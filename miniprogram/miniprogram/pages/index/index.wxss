@@ -1,0 +1,190 @@
+/**
+ * 搜索页面样式
+ */
+
+.page-container {
+  padding: var(--spacing-md);
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
+}
+
+/* 搜索框 */
+.search-box {
+  margin-bottom: var(--spacing-lg);
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-surface-light);
+  border-radius: var(--radius-xl);
+  padding: 20rpx 24rpx;
+  border: 2rpx solid var(--color-border);
+  transition: border-color 0.2s;
+}
+
+.search-input-wrapper:focus-within {
+  border-color: var(--color-primary);
+}
+
+.search-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 30rpx;
+  color: var(--color-text);
+  background: transparent;
+}
+
+.search-placeholder {
+  color: var(--color-text-muted);
+}
+
+.clear-icon {
+  font-size: 28rpx;
+  color: var(--color-text-muted);
+  padding: 8rpx;
+  margin-left: 8rpx;
+}
+
+/* 加载状态 */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 0;
+}
+
+.loading-text {
+  margin-top: var(--spacing-md);
+  color: var(--color-text-secondary);
+  font-size: 26rpx;
+}
+
+/* 错误提示 */
+.error-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 0;
+}
+
+.error-text {
+  color: var(--color-error);
+  font-size: 28rpx;
+  margin-bottom: var(--spacing-md);
+}
+
+.retry-btn {
+  padding: 16rpx 48rpx;
+  background-color: var(--color-primary);
+  color: var(--color-background);
+  border-radius: var(--radius-lg);
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+/* 运动员卡片 */
+.athlete-card {
+  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-light) 100%);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  position: relative;
+  border: 1rpx solid var(--color-border);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.athlete-card:active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-lg);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-sm);
+}
+
+.athlete-name {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+  margin-right: var(--spacing-md);
+}
+
+.athlete-time {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-primary);
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.card-body {
+  padding-right: 40rpx;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 8rpx;
+}
+
+.info-label {
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+  width: 100rpx;
+}
+
+.info-value {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  flex: 1;
+}
+
+.card-arrow {
+  position: absolute;
+  right: var(--spacing-md);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 40rpx;
+  color: var(--color-text-muted);
+}
+
+/* 空状态 */
+.empty,
+.initial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+}
+
+.empty-icon,
+.initial-icon {
+  font-size: 120rpx;
+  margin-bottom: var(--spacing-lg);
+}
+
+.empty-text,
+.initial-text {
+  font-size: 32rpx;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.empty-hint,
+.initial-hint {
+  font-size: 26rpx;
+  color: var(--color-text-muted);
+}
+
+
+
+

@@ -1,0 +1,89 @@
+<!--pages/index/index.wxml-->
+<view class="page-container">
+  <!-- 搜索框 -->
+  <view class="search-box">
+    <view class="search-input-wrapper">
+      <view class="search-icon">🔍</view>
+      <input 
+        class="search-input"
+        type="text"
+        placeholder="搜索运动员姓名..."
+        placeholder-class="search-placeholder"
+        value="{{searchValue}}"
+        bindinput="onSearchInput"
+        bindconfirm="onSearchConfirm"
+        confirm-type="search"
+      />
+      <view 
+        class="clear-icon" 
+        wx:if="{{searchValue}}"
+        bindtap="onClearSearch"
+      >✕</view>
+    </view>
+  </view>
+  
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">搜索中...</text>
+  </view>
+  
+  <!-- 错误提示 -->
+  <view class="error-tip" wx:if="{{error}}">
+    <text class="error-text">{{error}}</text>
+    <view class="retry-btn" bindtap="onSearchConfirm">重试</view>
+  </view>
+  
+  <!-- 搜索结果列表 -->
+  <view class="results-list" wx:if="{{!loading && !error && results.length > 0}}">
+    <view 
+      class="athlete-card"
+      wx:for="{{results}}"
+      wx:key="id"
+      data-item="{{item}}"
+      bindtap="onTapAthlete"
+    >
+      <view class="card-header">
+        <view class="athlete-name">{{item.name}}</view>
+        <view class="athlete-time">{{item.total_time}}</view>
+      </view>
+      <view class="card-body">
+        <view class="info-row">
+          <text class="info-label">比赛</text>
+          <text class="info-value">{{item.event_name}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">组别</text>
+          <text class="info-value">{{item.gender === 'male' ? "Men's" : "Women's"}} {{item.division}}</text>
+        </view>
+        <view class="info-row" wx:if="{{item.age_group}}">
+          <text class="info-label">年龄组</text>
+          <text class="info-value">{{item.age_group}}</text>
+        </view>
+        <view class="info-row" wx:if="{{item.nationality}}">
+          <text class="info-label">国籍</text>
+          <text class="info-value">{{item.nationality}}</text>
+        </view>
+      </view>
+      <view class="card-arrow">›</view>
+    </view>
+  </view>
+  
+  <!-- 空状态 -->
+  <view class="empty" wx:if="{{!loading && !error && searched && results.length === 0}}">
+    <view class="empty-icon">🏃</view>
+    <text class="empty-text">未找到相关运动员</text>
+    <text class="empty-hint">请尝试其他搜索关键词</text>
+  </view>
+  
+  <!-- 初始状态 -->
+  <view class="initial" wx:if="{{!loading && !error && !searched}}">
+    <view class="initial-icon">🏅</view>
+    <text class="initial-text">输入运动员姓名开始搜索</text>
+    <text class="initial-hint">支持模糊搜索，不区分大小写</text>
+  </view>
+</view>
+
+
+
+

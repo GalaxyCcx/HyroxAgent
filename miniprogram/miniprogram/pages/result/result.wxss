@@ -1,0 +1,307 @@
+/**
+ * 成绩详情页样式
+ */
+
+.page-container {
+  padding: var(--spacing-md);
+  padding-bottom: calc(var(--spacing-xl) + env(safe-area-inset-bottom));
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
+}
+
+/* 加载状态 */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.loading-text {
+  margin-top: var(--spacing-md);
+  color: var(--color-text-secondary);
+  font-size: 28rpx;
+}
+
+/* 错误状态 */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: var(--spacing-xl);
+}
+
+.error-icon {
+  font-size: 80rpx;
+  margin-bottom: var(--spacing-md);
+}
+
+.error-text {
+  color: var(--color-text-secondary);
+  font-size: 28rpx;
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+}
+
+.retry-btn,
+.back-btn {
+  padding: 16rpx 48rpx;
+  border-radius: var(--radius-lg);
+  font-size: 28rpx;
+  margin-bottom: var(--spacing-sm);
+}
+
+.retry-btn {
+  background-color: var(--color-primary);
+  color: var(--color-background);
+}
+
+.back-btn {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border: 1rpx solid var(--color-border);
+}
+
+/* 头部区域 */
+.header-section {
+  text-align: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.race-name {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+}
+
+.race-info {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+.division-tag,
+.age-tag {
+  font-size: 24rpx;
+  padding: 6rpx 16rpx;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-light);
+  color: var(--color-text-secondary);
+}
+
+/* 运动员区域 */
+.athlete-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+}
+
+.athlete-avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background-color: var(--color-surface-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--spacing-md);
+}
+
+.avatar-emoji {
+  font-size: 48rpx;
+}
+
+.athlete-info {
+  flex: 1;
+}
+
+.athlete-name {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 4rpx;
+}
+
+.athlete-meta {
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+}
+
+/* 核心成绩 */
+.result-section {
+  text-align: center;
+}
+
+.result-main {
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.total-time {
+  font-size: 72rpx;
+  font-weight: 700;
+  color: var(--color-primary);
+  font-family: 'SF Mono', 'Monaco', monospace;
+  letter-spacing: 2rpx;
+}
+
+.overall-rank {
+  font-size: 28rpx;
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+.result-ranks {
+  display: flex;
+  justify-content: space-around;
+}
+
+.rank-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rank-label {
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+  margin-bottom: 4rpx;
+}
+
+.rank-value {
+  font-size: 28rpx;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* 时间分布 */
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-md);
+}
+
+.time-bar-item {
+  margin-bottom: var(--spacing-md);
+}
+
+.time-bar-item:last-child {
+  margin-bottom: 0;
+}
+
+.bar-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.bar-label {
+  font-size: 26rpx;
+  color: var(--color-text);
+  width: 140rpx;
+}
+
+.bar-time {
+  flex: 1;
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.bar-percent {
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+  width: 80rpx;
+  text-align: right;
+}
+
+.bar-track {
+  height: 16rpx;
+  background-color: var(--color-surface-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  transition: width 0.3s ease;
+}
+
+.bar-running {
+  background: linear-gradient(90deg, #00d9ff, #00b3d4);
+}
+
+.bar-workout {
+  background: linear-gradient(90deg, #ff6b35, #e55a2b);
+}
+
+.bar-roxzone {
+  background: linear-gradient(90deg, #00ff88, #00cc6a);
+}
+
+/* 分段成绩 */
+.splits-list {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.split-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.split-item:last-child {
+  border-bottom: none;
+}
+
+.split-icon {
+  width: 60rpx;
+  font-size: 32rpx;
+  text-align: center;
+}
+
+.split-info {
+  flex: 1;
+}
+
+.split-name {
+  font-size: 26rpx;
+  color: var(--color-text);
+  display: block;
+}
+
+.split-dist {
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+}
+
+.split-time {
+  font-size: 28rpx;
+  color: var(--color-text);
+  font-family: 'SF Mono', 'Monaco', monospace;
+  font-weight: 500;
+}
+
+.run-item {
+  background-color: rgba(0, 217, 255, 0.05);
+}
+
+.workout-item {
+  background-color: rgba(255, 107, 53, 0.05);
+}
+
+
+
+

@@ -1,0 +1,466 @@
+# 后端开发规则
+
+## 架构原则
+
+### 分层架构
+```
+API Layer (路由层)
+    ↓
+Service Layer (业务逻辑层)
+    ↓
+Repository Layer (数据访问层)
+    ↓
+Database (数据库)
+```
+
+### 核心原则
+- **单一职责**: 每个类/函数只做一件事
+- **依赖注入**: 使用 FastAPI Depends
+- **接口隔离**: 通过抽象类定义接口
+- **开闭原则**: 对扩展开放，对修改关闭
+
+## 目录结构
+
+```
+backend/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                 # FastAPI 入口
+│   ├── config/                 # 配置管理
+│   │   ├── __init__.py
+│   │   ├── settings.py         # 配置类
+│   │   └── logging.py          # 日志配置
+│   ├── api/                    # API 路由
+│   │   ├── __init__.py
+│   │   ├── deps.py             # 公共依赖
+│   │   └── v1/                 # v1 版本路由
+│   │       ├── __init__.py
+│   │       ├── athletes.py
+│   │       ├── races.py
+│   │       └── analysis.py
+│   ├── core/                   # 核心模块
+│   │   ├── __init__.py
+│   │   ├── exceptions.py       # 自定义异常
+│   │   ├── security.py         # 安全相关
+│   │   └── cache.py            # 缓存管理
+│   ├── models/                 # 数据模型
+│   │   ├── __init__.py
+│   │   ├── database.py         # SQLAlchemy 模型
+│   │   └── schemas.py          # Pydantic Schema
+│   ├── services/               # 业务服务
+│   │   ├── __init__.py
+│   │   ├── athlete_service.py
+│   │   └── race_service.py
+│   ├── agents/                 # Agent 模块
+│   │   └── ...
+│   ├── db/                     # 数据库
+│   │   ├── __init__.py
+│   │   ├── session.py          # 数据库会话
+│   │   └── migrations/         # 迁移脚本
+│   └── utils/                  # 工具函数
+│       ├── __init__.py
+│       └── helpers.py
+├── tests/                      # 测试目录
+├── scripts/                    # 脚本目录
+├── requirements.txt
+└── Dockerfile
+```
+
+## FastAPI 规范
+
+### 应用入口
+```python
+# app/main.py
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.api.v1 import router as api_v1_router
+from app.core.exceptions import setup_exception_handlers
+from app.config.settings import settings
+
+app = FastAPI(
+    title="HyroxAgent API",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+)
+
+# 中间件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 异常处理
+setup_exception_handlers(app)
+
+# 路由
+app.include_router(api_v1_router, prefix="/api/v1")
+```
+
+### 路由组织
+```python
+# app/api/v1/athletes.py
+from fastapi import APIRouter, Depends, Query
+from app.api.deps import get_current_user, get_athlete_service
+from app.models.schemas import AthleteResponse, AthleteListResponse
+from app.services.athlete_service import AthleteService
+
+router = APIRouter(prefix="/athletes", tags=["运动员"])
+
+@router.get("", response_model=AthleteListResponse)
+async def list_athletes(
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
+    name: str | None = Query(None, description="姓名搜索"),
+    service: AthleteService = Depends(get_athlete_service),
+):
+    """获取运动员列表"""
+    return await service.list_athletes(page=page, page_size=page_size, name=name)
+
+@router.get("/{athlete_id}", response_model=AthleteResponse)
+async def get_athlete(
+    athlete_id: int,
+    service: AthleteService = Depends(get_athlete_service),
+):
+    """获取运动员详情"""
+    return await service.get_athlete(athlete_id)
+```
+
+### 依赖注入
+```python
+# app/api/deps.py
+from typing import AsyncGenerator
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.session import async_session_maker
+from app.services.athlete_service import AthleteService
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """获取数据库会话"""
+    async with async_session_maker() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+def get_athlete_service(db: AsyncSession = Depends(get_db)) -> AthleteService:
+    """获取运动员服务"""
+    return AthleteService(db)
+```
+
+## 统一响应格式
+
+### 成功响应
+```python
+from pydantic import BaseModel
+from typing import Generic, TypeVar
+
+T = TypeVar("T")
+
+class ResponseBase(BaseModel, Generic[T]):
+    """统一响应格式"""
+    code: int = 0
+    message: str = "success"
+    data: T | None = None
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    """分页响应格式"""
+    code: int = 0
+    message: str = "success"
+    data: list[T]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+```
+
+### 错误响应
+```python
+{
+    "code": 40001,
+    "message": "参数校验失败",
+    "data": null,
+    "errors": [
+        {"field": "name", "message": "姓名不能为空"}
+    ]
+}
+```
+
+## 异常处理
+
+### 自定义异常
+```python
+# app/core/exceptions.py
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+class AppException(Exception):
+    """应用异常基类"""
+    def __init__(self, code: int, message: str, status_code: int = 400):
+        self.code = code
+        self.message = message
+        self.status_code = status_code
+
+class NotFoundError(AppException):
+    """资源不存在"""
+    def __init__(self, message: str = "资源不存在"):
+        super().__init__(code=40401, message=message, status_code=404)
+
+class ValidationError(AppException):
+    """参数校验错误"""
+    def __init__(self, message: str = "参数校验失败"):
+        super().__init__(code=40001, message=message, status_code=400)
+
+class AuthenticationError(AppException):
+    """认证错误"""
+    def __init__(self, message: str = "认证失败"):
+        super().__init__(code=40101, message=message, status_code=401)
+
+def setup_exception_handlers(app: FastAPI):
+    """设置异常处理器"""
+    @app.exception_handler(AppException)
+    async def app_exception_handler(request: Request, exc: AppException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"code": exc.code, "message": exc.message, "data": None}
+        )
+```
+
+## 配置管理
+
+```python
+# app/config/settings.py
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+
+class Settings(BaseSettings):
+    """应用配置"""
+    # 应用
+    APP_NAME: str = "HyroxAgent"
+    APP_ENV: str = "development"
+    DEBUG: bool = True
+    
+    # 数据库
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 5432
+    DB_NAME: str = "hyrox_agent"
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = ""
+    
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379/0"
+    
+    # API Keys
+    OPENAI_API_KEY: str = ""
+    
+    # CORS
+    CORS_ORIGINS: list[str] = ["*"]
+    
+    @property
+    def database_url(self) -> str:
+        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+settings = get_settings()
+```
+
+## 服务层规范
+
+```python
+# app/services/athlete_service.py
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from app.models.database import Athlete
+from app.models.schemas import AthleteCreate, AthleteUpdate
+from app.core.exceptions import NotFoundError
+
+class AthleteService:
+    """运动员服务"""
+    
+    def __init__(self, db: AsyncSession):
+        self.db = db
+    
+    async def get_athlete(self, athlete_id: int) -> Athlete:
+        """获取单个运动员"""
+        result = await self.db.execute(
+            select(Athlete).where(Athlete.id == athlete_id)
+        )
+        athlete = result.scalar_one_or_none()
+        if not athlete:
+            raise NotFoundError(f"运动员 {athlete_id} 不存在")
+        return athlete
+    
+    async def list_athletes(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        name: str | None = None,
+    ) -> dict:
+        """获取运动员列表"""
+        query = select(Athlete)
+        
+        if name:
+            query = query.where(Athlete.name.ilike(f"%{name}%"))
+        
+        # 总数
+        count_result = await self.db.execute(
+            select(func.count()).select_from(query.subquery())
+        )
+        total = count_result.scalar()
+        
+        # 分页
+        query = query.offset((page - 1) * page_size).limit(page_size)
+        result = await self.db.execute(query)
+        athletes = result.scalars().all()
+        
+        return {
+            "data": athletes,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total + page_size - 1) // page_size,
+        }
+```
+
+## 缓存策略
+
+```python
+# app/core/cache.py
+import redis.asyncio as redis
+import json
+from functools import wraps
+from app.config.settings import settings
+
+redis_client = redis.from_url(settings.REDIS_URL)
+
+def cache(prefix: str, expire: int = 300):
+    """缓存装饰器"""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # 生成缓存 key
+            cache_key = f"{prefix}:{hash(str(args) + str(kwargs))}"
+            
+            # 尝试获取缓存
+            cached = await redis_client.get(cache_key)
+            if cached:
+                return json.loads(cached)
+            
+            # 执行函数
+            result = await func(*args, **kwargs)
+            
+            # 设置缓存
+            await redis_client.setex(cache_key, expire, json.dumps(result))
+            return result
+        return wrapper
+    return decorator
+
+# 使用示例
+@cache(prefix="athlete", expire=600)
+async def get_athlete_stats(athlete_id: int) -> dict:
+    # 复杂的统计计算
+    pass
+```
+
+## 日志规范
+
+```python
+# app/config/logging.py
+import logging
+import sys
+from app.config.settings import settings
+
+def setup_logging():
+    """配置日志"""
+    log_format = "%(asctime)s | %(levelname)-8s | %(name)s:%(lineno)d | %(message)s"
+    
+    logging.basicConfig(
+        level=logging.DEBUG if settings.DEBUG else logging.INFO,
+        format=log_format,
+        handlers=[
+            logging.StreamHandler(sys.stdout),
+        ]
+    )
+    
+    # 降低第三方库日志级别
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
+# 使用日志
+import logging
+logger = logging.getLogger(__name__)
+
+logger.info("操作成功", extra={"athlete_id": 123})
+logger.error("操作失败", exc_info=True)
+logger.warning("数据异常", extra={"reason": "缺少必填字段"})
+```
+
+## 异步任务 (Celery)
+
+```python
+# app/tasks/celery_app.py
+from celery import Celery
+from app.config.settings import settings
+
+celery_app = Celery(
+    "hyrox_agent",
+    broker=settings.REDIS_URL,
+    backend=settings.REDIS_URL,
+)
+
+celery_app.conf.update(
+    task_serializer="json",
+    accept_content=["json"],
+    result_serializer="json",
+    timezone="Asia/Shanghai",
+    enable_utc=True,
+)
+
+# app/tasks/data_tasks.py
+from app.tasks.celery_app import celery_app
+
+@celery_app.task
+def sync_race_data(season: int, location: str):
+    """同步比赛数据的异步任务"""
+    # 实现数据同步逻辑
+    pass
+```
+
+## 中间件规范
+
+```python
+# app/middleware/logging.py
+import time
+import logging
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+
+logger = logging.getLogger(__name__)
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """请求日志中间件"""
+    
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.time()
+        
+        response = await call_next(request)
+        
+        process_time = time.time() - start_time
+        logger.info(
+            f"{request.method} {request.url.path} "
+            f"- {response.status_code} - {process_time:.3f}s"
+        )
+        
+        response.headers["X-Process-Time"] = str(process_time)
+        return response
+```

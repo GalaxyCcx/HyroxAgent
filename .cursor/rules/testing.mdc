@@ -1,0 +1,643 @@
+# 测试规范
+
+## 测试策略
+
+### 测试金字塔
+```
+        /\
+       /  \     E2E 测试 (10%)
+      /----\    
+     /      \   集成测试 (20%)
+    /--------\  
+   /          \ 单元测试 (70%)
+  /------------\
+```
+
+### 覆盖率要求
+| 类型 | 最低覆盖率 |
+|------|-----------|
+| 单元测试 | 80% |
+| 分支覆盖 | 70% |
+| 集成测试 | 关键路径 100% |
+
+## 测试目录结构
+
+```
+backend/tests/
+├── __init__.py
+├── conftest.py              # pytest 配置和 fixtures
+├── unit/                    # 单元测试
+│   ├── __init__.py
+│   ├── test_services/       # 服务层测试
+│   │   ├── test_athlete_service.py
+│   │   └── test_race_service.py
+│   ├── test_agents/         # Agent 测试
+│   │   ├── test_analysis_agent.py
+│   │   └── test_tools.py
+│   └── test_utils/          # 工具函数测试
+│       └── test_helpers.py
+├── integration/             # 集成测试
+│   ├── __init__.py
+│   ├── test_api/            # API 集成测试
+│   │   ├── test_athletes_api.py
+│   │   └── test_analysis_api.py
+│   └── test_db/             # 数据库集成测试
+│       └── test_repositories.py
+└── e2e/                     # 端到端测试
+    ├── __init__.py
+    └── test_workflows.py
+```
+
+## Pytest 配置
+
+### pytest.ini
+```ini
+[pytest]
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+asyncio_mode = auto
+addopts = 
+    -v
+    --tb=short
+    --strict-markers
+    -ra
+    --cov=app
+    --cov-report=term-missing
+    --cov-report=html:coverage_html
+    --cov-fail-under=80
+
+markers =
+    slow: 标记慢速测试
+    integration: 集成测试
+    e2e: 端到端测试
+```
+
+### conftest.py 配置
+```python
+# tests/conftest.py
+import pytest
+import asyncio
+from typing import AsyncGenerator
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+
+from app.main import app
+from app.db.session import get_db
+from app.models.database import Base
+
+# 测试数据库 URL
+TEST_DATABASE_URL = "postgresql+asyncpg://test:test@localhost:5432/hyrox_test"
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """创建事件循环"""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+@pytest.fixture(scope="session")
+async def test_engine():
+    """创建测试数据库引擎"""
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    
+    yield engine
+    
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    
+    await engine.dispose()
+
+@pytest.fixture
+async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
+    """创建测试数据库会话"""
+    async_session = async_sessionmaker(
+        test_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    
+    async with async_session() as session:
+        yield session
+        await session.rollback()
+
+@pytest.fixture
+async def client(db_session) -> AsyncGenerator[AsyncClient, None]:
+    """创建测试客户端"""
+    async def override_get_db():
+        yield db_session
+    
+    app.dependency_overrides[get_db] = override_get_db
+    
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
+    
+    app.dependency_overrides.clear()
+
+@pytest.fixture
+def sample_athlete_data():
+    """示例运动员数据"""
+    return {
+        "name": "张伟",
+        "nationality": "CHN",
+        "gender": "male",
+        "age_group": "30-34",
+        "division": "open",
+    }
+
+@pytest.fixture
+def sample_race_data():
+    """示例比赛数据"""
+    return {
+        "season": 7,
+        "location": "amsterdam",
+        "year": 2024,
+    }
+```
+
+## 单元测试
+
+### 服务层测试
+```python
+# tests/unit/test_services/test_athlete_service.py
+import pytest
+from unittest.mock import AsyncMock, MagicMock
+from app.services.athlete_service import AthleteService
+from app.core.exceptions import NotFoundError
+
+class TestAthleteService:
+    """运动员服务测试"""
+    
+    @pytest.fixture
+    def mock_db(self):
+        """Mock 数据库会话"""
+        return AsyncMock()
+    
+    @pytest.fixture
+    def service(self, mock_db):
+        """创建服务实例"""
+        return AthleteService(mock_db)
+    
+    @pytest.mark.asyncio
+    async def test_get_athlete_success(self, service, mock_db):
+        """测试成功获取运动员"""
+        # Arrange
+        mock_athlete = MagicMock(id=1, name="张伟")
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_athlete
+        mock_db.execute.return_value = mock_result
+        
+        # Act
+        result = await service.get_athlete(1)
+        
+        # Assert
+        assert result.id == 1
+        assert result.name == "张伟"
+    
+    @pytest.mark.asyncio
+    async def test_get_athlete_not_found(self, service, mock_db):
+        """测试运动员不存在"""
+        # Arrange
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_db.execute.return_value = mock_result
+        
+        # Act & Assert
+        with pytest.raises(NotFoundError) as exc_info:
+            await service.get_athlete(999)
+        
+        assert "不存在" in str(exc_info.value.message)
+    
+    @pytest.mark.asyncio
+    async def test_list_athletes_with_pagination(self, service, mock_db):
+        """测试分页获取运动员列表"""
+        # Arrange
+        mock_athletes = [MagicMock(id=i) for i in range(5)]
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 100
+        
+        mock_list_result = MagicMock()
+        mock_list_result.scalars.return_value.all.return_value = mock_athletes
+        
+        mock_db.execute.side_effect = [mock_count_result, mock_list_result]
+        
+        # Act
+        result = await service.list_athletes(page=1, page_size=5)
+        
+        # Assert
+        assert len(result["data"]) == 5
+        assert result["total"] == 100
+        assert result["page"] == 1
+    
+    @pytest.mark.asyncio
+    async def test_search_athlete_by_name(self, service, mock_db):
+        """测试按名称搜索运动员"""
+        # Arrange
+        mock_athletes = [MagicMock(name="张伟"), MagicMock(name="张明")]
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = mock_athletes
+        mock_db.execute.return_value = mock_result
+        
+        # Act
+        result = await service.search_by_name("张")
+        
+        # Assert
+        assert len(result) == 2
+```
+
+### Agent 工具测试
+```python
+# tests/unit/test_agents/test_tools.py
+import pytest
+from unittest.mock import patch, AsyncMock
+from app.agents.tools.data_tools import search_athlete, get_athlete_races
+
+class TestDataTools:
+    """数据工具测试"""
+    
+    @pytest.mark.asyncio
+    async def test_search_athlete_found(self):
+        """测试搜索找到运动员"""
+        with patch("app.agents.tools.data_tools.AthleteService") as MockService:
+            mock_service = AsyncMock()
+            mock_service.search_by_name.return_value = [
+                {"name": "张伟", "nationality": "CHN"}
+            ]
+            MockService.return_value = mock_service
+            
+            result = await search_athlete.ainvoke({"name": "张伟"})
+            
+            assert "张伟" in result
+            assert "CHN" in result
+    
+    @pytest.mark.asyncio
+    async def test_search_athlete_not_found(self):
+        """测试搜索未找到运动员"""
+        with patch("app.agents.tools.data_tools.AthleteService") as MockService:
+            mock_service = AsyncMock()
+            mock_service.search_by_name.return_value = []
+            MockService.return_value = mock_service
+            
+            result = await search_athlete.ainvoke({"name": "NotExist"})
+            
+            assert "未找到" in result
+```
+
+### 工具函数测试
+```python
+# tests/unit/test_utils/test_helpers.py
+import pytest
+from app.utils.time_utils import format_time, parse_time
+
+class TestTimeUtils:
+    """时间工具函数测试"""
+    
+    @pytest.mark.parametrize("seconds,expected", [
+        (3661, "1:01:01"),
+        (61, "0:01:01"),
+        (3600, "1:00:00"),
+        (0, "0:00:00"),
+    ])
+    def test_format_time(self, seconds, expected):
+        """测试时间格式化"""
+        assert format_time(seconds) == expected
+    
+    @pytest.mark.parametrize("time_str,expected", [
+        ("1:01:01", 3661),
+        ("0:01:01", 61),
+        ("1:00:00", 3600),
+    ])
+    def test_parse_time(self, time_str, expected):
+        """测试时间解析"""
+        assert parse_time(time_str) == expected
+    
+    def test_parse_time_invalid(self):
+        """测试无效时间格式"""
+        with pytest.raises(ValueError):
+            parse_time("invalid")
+```
+
+## 集成测试
+
+### API 集成测试
+```python
+# tests/integration/test_api/test_athletes_api.py
+import pytest
+from httpx import AsyncClient
+
+class TestAthletesAPI:
+    """运动员 API 集成测试"""
+    
+    @pytest.mark.asyncio
+    async def test_create_athlete(self, client: AsyncClient, sample_athlete_data):
+        """测试创建运动员"""
+        response = await client.post("/api/v1/athletes", json=sample_athlete_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["code"] == 0
+        assert data["data"]["id"] is not None
+    
+    @pytest.mark.asyncio
+    async def test_get_athlete(self, client: AsyncClient, sample_athlete_data):
+        """测试获取运动员"""
+        # 先创建
+        create_response = await client.post("/api/v1/athletes", json=sample_athlete_data)
+        athlete_id = create_response.json()["data"]["id"]
+        
+        # 再获取
+        response = await client.get(f"/api/v1/athletes/{athlete_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["data"]["name"] == sample_athlete_data["name"]
+    
+    @pytest.mark.asyncio
+    async def test_get_athlete_not_found(self, client: AsyncClient):
+        """测试获取不存在的运动员"""
+        response = await client.get("/api/v1/athletes/99999")
+        
+        assert response.status_code == 404
+        assert response.json()["code"] == 40401
+    
+    @pytest.mark.asyncio
+    async def test_list_athletes_pagination(self, client: AsyncClient):
+        """测试运动员列表分页"""
+        response = await client.get("/api/v1/athletes?page=1&page_size=10")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "pagination" in data["data"]
+        assert data["data"]["pagination"]["page"] == 1
+    
+    @pytest.mark.asyncio
+    async def test_search_athletes(self, client: AsyncClient, sample_athlete_data):
+        """测试搜索运动员"""
+        # 创建测试数据
+        await client.post("/api/v1/athletes", json=sample_athlete_data)
+        
+        # 搜索
+        response = await client.get(f"/api/v1/athletes?name={sample_athlete_data['name'][:2]}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["data"]["items"]) > 0
+```
+
+### 数据库集成测试
+```python
+# tests/integration/test_db/test_repositories.py
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.database import Athlete, Race, RaceResult
+
+class TestAthleteRepository:
+    """运动员数据库操作测试"""
+    
+    @pytest.mark.asyncio
+    async def test_create_athlete(self, db_session: AsyncSession):
+        """测试创建运动员"""
+        athlete = Athlete(
+            name="张伟",
+            nationality="CHN",
+            gender="male",
+        )
+        db_session.add(athlete)
+        await db_session.flush()
+        
+        assert athlete.id is not None
+        assert athlete.created_at is not None
+    
+    @pytest.mark.asyncio
+    async def test_query_athlete(self, db_session: AsyncSession):
+        """测试查询运动员"""
+        # 创建
+        athlete = Athlete(name="测试用户", nationality="CHN", gender="male")
+        db_session.add(athlete)
+        await db_session.flush()
+        
+        # 查询
+        from sqlalchemy import select
+        result = await db_session.execute(
+            select(Athlete).where(Athlete.name == "测试用户")
+        )
+        found = result.scalar_one_or_none()
+        
+        assert found is not None
+        assert found.name == "测试用户"
+```
+
+## 端到端测试
+
+```python
+# tests/e2e/test_workflows.py
+import pytest
+from httpx import AsyncClient
+
+class TestAnalysisWorkflow:
+    """分析工作流端到端测试"""
+    
+    @pytest.mark.e2e
+    @pytest.mark.asyncio
+    async def test_complete_analysis_workflow(self, client: AsyncClient):
+        """测试完整的分析工作流"""
+        # 1. 创建运动员
+        athlete_response = await client.post("/api/v1/athletes", json={
+            "name": "测试运动员",
+            "nationality": "CHN",
+            "gender": "male",
+        })
+        athlete_id = athlete_response.json()["data"]["id"]
+        
+        # 2. 添加比赛记录
+        race_response = await client.post("/api/v1/races", json={
+            "season": 7,
+            "location": "test",
+            "year": 2024,
+        })
+        race_id = race_response.json()["data"]["id"]
+        
+        # 3. 添加成绩
+        await client.post("/api/v1/race-results", json={
+            "race_id": race_id,
+            "athlete_id": athlete_id,
+            "total_time": 75.5,
+            "division": "open",
+        })
+        
+        # 4. 请求分析
+        analysis_response = await client.post("/api/v1/analysis/request", json={
+            "athlete_id": athlete_id,
+            "analysis_type": "performance",
+        })
+        
+        assert analysis_response.status_code == 200
+        
+        # 5. 获取分析结果
+        report_response = await client.get(f"/api/v1/analysis/report/{athlete_id}")
+        
+        assert report_response.status_code == 200
+        assert "summary" in report_response.json()["data"]
+```
+
+## Mock 规范
+
+### 外部 API Mock
+```python
+# tests/mocks/external_api.py
+import pytest
+from unittest.mock import patch, MagicMock
+
+@pytest.fixture
+def mock_openai():
+    """Mock OpenAI API"""
+    with patch("openai.ChatCompletion.acreate") as mock:
+        mock.return_value = MagicMock(
+            choices=[
+                MagicMock(
+                    message=MagicMock(
+                        content='{"summary": "分析结果", "recommendations": []}'
+                    )
+                )
+            ]
+        )
+        yield mock
+
+@pytest.fixture
+def mock_pyrox_client():
+    """Mock Pyrox 客户端"""
+    with patch("pyrox.PyroxClient") as mock:
+        client = MagicMock()
+        client.list_races.return_value = [
+            {"season": 7, "location": "amsterdam"}
+        ]
+        client.get_race.return_value = MagicMock()
+        mock.return_value = client
+        yield client
+```
+
+### 数据库 Mock
+```python
+# 使用 pytest-asyncio 的 fixture
+@pytest.fixture
+async def mock_db_session():
+    """Mock 数据库会话"""
+    session = AsyncMock(spec=AsyncSession)
+    
+    # Mock execute 返回
+    mock_result = MagicMock()
+    session.execute.return_value = mock_result
+    
+    return session
+```
+
+## 测试数据工厂
+
+```python
+# tests/factories.py
+from factory import Factory, Faker, LazyAttribute
+from app.models.database import Athlete, Race
+
+class AthleteFactory(Factory):
+    """运动员工厂"""
+    class Meta:
+        model = Athlete
+    
+    name = Faker("name", locale="zh_CN")
+    nationality = "CHN"
+    gender = Faker("random_element", elements=["male", "female"])
+    age_group = Faker("random_element", elements=["25-29", "30-34", "35-39"])
+    division = "open"
+    total_races = Faker("random_int", min=0, max=20)
+    best_time = Faker("pydecimal", min_value=50, max_value=120)
+
+class RaceFactory(Factory):
+    """比赛工厂"""
+    class Meta:
+        model = Race
+    
+    season = 7
+    location = Faker("random_element", elements=["amsterdam", "berlin", "london"])
+    year = 2024
+
+# 使用
+def test_with_factory():
+    athlete = AthleteFactory.build()
+    assert athlete.name is not None
+```
+
+## 运行测试
+
+### 命令行
+```bash
+# 运行所有测试
+pytest
+
+# 运行单元测试
+pytest tests/unit/
+
+# 运行特定文件
+pytest tests/unit/test_services/test_athlete_service.py
+
+# 运行特定测试
+pytest tests/unit/test_services/test_athlete_service.py::TestAthleteService::test_get_athlete_success
+
+# 跳过慢速测试
+pytest -m "not slow"
+
+# 只运行集成测试
+pytest -m integration
+
+# 生成覆盖率报告
+pytest --cov=app --cov-report=html
+
+# 并行运行
+pytest -n auto
+```
+
+### CI 中的测试
+```yaml
+# .github/workflows/test.yml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: hyrox_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements-dev.txt
+      
+      - name: Run tests
+        run: |
+          cd backend
+          pytest --cov=app --cov-report=xml
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+```

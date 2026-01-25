@@ -1,0 +1,21 @@
+"""
+API v1 路由汇总
+"""
+from fastapi import APIRouter
+
+from app.api.v1.athletes import router as athletes_router
+from app.api.v1.suggest import router as suggest_router
+from app.api.v1.results import router as results_router
+from app.api.v1.sync import router as sync_router
+from app.api.v1.races import router as races_router
+
+# 创建 v1 路由
+api_router = APIRouter()
+
+# 注册子路由
+api_router.include_router(suggest_router)  # suggest 在 athletes 之前，避免路由冲突
+api_router.include_router(athletes_router)
+api_router.include_router(results_router)
+api_router.include_router(sync_router)  # 数据同步路由
+api_router.include_router(races_router)  # 赛事列表路由
+

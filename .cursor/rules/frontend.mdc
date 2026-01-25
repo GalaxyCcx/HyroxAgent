@@ -1,0 +1,634 @@
+# 小程序前端开发规则
+
+## 技术栈
+
+- **框架**: 微信原生小程序框架
+- **UI 组件**: Vant Weapp 3.x
+- **图表**: echarts-for-weixin
+- **状态管理**: MobX-miniprogram (可选)
+- **请求封装**: 自定义 request 模块
+
+## 目录结构
+
+```
+miniprogram/
+├── miniprogram/
+│   ├── app.js                  # 小程序入口
+│   ├── app.json                # 全局配置
+│   ├── app.wxss                # 全局样式
+│   ├── pages/                  # 页面目录
+│   │   ├── index/              # 首页
+│   │   │   ├── index.js
+│   │   │   ├── index.json
+│   │   │   ├── index.wxml
+│   │   │   └── index.wxss
+│   │   ├── athlete/            # 运动员详情
+│   │   ├── race/               # 比赛详情
+│   │   ├── analysis/           # 数据分析
+│   │   ├── report/             # 分析报告
+│   │   └── profile/            # 个人中心
+│   ├── components/             # 自定义组件
+│   │   ├── charts/             # 图表组件
+│   │   │   ├── line-chart/
+│   │   │   ├── bar-chart/
+│   │   │   └── radar-chart/
+│   │   ├── athlete-card/       # 运动员卡片
+│   │   ├── race-card/          # 比赛卡片
+│   │   ├── loading/            # 加载组件
+│   │   └── navbar/             # 导航栏
+│   ├── services/               # API 服务
+│   │   ├── api.js              # API 接口定义
+│   │   ├── request.js          # 请求封装
+│   │   └── config.js           # 配置
+│   ├── utils/                  # 工具函数
+│   │   ├── util.js             # 通用工具
+│   │   ├── format.js           # 格式化
+│   │   └── storage.js          # 存储封装
+│   ├── store/                  # 状态管理
+│   │   ├── index.js
+│   │   └── modules/
+│   │       ├── user.js
+│   │       └── athlete.js
+│   └── assets/                 # 静态资源
+│       ├── images/
+│       ├── icons/
+│       └── styles/
+│           ├── variables.wxss  # CSS 变量
+│           └── mixins.wxss     # 混入样式
+├── typings/                    # TypeScript 类型
+├── project.config.json         # 项目配置
+└── package.json
+```
+
+## 命名规范
+
+| 类型 | 规范 | 示例 |
+|------|------|------|
+| 页面目录 | kebab-case | `athlete-detail/` |
+| 组件目录 | kebab-case | `athlete-card/` |
+| JS 函数 | camelCase | `handleTapCard` |
+| CSS 类名 | kebab-case / BEM | `athlete-card__title` |
+| 事件处理 | handle + 动作 | `handleTapSearch` |
+| 数据请求 | fetch + 资源 | `fetchAthleteList` |
+
+## 页面开发规范
+
+### 页面结构
+```javascript
+// pages/athlete/athlete.js
+const app = getApp()
+const { request } = require('../../services/request')
+
+Page({
+  /**
+   * 页面的初始数据
+   */
+  data: {
+    loading: true,
+    athlete: null,
+    races: [],
+  },
+
+  /**
+   * 生命周期函数--监听页面加载
+   */
+  onLoad(options) {
+    const { id } = options
+    if (id) {
+      this.fetchAthleteDetail(id)
+    }
+  },
+
+  /**
+   * 获取运动员详情
+   */
+  async fetchAthleteDetail(id) {
+    try {
+      this.setData({ loading: true })
+      const athlete = await request({
+        url: `/api/v1/athletes/${id}`,
+        method: 'GET',
+      })
+      this.setData({ athlete, loading: false })
+    } catch (error) {
+      console.error('获取运动员详情失败', error)
+      wx.showToast({ title: '加载失败', icon: 'error' })
+      this.setData({ loading: false })
+    }
+  },
+
+  /**
+   * 点击比赛记录
+   */
+  handleTapRace(e) {
+    const { raceId } = e.currentTarget.dataset
+    wx.navigateTo({
+      url: `/pages/race/race?id=${raceId}`,
+    })
+  },
+
+  /**
+   * 页面相关事件处理函数--监听用户下拉动作
+   */
+  onPullDownRefresh() {
+    this.fetchAthleteDetail(this.data.athlete.id)
+    wx.stopPullDownRefresh()
+  },
+})
+```
+
+### WXML 模板规范
+```html
+<!-- pages/athlete/athlete.wxml -->
+<view class="container">
+  <!-- 加载状态 -->
+  <loading wx:if="{{loading}}" />
+  
+  <!-- 内容区域 -->
+  <block wx:else>
+    <!-- 运动员信息 -->
+    <view class="athlete-header">
+      <image 
+        class="athlete-header__avatar" 
+        src="{{athlete.avatar}}" 
+        mode="aspectFill"
+      />
+      <view class="athlete-header__info">
+        <text class="athlete-header__name">{{athlete.name}}</text>
+        <text class="athlete-header__nationality">{{athlete.nationality}}</text>
+      </view>
+    </view>
+    
+    <!-- 比赛列表 -->
+    <view class="race-list">
+      <race-card 
+        wx:for="{{races}}" 
+        wx:key="id"
+        race="{{item}}"
+        data-race-id="{{item.id}}"
+        bind:tap="handleTapRace"
+      />
+    </view>
+  </block>
+</view>
+```
+
+## 组件开发规范
+
+### 组件结构
+```javascript
+// components/athlete-card/athlete-card.js
+Component({
+  /**
+   * 组件的属性列表
+   */
+  properties: {
+    athlete: {
+      type: Object,
+      value: null,
+    },
+    showDetail: {
+      type: Boolean,
+      value: true,
+    },
+  },
+
+  /**
+   * 组件的初始数据
+   */
+  data: {
+    
+  },
+
+  /**
+   * 数据监听器
+   */
+  observers: {
+    'athlete': function(athlete) {
+      if (athlete) {
+        this.formatAthleteData(athlete)
+      }
+    }
+  },
+
+  /**
+   * 组件的方法列表
+   */
+  methods: {
+    formatAthleteData(athlete) {
+      // 格式化数据
+    },
+    
+    handleTap() {
+      this.triggerEvent('tap', { athlete: this.data.athlete })
+    },
+  },
+})
+```
+
+### 组件配置
+```json
+// components/athlete-card/athlete-card.json
+{
+  "component": true,
+  "usingComponents": {
+    "van-image": "@vant/weapp/image/index",
+    "van-tag": "@vant/weapp/tag/index"
+  }
+}
+```
+
+## API 请求封装
+
+### 请求基础封装
+```javascript
+// services/request.js
+const config = require('./config')
+
+/**
+ * 统一请求封装
+ */
+function request(options) {
+  return new Promise((resolve, reject) => {
+    const { url, method = 'GET', data, header = {} } = options
+    
+    // 获取 token
+    const token = wx.getStorageSync('token')
+    
+    wx.request({
+      url: config.BASE_URL + url,
+      method,
+      data,
+      header: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : '',
+        ...header,
+      },
+      success(res) {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          const { code, data, message } = res.data
+          if (code === 0) {
+            resolve(data)
+          } else {
+            reject(new Error(message || '请求失败'))
+          }
+        } else if (res.statusCode === 401) {
+          // Token 过期，跳转登录
+          wx.navigateTo({ url: '/pages/login/login' })
+          reject(new Error('登录已过期'))
+        } else {
+          reject(new Error(`HTTP Error: ${res.statusCode}`))
+        }
+      },
+      fail(err) {
+        reject(new Error(err.errMsg || '网络错误'))
+      },
+    })
+  })
+}
+
+module.exports = { request }
+```
+
+### API 接口定义
+```javascript
+// services/api.js
+const { request } = require('./request')
+
+/**
+ * 运动员相关接口
+ */
+const athleteApi = {
+  // 获取运动员列表
+  getList(params) {
+    return request({
+      url: '/api/v1/athletes',
+      method: 'GET',
+      data: params,
+    })
+  },
+  
+  // 获取运动员详情
+  getDetail(id) {
+    return request({
+      url: `/api/v1/athletes/${id}`,
+      method: 'GET',
+    })
+  },
+  
+  // 搜索运动员
+  search(keyword) {
+    return request({
+      url: '/api/v1/athletes/search',
+      method: 'GET',
+      data: { keyword },
+    })
+  },
+}
+
+/**
+ * 分析相关接口
+ */
+const analysisApi = {
+  // 获取分析报告
+  getReport(athleteId) {
+    return request({
+      url: `/api/v1/analysis/report/${athleteId}`,
+      method: 'GET',
+    })
+  },
+  
+  // 请求 AI 分析
+  requestAnalysis(data) {
+    return request({
+      url: '/api/v1/analysis/request',
+      method: 'POST',
+      data,
+    })
+  },
+}
+
+module.exports = {
+  athleteApi,
+  analysisApi,
+}
+```
+
+## 状态管理
+
+### 全局状态 (app.globalData)
+```javascript
+// app.js
+App({
+  globalData: {
+    userInfo: null,
+    isLoggedIn: false,
+    systemInfo: null,
+  },
+  
+  onLaunch() {
+    // 获取系统信息
+    this.globalData.systemInfo = wx.getSystemInfoSync()
+    
+    // 检查登录状态
+    this.checkLoginStatus()
+  },
+  
+  checkLoginStatus() {
+    const token = wx.getStorageSync('token')
+    this.globalData.isLoggedIn = !!token
+  },
+})
+```
+
+### MobX 状态管理 (复杂场景)
+```javascript
+// store/modules/athlete.js
+import { observable, action } from 'mobx-miniprogram'
+
+export const athleteStore = observable({
+  // 状态
+  currentAthlete: null,
+  searchHistory: [],
+  
+  // 计算属性
+  get hasCurrentAthlete() {
+    return this.currentAthlete !== null
+  },
+  
+  // 方法
+  setCurrentAthlete: action(function(athlete) {
+    this.currentAthlete = athlete
+  }),
+  
+  addSearchHistory: action(function(keyword) {
+    if (!this.searchHistory.includes(keyword)) {
+      this.searchHistory.unshift(keyword)
+      if (this.searchHistory.length > 10) {
+        this.searchHistory.pop()
+      }
+    }
+  }),
+})
+```
+
+## 样式规范
+
+### CSS 变量定义
+```css
+/* assets/styles/variables.wxss */
+page {
+  /* 主题色 */
+  --color-primary: #1890ff;
+  --color-primary-light: #40a9ff;
+  --color-primary-dark: #096dd9;
+  
+  /* 功能色 */
+  --color-success: #52c41a;
+  --color-warning: #faad14;
+  --color-error: #ff4d4f;
+  
+  /* 中性色 */
+  --color-text-primary: #262626;
+  --color-text-secondary: #8c8c8c;
+  --color-text-disabled: #bfbfbf;
+  --color-border: #d9d9d9;
+  --color-background: #f5f5f5;
+  
+  /* 间距 */
+  --spacing-xs: 8rpx;
+  --spacing-sm: 16rpx;
+  --spacing-md: 24rpx;
+  --spacing-lg: 32rpx;
+  --spacing-xl: 48rpx;
+  
+  /* 圆角 */
+  --radius-sm: 8rpx;
+  --radius-md: 16rpx;
+  --radius-lg: 24rpx;
+  
+  /* 字体 */
+  --font-size-xs: 24rpx;
+  --font-size-sm: 28rpx;
+  --font-size-md: 32rpx;
+  --font-size-lg: 36rpx;
+  --font-size-xl: 40rpx;
+}
+```
+
+### BEM 命名示例
+```css
+/* components/athlete-card/athlete-card.wxss */
+.athlete-card {
+  display: flex;
+  padding: var(--spacing-md);
+  background-color: #fff;
+  border-radius: var(--radius-md);
+}
+
+.athlete-card__avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  margin-right: var(--spacing-md);
+}
+
+.athlete-card__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.athlete-card__name {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.athlete-card__name--highlight {
+  color: var(--color-primary);
+}
+
+.athlete-card--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+```
+
+## 图表使用
+
+### ECharts 组件封装
+```javascript
+// components/charts/line-chart/line-chart.js
+import * as echarts from '../../../ec-canvas/echarts'
+
+Component({
+  properties: {
+    chartData: {
+      type: Array,
+      value: [],
+    },
+  },
+
+  data: {
+    ec: {
+      lazyLoad: true,
+    },
+  },
+
+  lifetimes: {
+    ready() {
+      this.initChart()
+    },
+  },
+
+  methods: {
+    initChart() {
+      this.selectComponent('#chart').init((canvas, width, height, dpr) => {
+        const chart = echarts.init(canvas, null, {
+          width,
+          height,
+          devicePixelRatio: dpr,
+        })
+        this.setOption(chart)
+        return chart
+      })
+    },
+
+    setOption(chart) {
+      const option = {
+        xAxis: {
+          type: 'category',
+          data: this.data.chartData.map(item => item.date),
+        },
+        yAxis: {
+          type: 'value',
+        },
+        series: [{
+          data: this.data.chartData.map(item => item.value),
+          type: 'line',
+          smooth: true,
+        }],
+      }
+      chart.setOption(option)
+    },
+  },
+})
+```
+
+## 性能优化
+
+### setData 优化
+```javascript
+// ❌ 错误：更新整个数组
+this.setData({ list: newList })
+
+// ✅ 正确：只更新变化的部分
+this.setData({
+  [`list[${index}]`]: newItem,
+})
+
+// ✅ 正确：批量更新
+this.setData({
+  'athlete.name': newName,
+  'athlete.score': newScore,
+})
+```
+
+### 长列表优化
+```javascript
+// 使用 recycle-view 虚拟列表
+// 或使用分页加载
+Page({
+  data: {
+    list: [],
+    page: 1,
+    pageSize: 20,
+    hasMore: true,
+  },
+  
+  onReachBottom() {
+    if (this.data.hasMore) {
+      this.loadMore()
+    }
+  },
+  
+  async loadMore() {
+    const newData = await this.fetchData(this.data.page + 1)
+    this.setData({
+      list: [...this.data.list, ...newData],
+      page: this.data.page + 1,
+      hasMore: newData.length === this.data.pageSize,
+    })
+  },
+})
+```
+
+### 图片优化
+```html
+<!-- 使用懒加载 -->
+<image lazy-load src="{{imageUrl}}" mode="aspectFill" />
+
+<!-- 使用合适的图片尺寸 -->
+<image src="{{imageUrl}}?x-oss-process=image/resize,w_200" />
+```
+
+## 调试技巧
+
+```javascript
+// 开发环境日志
+const isDev = __wxConfig.envVersion === 'develop'
+
+function log(...args) {
+  if (isDev) {
+    console.log('[HyroxAgent]', ...args)
+  }
+}
+
+// 性能监控
+const performance = wx.getPerformance()
+const observer = performance.createObserver((entryList) => {
+  console.log('Performance entries:', entryList.getEntries())
+})
+observer.observe({ entryTypes: ['render', 'script'] })
+```

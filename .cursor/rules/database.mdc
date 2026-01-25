@@ -1,0 +1,456 @@
+# 数据库设计规范
+
+## 技术选型
+
+- **主数据库**: SQLite 3
+- **ORM**: SQLAlchemy 2.0 (异步)
+- **异步驱动**: aiosqlite
+- **数据库文件**: `data/hyrox.db`
+
+## 命名规范
+
+### 表命名
+| 规则 | 说明 | 示例 |
+|------|------|------|
+| 使用小写 | 全部小写字母 | `athletes` |
+| 使用下划线 | 多词用下划线分隔 | `race_results` |
+| 使用复数 | 表名使用复数形式 | `athletes`, `races` |
+| 避免前缀 | 不使用 tbl_ 等前缀 | ❌ `tbl_athletes` |
+
+### 字段命名
+| 规则 | 说明 | 示例 |
+|------|------|------|
+| 使用小写 | 全部小写字母 | `first_name` |
+| 使用下划线 | 多词用下划线分隔 | `created_at` |
+| 布尔字段 | 使用 is_/has_ 前缀 | `is_active`, `has_pro` |
+| 时间字段 | 使用 _at 后缀 | `created_at`, `updated_at` |
+| 外键字段 | 使用 _id 后缀 | `athlete_id`, `race_id` |
+
+### 索引命名
+```
+idx_{表名}_{字段名}           # 普通索引
+uq_{表名}_{字段名}            # 唯一索引
+pk_{表名}                     # 主键
+```
+
+## SQLite 特性说明
+
+### 数据类型映射
+| Python/通用类型 | SQLite 类型 | 说明 |
+|----------------|-------------|------|
+| int | INTEGER | 整数 |
+| float | REAL | 浮点数 |
+| str | TEXT | 字符串 |
+| bool | INTEGER | 0/1 表示 |
+| datetime | TEXT | ISO 8601 格式存储 |
+| dict/list | TEXT | JSON 序列化存储 |
+
+### 自增主键
+```python
+# SQLite 使用 INTEGER PRIMARY KEY 自动自增
+id = Column(Integer, primary_key=True)  # 自动 AUTOINCREMENT
+```
+
+### JSON 字段处理
+```python
+import json
+from sqlalchemy import Column, Text
+
+class JsonField:
+    """JSON 字段序列化"""
+    
+    @staticmethod
+    def serialize(data: dict | list) -> str:
+        return json.dumps(data, ensure_ascii=False)
+    
+    @staticmethod
+    def deserialize(text: str) -> dict | list:
+        return json.loads(text) if text else None
+
+# 在模型中使用 TEXT 存储 JSON
+recommendations = Column(Text, comment="JSON 格式建议")
+```
+
+## 表结构设计
+
+### 基础字段模板
+每个表必须包含以下基础字段：
+
+```python
+from sqlalchemy import Column, Integer, DateTime, Boolean
+from sqlalchemy.sql import func
+
+class TimestampMixin:
+    """时间戳混入类"""
+    created_at = Column(DateTime, server_default=func.now(), comment="创建时间")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="更新时间")
+```
+
+### 核心表设计
+
+#### races (比赛表)
+```sql
+CREATE TABLE races (
+    id INTEGER PRIMARY KEY,
+    season INTEGER NOT NULL,
+    location TEXT NOT NULL,
+    file_last_modified TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    UNIQUE (season, location)
+);
+
+CREATE INDEX idx_races_season ON races (season);
+```
+
+#### results (比赛成绩表)
+```sql
+CREATE TABLE results (
+    id INTEGER PRIMARY KEY,
+    
+    -- 比赛信息
+    season INTEGER NOT NULL,
+    location TEXT NOT NULL,
+    event_id TEXT,
+    event_name TEXT,
+    
+    -- 选手信息
+    name TEXT NOT NULL,
+    nationality TEXT,
+    gender TEXT,
+    division TEXT,
+    age_group TEXT,
+    
+    -- 总成绩 (单位: 分钟)
+    total_time REAL,
+    run_time REAL,
+    work_time REAL,
+    roxzone_time REAL,
+    
+    -- 跑步分段
+    run1_time REAL,
+    run2_time REAL,
+    run3_time REAL,
+    run4_time REAL,
+    run5_time REAL,
+    run6_time REAL,
+    run7_time REAL,
+    run8_time REAL,
+    
+    -- 功能站分段
+    skierg_time REAL,
+    sled_push_time REAL,
+    sled_pull_time REAL,
+    burpee_broad_jump_time REAL,
+    row_erg_time REAL,
+    farmers_carry_time REAL,
+    sandbag_lunges_time REAL,
+    wall_balls_time REAL,
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    UNIQUE (season, location, name, event_id)
+);
+
+CREATE INDEX idx_results_name ON results (name);
+CREATE INDEX idx_results_season_location ON results (season, location);
+CREATE INDEX idx_results_nationality ON results (nationality);
+CREATE INDEX idx_results_total_time ON results (total_time);
+```
+
+#### sync_log (同步日志表)
+```sql
+CREATE TABLE sync_log (
+    id INTEGER PRIMARY KEY,
+    season INTEGER,
+    location TEXT,
+    status TEXT NOT NULL,  -- success, failed
+    records_count INTEGER DEFAULT 0,
+    error_message TEXT,
+    synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_sync_log_season ON sync_log (season);
+CREATE INDEX idx_sync_log_status ON sync_log (status);
+```
+
+## SQLAlchemy 模型
+
+### 模型定义
+```python
+# app/db/models.py
+from sqlalchemy import Column, Integer, String, Float, DateTime, Index, Text
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.sql import func
+
+class Base(DeclarativeBase):
+    pass
+
+class TimestampMixin:
+    """时间戳混入类"""
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+class Race(Base, TimestampMixin):
+    """比赛模型"""
+    __tablename__ = "races"
+    
+    id = Column(Integer, primary_key=True)
+    season = Column(Integer, nullable=False)
+    location = Column(String(50), nullable=False)
+    file_last_modified = Column(String(50))
+    
+    __table_args__ = (
+        Index("idx_races_season_location", "season", "location", unique=True),
+    )
+
+class Result(Base):
+    """比赛成绩模型"""
+    __tablename__ = "results"
+    
+    id = Column(Integer, primary_key=True)
+    season = Column(Integer, nullable=False)
+    location = Column(String(50), nullable=False)
+    event_id = Column(String(50))
+    event_name = Column(String(100))
+    
+    name = Column(String(100), nullable=False, index=True)
+    nationality = Column(String(20))
+    gender = Column(String(10))
+    division = Column(String(20))
+    age_group = Column(String(20))
+    
+    total_time = Column(Float)
+    run_time = Column(Float)
+    work_time = Column(Float)
+    roxzone_time = Column(Float)
+    
+    # 跑步分段
+    run1_time = Column(Float)
+    run2_time = Column(Float)
+    run3_time = Column(Float)
+    run4_time = Column(Float)
+    run5_time = Column(Float)
+    run6_time = Column(Float)
+    run7_time = Column(Float)
+    run8_time = Column(Float)
+    
+    # 功能站分段
+    skierg_time = Column(Float)
+    sled_push_time = Column(Float)
+    sled_pull_time = Column(Float)
+    burpee_broad_jump_time = Column(Float)
+    row_erg_time = Column(Float)
+    farmers_carry_time = Column(Float)
+    sandbag_lunges_time = Column(Float)
+    wall_balls_time = Column(Float)
+    
+    created_at = Column(DateTime, server_default=func.now())
+    
+    __table_args__ = (
+        Index("idx_results_season_location", "season", "location"),
+        Index("idx_results_nationality", "nationality"),
+    )
+
+class SyncLog(Base):
+    """同步日志模型"""
+    __tablename__ = "sync_log"
+    
+    id = Column(Integer, primary_key=True)
+    season = Column(Integer)
+    location = Column(String(50))
+    status = Column(String(20), nullable=False)
+    records_count = Column(Integer, default=0)
+    error_message = Column(Text)
+    synced_at = Column(DateTime, server_default=func.now())
+```
+
+## 数据库连接
+
+### 异步连接配置
+```python
+# app/db/database.py
+from pathlib import Path
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+
+# 数据库文件路径
+DB_PATH = Path(__file__).parent.parent.parent.parent / "data" / "hyrox.db"
+DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
+
+# 创建异步引擎
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=False,  # 生产环境设为 False
+    connect_args={"check_same_thread": False}  # SQLite 特有配置
+)
+
+# 创建异步会话工厂
+async_session_maker = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
+
+async def get_db() -> AsyncSession:
+    """获取数据库会话"""
+    async with async_session_maker() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+async def init_db():
+    """初始化数据库表"""
+    from app.db.models import Base
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+```
+
+## 索引策略
+
+### 索引原则
+1. **主键自动索引**: 无需额外创建
+2. **常用查询字段**: 根据 WHERE 条件创建
+3. **排序字段**: ORDER BY 常用字段
+4. **避免过多索引**: 影响写入性能
+
+### 本项目核心索引
+```sql
+-- 运动员搜索 (最常用)
+CREATE INDEX idx_results_name ON results (name);
+
+-- 按比赛筛选
+CREATE INDEX idx_results_season_location ON results (season, location);
+
+-- 按国籍筛选
+CREATE INDEX idx_results_nationality ON results (nationality);
+
+-- 按成绩排序
+CREATE INDEX idx_results_total_time ON results (total_time);
+```
+
+## 查询优化
+
+### 使用参数化查询
+```python
+# ✅ 正确：参数化查询
+from sqlalchemy import select
+
+stmt = select(Result).where(Result.name == name)
+result = await session.execute(stmt)
+
+# ❌ 错误：字符串拼接 (SQL 注入风险)
+stmt = f"SELECT * FROM results WHERE name = '{name}'"
+```
+
+### 只查询需要的字段
+```python
+# ✅ 只查询需要的字段
+from sqlalchemy import select
+
+stmt = select(Result.id, Result.name, Result.total_time)
+result = await session.execute(stmt)
+
+# ❌ 查询所有字段
+stmt = select(Result)
+```
+
+### 使用 LIMIT 分页
+```python
+# 分页查询
+stmt = (
+    select(Result)
+    .where(Result.name.contains(keyword))
+    .order_by(Result.total_time)
+    .limit(20)
+    .offset(0)
+)
+```
+
+### 批量操作
+```python
+# ✅ 批量插入
+from sqlalchemy import insert
+
+stmt = insert(Result).values([
+    {"name": "张伟", "nationality": "CHN", ...},
+    {"name": "李明", "nationality": "CHN", ...},
+])
+await session.execute(stmt)
+
+# ✅ 批量更新 - 先删除再插入 (SQLite 推荐方式)
+await session.execute(
+    delete(Result).where(Result.season == season, Result.location == location)
+)
+await session.execute(insert(Result).values(records))
+```
+
+## 事务管理
+
+```python
+# 显式事务
+async with async_session_maker() as session:
+    async with session.begin():
+        # 事务内的操作
+        session.add(race)
+        session.add_all(results)
+    # 自动提交
+```
+
+## 数据备份
+
+### 备份策略
+| 类型 | 频率 | 说明 |
+|------|------|------|
+| 文件备份 | 每天 | 复制 hyrox.db 文件 |
+| 导出 CSV | 按需 | 使用 pandas 导出 |
+
+### 备份命令
+```bash
+# 复制数据库文件
+cp data/hyrox.db data/backup/hyrox_$(date +%Y%m%d).db
+
+# 保留最近 7 天
+find data/backup -name "hyrox_*.db" -mtime +7 -delete
+```
+
+## SQLite 性能优化
+
+### WAL 模式
+```python
+# 启用 WAL 模式提升并发性能
+async with engine.begin() as conn:
+    await conn.execute(text("PRAGMA journal_mode=WAL"))
+    await conn.execute(text("PRAGMA synchronous=NORMAL"))
+```
+
+### 定期优化
+```sql
+-- 重建索引和回收空间
+VACUUM;
+
+-- 分析表统计信息
+ANALYZE;
+```
+
+## 与 Pandas 集成
+
+```python
+import pandas as pd
+from sqlalchemy import create_engine
+
+# 同步引擎 (用于 pandas)
+sync_engine = create_engine(f"sqlite:///{DB_PATH}")
+
+# 读取数据到 DataFrame
+df = pd.read_sql("SELECT * FROM results WHERE season = 8", sync_engine)
+
+# DataFrame 写入数据库
+df.to_sql("results", sync_engine, if_exists="append", index=False)
+```

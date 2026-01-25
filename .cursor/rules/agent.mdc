@@ -1,0 +1,399 @@
+# Agent 开发规则
+
+## 架构概述
+
+基于 LangChain 构建的多 Agent 系统，采用 ReAct (Reasoning + Acting) 模式。
+
+```
+用户请求
+    ↓
+路由层 (根据意图分发)
+    ↓
+┌─────────────────────────────────────┐
+│  AnalysisAgent  │  VisualizationAgent  │  ReportAgent  │
+└─────────────────────────────────────┘
+    ↓
+工具层 (Tools)
+    ↓
+数据层 (Services/Database)
+```
+
+## 目录结构
+
+```
+backend/app/agents/
+├── __init__.py
+├── base_agent.py           # Agent 基类
+├── analysis_agent.py       # 数据分析 Agent
+├── visualization_agent.py  # 可视化 Agent
+├── report_agent.py         # 报告生成 Agent
+├── router.py               # Agent 路由
+├── tools/                  # 工具集
+│   ├── __init__.py
+│   ├── data_tools.py       # 数据查询工具
+│   ├── chart_tools.py      # 图表生成工具
+│   ├── calculation_tools.py # 计算工具
+│   └── export_tools.py     # 导出工具
+└── prompts/                # 提示词模板
+    ├── __init__.py
+    ├── system_prompts.py   # 系统提示词
+    ├── analysis.py         # 分析提示词
+    └── report.py           # 报告提示词
+```
+
+## Agent 类型定义
+
+### 1. AnalysisAgent - 数据分析
+- **职责**: 分析运动员成绩、对比表现、发现趋势
+- **输入**: 运动员名称、比赛信息、分析维度
+- **输出**: 结构化分析结果 (JSON)
+
+### 2. VisualizationAgent - 可视化
+- **职责**: 生成图表配置、推荐可视化方案
+- **输入**: 数据集、图表类型偏好
+- **输出**: ECharts 配置对象
+
+### 3. ReportAgent - 报告生成
+- **职责**: 生成训练建议、比赛分析报告
+- **输入**: 分析结果、用户偏好
+- **输出**: Markdown 格式报告
+
+## Agent 基类实现
+
+```python
+# app/agents/base_agent.py
+from abc import ABC, abstractmethod
+from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.tools import BaseTool
+from app.config.settings import settings
+
+class BaseAgent(ABC):
+    """Agent 基类"""
+    
+    def __init__(
+        self,
+        model_name: str = "gpt-4o-mini",
+        temperature: float = 0.1,
+        max_tokens: int = 4096,
+    ):
+        self.llm = ChatOpenAI(
+            model=model_name,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            api_key=settings.OPENAI_API_KEY,
+        )
+        self.tools = self._get_tools()
+        self.prompt = self._get_prompt()
+        self.agent = self._create_agent()
+    
+    @abstractmethod
+    def _get_tools(self) -> list[BaseTool]:
+        """获取 Agent 可用的工具列表"""
+        pass
+    
+    @abstractmethod
+    def _get_prompt(self) -> ChatPromptTemplate:
+        """获取 Agent 的提示词模板"""
+        pass
+    
+    def _create_agent(self) -> AgentExecutor:
+        """创建 Agent 执行器"""
+        agent = create_openai_tools_agent(
+            llm=self.llm,
+            tools=self.tools,
+            prompt=self.prompt,
+        )
+        return AgentExecutor(
+            agent=agent,
+            tools=self.tools,
+            verbose=settings.DEBUG,
+            max_iterations=10,
+            handle_parsing_errors=True,
+        )
+    
+    async def run(self, input_text: str, **kwargs) -> dict:
+        """执行 Agent"""
+        try:
+            result = await self.agent.ainvoke({
+                "input": input_text,
+                **kwargs
+            })
+            return {
+                "success": True,
+                "output": result.get("output"),
+                "intermediate_steps": result.get("intermediate_steps", []),
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "output": None,
+            }
+```
+
+## 工具开发规范
+
+### 工具定义模板
+```python
+# app/agents/tools/data_tools.py
+from langchain.tools import tool
+from pydantic import BaseModel, Field
+from app.services.athlete_service import AthleteService
+
+class SearchAthleteInput(BaseModel):
+    """搜索运动员的输入参数"""
+    name: str = Field(description="运动员姓名，支持模糊匹配")
+    season: int | None = Field(default=None, description="赛季编号，1-8")
+
+@tool(args_schema=SearchAthleteInput)
+async def search_athlete(name: str, season: int | None = None) -> str:
+    """
+    搜索运动员信息。
+    
+    根据姓名搜索运动员，返回匹配的运动员列表及其基本信息。
+    可以指定赛季筛选特定赛季的参赛记录。
+    """
+    service = AthleteService()
+    athletes = await service.search_by_name(name, season=season)
+    
+    if not athletes:
+        return f"未找到名为 '{name}' 的运动员"
+    
+    # 格式化返回结果
+    result = []
+    for athlete in athletes[:10]:  # 限制返回数量
+        result.append({
+            "name": athlete.name,
+            "nationality": athlete.nationality,
+            "total_races": athlete.total_races,
+            "best_time": athlete.best_time,
+        })
+    
+    return json.dumps(result, ensure_ascii=False, indent=2)
+```
+
+### 工具开发原则
+1. **明确的参数定义**: 使用 Pydantic 定义输入 Schema
+2. **详细的文档字符串**: LLM 依赖文档理解工具用途
+3. **返回字符串格式**: 工具输出必须是字符串
+4. **错误处理**: 返回友好的错误信息
+5. **结果限制**: 避免返回过大的数据
+
+### 常用工具列表
+| 工具名 | 用途 | 返回格式 |
+|--------|------|----------|
+| search_athlete | 搜索运动员 | JSON 列表 |
+| get_athlete_races | 获取比赛记录 | JSON 列表 |
+| get_race_stats | 获取比赛统计 | JSON 对象 |
+| compare_athletes | 对比运动员 | JSON 对象 |
+| calculate_progress | 计算进步幅度 | JSON 对象 |
+| generate_chart | 生成图表配置 | ECharts JSON |
+
+## 提示词工程
+
+### 提示词模板结构
+```python
+# app/agents/prompts/analysis.py
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+ANALYSIS_SYSTEM_PROMPT = """你是一个专业的 HYROX 运动数据分析师。
+
+## 你的能力
+- 分析运动员的比赛成绩和表现趋势
+- 识别运动员的强项和弱项
+- 提供针对性的训练建议
+- 对比不同运动员的表现
+
+## 数据说明
+- HYROX 比赛包含 8 个功能性训练站点
+- 每个站点之间有 1km 跑步
+- 总距离约 8km 跑步 + 8 个训练站
+- 成绩以分钟为单位
+
+## 站点说明
+1. SkiErg (1000m)
+2. Sled Push (50m)
+3. Sled Pull (50m)
+4. Burpee Broad Jumps (80m)
+5. Rowing (1000m)
+6. Farmers Carry (200m)
+7. Sandbag Lunges (100m)
+8. Wall Balls (100次)
+
+## 输出要求
+- 使用中文回答
+- 分析要具体，引用实际数据
+- 建议要可执行
+- 输出 JSON 格式
+"""
+
+ANALYSIS_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", ANALYSIS_SYSTEM_PROMPT),
+    MessagesPlaceholder(variable_name="chat_history", optional=True),
+    ("human", "{input}"),
+    MessagesPlaceholder(variable_name="agent_scratchpad"),
+])
+```
+
+### 提示词最佳实践
+1. **角色定义**: 明确 Agent 的专业领域
+2. **能力边界**: 说明能做什么、不能做什么
+3. **领域知识**: 提供必要的背景信息
+4. **输出格式**: 明确指定输出结构
+5. **示例 (Few-shot)**: 提供 1-2 个示例
+
+## Token 使用策略
+
+### 限制规则
+| 场景 | 最大 Token |
+|------|-----------|
+| 单次工具调用 | 2,000 |
+| Agent 单轮对话 | 8,000 |
+| 上下文历史 | 4,000 |
+| 输出限制 | 4,096 |
+
+### 优化策略
+```python
+# 压缩历史对话
+def compress_history(messages: list, max_tokens: int = 4000) -> list:
+    """压缩对话历史，保留最近的消息"""
+    # 使用 tiktoken 计算 token
+    import tiktoken
+    encoder = tiktoken.encoding_for_model("gpt-4")
+    
+    total_tokens = 0
+    compressed = []
+    
+    for msg in reversed(messages):
+        msg_tokens = len(encoder.encode(msg.content))
+        if total_tokens + msg_tokens > max_tokens:
+            break
+        compressed.insert(0, msg)
+        total_tokens += msg_tokens
+    
+    return compressed
+```
+
+## 流式输出
+
+```python
+# 流式输出实现
+from langchain.callbacks import AsyncIteratorCallbackHandler
+
+async def stream_agent_response(agent: BaseAgent, input_text: str):
+    """流式输出 Agent 响应"""
+    callback = AsyncIteratorCallbackHandler()
+    
+    task = asyncio.create_task(
+        agent.agent.ainvoke(
+            {"input": input_text},
+            config={"callbacks": [callback]}
+        )
+    )
+    
+    async for token in callback.aiter():
+        yield token
+    
+    await task
+```
+
+## 错误处理
+
+### 错误类型
+```python
+# app/agents/exceptions.py
+class AgentError(Exception):
+    """Agent 基础异常"""
+    pass
+
+class ToolExecutionError(AgentError):
+    """工具执行错误"""
+    pass
+
+class TokenLimitError(AgentError):
+    """Token 超限错误"""
+    pass
+
+class MaxIterationsError(AgentError):
+    """最大迭代次数错误"""
+    pass
+```
+
+### 重试策略
+```python
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+)
+async def execute_with_retry(agent: BaseAgent, input_text: str):
+    """带重试的 Agent 执行"""
+    return await agent.run(input_text)
+```
+
+## 测试规范
+
+### 工具单元测试
+```python
+# tests/unit/test_data_tools.py
+import pytest
+from app.agents.tools.data_tools import search_athlete
+
+@pytest.mark.asyncio
+async def test_search_athlete_found():
+    """测试搜索到运动员"""
+    result = await search_athlete("Zhang Wei", season=7)
+    assert "Zhang Wei" in result
+
+@pytest.mark.asyncio
+async def test_search_athlete_not_found():
+    """测试未找到运动员"""
+    result = await search_athlete("NonExistentAthlete")
+    assert "未找到" in result
+```
+
+### Agent 集成测试
+```python
+# tests/integration/test_analysis_agent.py
+import pytest
+from app.agents.analysis_agent import AnalysisAgent
+
+@pytest.mark.asyncio
+async def test_analysis_agent_basic():
+    """测试分析 Agent 基本功能"""
+    agent = AnalysisAgent()
+    result = await agent.run("分析运动员张伟的最近比赛表现")
+    
+    assert result["success"] is True
+    assert result["output"] is not None
+```
+
+## 监控和调试
+
+### 日志记录
+```python
+import logging
+from langchain.callbacks import FileCallbackHandler
+
+logger = logging.getLogger("agents")
+
+# 记录 Agent 执行过程
+file_handler = FileCallbackHandler("agent_logs.txt")
+agent_executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    callbacks=[file_handler],
+)
+```
+
+### LangSmith 集成 (可选)
+```python
+# 启用 LangSmith 追踪
+import os
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_API_KEY"] = "your-api-key"
+os.environ["LANGCHAIN_PROJECT"] = "hyrox-agent"
+```

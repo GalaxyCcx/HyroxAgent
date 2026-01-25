@@ -1,0 +1,612 @@
+# 安全规范
+
+## 安全原则
+
+1. **最小权限原则**: 只授予必要的最小权限
+2. **纵深防御**: 多层安全防护
+3. **安全默认**: 默认配置应该是安全的
+4. **失败安全**: 出错时倾向于拒绝访问
+
+## 认证与授权
+
+### JWT 认证
+
+#### Token 结构
+```python
+# JWT Payload
+{
+    "sub": "user_id",           # 用户ID
+    "exp": 1705747200,          # 过期时间
+    "iat": 1705660800,          # 签发时间
+    "type": "access",           # Token类型: access/refresh
+    "roles": ["user"],          # 用户角色
+}
+```
+
+#### Token 配置
+```python
+# app/core/security.py
+from datetime import datetime, timedelta
+from jose import jwt, JWTError
+from passlib.context import CryptContext
+from app.config.settings import settings
+
+# 密码加密上下文
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Token 配置
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 7
+ALGORITHM = "HS256"
+
+def create_access_token(data: dict) -> str:
+    """创建访问令牌"""
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode = data.copy()
+    to_encode.update({
+        "exp": expire,
+        "type": "access",
+    })
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+def create_refresh_token(data: dict) -> str:
+    """创建刷新令牌"""
+    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode = data.copy()
+    to_encode.update({
+        "exp": expire,
+        "type": "refresh",
+    })
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_token(token: str, token_type: str = "access") -> dict:
+    """验证令牌"""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != token_type:
+            raise JWTError("Invalid token type")
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="Could not validate credentials"
+        )
+```
+
+#### 认证依赖
+```python
+# app/api/deps.py
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from app.core.security import verify_token
+from app.models.schemas import TokenPayload
+
+security = HTTPBearer()
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> TokenPayload:
+    """获取当前用户"""
+    token = credentials.credentials
+    payload = verify_token(token)
+    return TokenPayload(**payload)
+
+async def get_current_active_user(
+    current_user: TokenPayload = Depends(get_current_user)
+) -> TokenPayload:
+    """获取当前活跃用户"""
+    if not current_user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+def require_roles(*roles: str):
+    """角色权限装饰器"""
+    async def role_checker(
+        current_user: TokenPayload = Depends(get_current_user)
+    ):
+        if not any(role in current_user.roles for role in roles):
+            raise HTTPException(
+                status_code=403,
+                detail="Insufficient permissions"
+            )
+        return current_user
+    return role_checker
+```
+
+### 微信小程序认证
+
+```python
+# app/core/wechat_auth.py
+import httpx
+from app.config.settings import settings
+
+async def wechat_login(code: str) -> dict:
+    """微信登录"""
+    url = "https://api.weixin.qq.com/sns/jscode2session"
+    params = {
+        "appid": settings.WECHAT_APP_ID,
+        "secret": settings.WECHAT_APP_SECRET,
+        "js_code": code,
+        "grant_type": "authorization_code",
+    }
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, params=params)
+        data = response.json()
+        
+        if "errcode" in data:
+            raise HTTPException(
+                status_code=400,
+                detail=f"WeChat login failed: {data['errmsg']}"
+            )
+        
+        return {
+            "openid": data["openid"],
+            "session_key": data["session_key"],
+            "unionid": data.get("unionid"),
+        }
+```
+
+## 密码安全
+
+### 密码规则
+```python
+import re
+from pydantic import validator
+
+class PasswordMixin:
+    """密码验证混入"""
+    
+    @validator("password")
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("密码长度至少8位")
+        if len(v) > 128:
+            raise ValueError("密码长度最多128位")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("密码需要包含大写字母")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("密码需要包含小写字母")
+        if not re.search(r"\d", v):
+            raise ValueError("密码需要包含数字")
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
+            raise ValueError("密码需要包含特殊字符")
+        return v
+```
+
+### 密码存储
+```python
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__rounds=12  # 加密轮数
+)
+
+def hash_password(password: str) -> str:
+    """哈希密码"""
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """验证密码"""
+    return pwd_context.verify(plain_password, hashed_password)
+```
+
+## 敏感信息处理
+
+### 敏感信息定义
+| 类型 | 级别 | 处理方式 |
+|------|------|----------|
+| 密码 | 高 | 不存储明文，使用 bcrypt 哈希 |
+| API Key | 高 | 环境变量，不提交代码 |
+| 用户手机号 | 中 | 脱敏存储或加密 |
+| 用户邮箱 | 中 | 脱敏显示 |
+| 身份证号 | 高 | 加密存储 |
+| session_key | 高 | 服务端存储，不返回客户端 |
+
+### 数据脱敏
+```python
+# app/utils/masking.py
+
+def mask_phone(phone: str) -> str:
+    """手机号脱敏: 138****8888"""
+    if not phone or len(phone) < 11:
+        return phone
+    return phone[:3] + "****" + phone[-4:]
+
+def mask_email(email: str) -> str:
+    """邮箱脱敏: a**@example.com"""
+    if not email or "@" not in email:
+        return email
+    local, domain = email.split("@")
+    if len(local) <= 2:
+        masked_local = local[0] + "*"
+    else:
+        masked_local = local[0] + "**" + local[-1]
+    return f"{masked_local}@{domain}"
+
+def mask_id_card(id_card: str) -> str:
+    """身份证脱敏: 110***********1234"""
+    if not id_card or len(id_card) < 18:
+        return id_card
+    return id_card[:3] + "***********" + id_card[-4:]
+
+def mask_name(name: str) -> str:
+    """姓名脱敏: 张*伟"""
+    if not name:
+        return name
+    if len(name) == 2:
+        return name[0] + "*"
+    return name[0] + "*" * (len(name) - 2) + name[-1]
+```
+
+### 数据加密
+```python
+# app/core/encryption.py
+from cryptography.fernet import Fernet
+from app.config.settings import settings
+
+class DataEncryptor:
+    """数据加密器"""
+    
+    def __init__(self):
+        self.fernet = Fernet(settings.ENCRYPTION_KEY.encode())
+    
+    def encrypt(self, data: str) -> str:
+        """加密数据"""
+        return self.fernet.encrypt(data.encode()).decode()
+    
+    def decrypt(self, encrypted_data: str) -> str:
+        """解密数据"""
+        return self.fernet.decrypt(encrypted_data.encode()).decode()
+
+encryptor = DataEncryptor()
+
+# 使用示例
+encrypted_phone = encryptor.encrypt("13888888888")
+original_phone = encryptor.decrypt(encrypted_phone)
+```
+
+## 输入验证
+
+### SQL 注入防护
+```python
+# ✅ 使用参数化查询 (SQLAlchemy ORM)
+from sqlalchemy import select
+
+# 正确方式
+stmt = select(User).where(User.name == name)
+
+# ❌ 危险：字符串拼接
+stmt = f"SELECT * FROM users WHERE name = '{name}'"  # 不要这样做！
+```
+
+### XSS 防护
+```python
+# app/utils/sanitize.py
+import html
+import bleach
+
+def sanitize_html(content: str) -> str:
+    """清理 HTML 内容"""
+    allowed_tags = ['p', 'br', 'strong', 'em', 'a', 'ul', 'ol', 'li']
+    allowed_attrs = {'a': ['href', 'title']}
+    return bleach.clean(
+        content,
+        tags=allowed_tags,
+        attributes=allowed_attrs,
+        strip=True
+    )
+
+def escape_html(content: str) -> str:
+    """转义 HTML 特殊字符"""
+    return html.escape(content)
+```
+
+### 请求验证
+```python
+from pydantic import BaseModel, Field, validator
+import re
+
+class UserInput(BaseModel):
+    """用户输入验证"""
+    name: str = Field(..., min_length=1, max_length=50)
+    email: str = Field(..., regex=r"^[\w\.-]+@[\w\.-]+\.\w+$")
+    
+    @validator("name")
+    def validate_name(cls, v):
+        # 移除潜在的恶意字符
+        v = re.sub(r'[<>"\';]', '', v)
+        return v.strip()
+```
+
+## 请求安全
+
+### 限流配置
+```python
+# app/middleware/rate_limit.py
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+limiter = Limiter(key_func=get_remote_address)
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={
+            "code": 42900,
+            "message": "请求过于频繁，请稍后再试",
+            "data": {"retry_after": exc.detail}
+        }
+    )
+
+# 应用限流
+@router.post("/login")
+@limiter.limit("5/minute")
+async def login(request: Request):
+    pass
+
+@router.post("/analysis/request")
+@limiter.limit("10/minute")
+async def request_analysis(request: Request):
+    pass
+```
+
+### CORS 安全配置
+```python
+from fastapi.middleware.cors import CORSMiddleware
+
+# 生产环境配置
+ALLOWED_ORIGINS = [
+    "https://servicewechat.com",  # 微信小程序域名
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
+    max_age=600,
+)
+```
+
+### 请求签名验证
+```python
+# app/core/signature.py
+import hashlib
+import hmac
+import time
+from fastapi import Request, HTTPException
+
+def verify_signature(request: Request) -> bool:
+    """验证请求签名"""
+    timestamp = request.headers.get("X-Timestamp")
+    nonce = request.headers.get("X-Nonce")
+    signature = request.headers.get("X-Signature")
+    
+    if not all([timestamp, nonce, signature]):
+        return False
+    
+    # 检查时间戳（5分钟内有效）
+    if abs(time.time() - int(timestamp)) > 300:
+        return False
+    
+    # 构建签名字符串
+    sign_str = f"{timestamp}{nonce}{request.url.path}"
+    expected_signature = hmac.new(
+        settings.API_SECRET.encode(),
+        sign_str.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    
+    return hmac.compare_digest(signature, expected_signature)
+```
+
+## 日志安全
+
+### 安全日志记录
+```python
+# app/core/audit_log.py
+import logging
+from datetime import datetime
+from app.models.database import AuditLog
+
+audit_logger = logging.getLogger("audit")
+
+class AuditLogger:
+    """审计日志记录器"""
+    
+    @staticmethod
+    async def log(
+        action: str,
+        user_id: int | None,
+        resource: str,
+        resource_id: str | None,
+        details: dict | None = None,
+        ip_address: str | None = None,
+    ):
+        """记录审计日志"""
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "action": action,
+            "user_id": user_id,
+            "resource": resource,
+            "resource_id": resource_id,
+            "details": details,
+            "ip_address": ip_address,
+        }
+        
+        # 记录到日志文件
+        audit_logger.info(log_entry)
+        
+        # 记录到数据库
+        audit_record = AuditLog(**log_entry)
+        # await session.add(audit_record)
+
+# 使用示例
+await AuditLogger.log(
+    action="LOGIN",
+    user_id=123,
+    resource="auth",
+    resource_id=None,
+    ip_address=request.client.host
+)
+```
+
+### 日志脱敏
+```python
+import re
+import json
+
+class SensitiveDataFilter(logging.Filter):
+    """敏感数据过滤器"""
+    
+    PATTERNS = [
+        (r'"password"\s*:\s*"[^"]*"', '"password": "***"'),
+        (r'"api_key"\s*:\s*"[^"]*"', '"api_key": "***"'),
+        (r'"token"\s*:\s*"[^"]*"', '"token": "***"'),
+        (r'\d{11}', '***'),  # 手机号
+    ]
+    
+    def filter(self, record):
+        if isinstance(record.msg, str):
+            for pattern, replacement in self.PATTERNS:
+                record.msg = re.sub(pattern, replacement, record.msg)
+        return True
+```
+
+## 依赖安全
+
+### 依赖扫描
+```yaml
+# .github/workflows/security.yml
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 0'  # 每周日运行
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install safety
+        run: pip install safety
+      
+      - name: Run safety check
+        run: |
+          cd backend
+          safety check -r requirements.txt
+      
+      - name: Run bandit
+        run: |
+          pip install bandit
+          bandit -r backend/app/ -f json -o bandit-report.json
+      
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: bandit-report.json
+```
+
+### 安全更新
+```bash
+# 检查过时的依赖
+pip list --outdated
+
+# 检查已知漏洞
+pip install safety
+safety check
+
+# 更新依赖
+pip install --upgrade package_name
+```
+
+## 环境安全
+
+### Secret 管理
+```python
+# 使用环境变量
+import os
+SECRET_KEY = os.environ.get("SECRET_KEY")
+
+# 使用 Secret Manager (生产环境)
+# 阿里云 KMS
+from alibabacloud_kms20160120.client import Client
+from alibabacloud_kms20160120 import models
+
+def get_secret(secret_name: str) -> str:
+    client = Client(config)
+    request = models.GetSecretValueRequest(secret_name=secret_name)
+    response = client.get_secret_value(request)
+    return response.body.secret_data
+```
+
+### 敏感配置检查
+```python
+# app/config/settings.py
+from pydantic_settings import BaseSettings
+from pydantic import validator
+
+class Settings(BaseSettings):
+    SECRET_KEY: str
+    DB_PASSWORD: str
+    OPENAI_API_KEY: str
+    
+    @validator("SECRET_KEY")
+    def validate_secret_key(cls, v):
+        if len(v) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters")
+        if v == "your-secret-key":
+            raise ValueError("SECRET_KEY cannot be default value")
+        return v
+    
+    @validator("DB_PASSWORD")
+    def validate_db_password(cls, v):
+        if v in ["password", "123456", "admin"]:
+            raise ValueError("Weak database password detected")
+        return v
+```
+
+## 安全检查清单
+
+### 开发阶段
+- [ ] 所有输入都经过验证
+- [ ] 使用参数化查询防止 SQL 注入
+- [ ] 敏感数据已加密存储
+- [ ] 密码使用 bcrypt 哈希
+- [ ] API 端点有适当的认证
+- [ ] 敏感信息不在日志中输出
+- [ ] 错误信息不泄露系统细节
+
+### 部署阶段
+- [ ] HTTPS 已启用
+- [ ] 安全 Headers 已配置
+- [ ] CORS 已正确配置
+- [ ] 限流已启用
+- [ ] 日志审计已配置
+- [ ] 依赖漏洞已扫描
+- [ ] 敏感配置使用环境变量
+
+### 运维阶段
+- [ ] 定期更新依赖
+- [ ] 定期安全扫描
+- [ ] 定期审计日志检查
+- [ ] 备份加密存储
+- [ ] 访问权限定期审核

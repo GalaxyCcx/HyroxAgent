@@ -1,0 +1,30 @@
+{
+  "projectName": "HyroxAgent",
+  "version": "1.0.0",
+  "language": "zh-CN",
+  "aiAssistant": {
+    "defaultModel": "claude-3.5-sonnet",
+    "contextFiles": [
+      "docs/design/architecture.md",
+      "docs/api/API_Documentation.md"
+    ]
+  },
+  "codeStyle": {
+    "python": {
+      "formatter": "black",
+      "linter": "ruff",
+      "lineLength": 100
+    },
+    "javascript": {
+      "formatter": "prettier",
+      "linter": "eslint"
+    }
+  },
+  "paths": {
+    "backend": "./backend",
+    "frontend": "./miniprogram",
+    "docs": "./docs",
+    "tests": "./backend/tests"
+  }
+}
+

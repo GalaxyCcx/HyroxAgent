@@ -1,0 +1,519 @@
+# API 设计规范
+
+## 设计原则
+
+### RESTful 原则
+- **资源导向**: URL 表示资源，HTTP 方法表示操作
+- **无状态**: 每个请求包含完整信息，服务端不保存会话
+- **统一接口**: 一致的 URL 结构和响应格式
+- **分层系统**: 支持负载均衡、缓存等中间层
+
+## URL 设计规范
+
+### 基本规则
+```
+https://api.hyroxagent.com/api/v1/resources
+```
+
+| 规则 | 说明 | 示例 |
+|------|------|------|
+| 使用名词复数 | 资源用复数形式 | `/athletes`, `/races` |
+| 使用小写字母 | URL 全部小写 | `/athlete-records` |
+| 使用连字符 | 多词用连字符分隔 | `/race-results` |
+| 层级关系 | 嵌套表示从属关系 | `/athletes/{id}/races` |
+| 避免动词 | 用 HTTP 方法代替 | ❌ `/getAthletes` |
+
+### HTTP 方法使用
+| 方法 | 用途 | 示例 | 幂等性 |
+|------|------|------|--------|
+| GET | 获取资源 | `GET /athletes` | ✅ |
+| POST | 创建资源 | `POST /athletes` | ❌ |
+| PUT | 全量更新 | `PUT /athletes/{id}` | ✅ |
+| PATCH | 部分更新 | `PATCH /athletes/{id}` | ✅ |
+| DELETE | 删除资源 | `DELETE /athletes/{id}` | ✅ |
+
+### URL 示例
+```
+# 运动员资源
+GET    /api/v1/athletes              # 获取运动员列表
+GET    /api/v1/athletes/{id}         # 获取单个运动员
+POST   /api/v1/athletes              # 创建运动员
+PUT    /api/v1/athletes/{id}         # 更新运动员
+DELETE /api/v1/athletes/{id}         # 删除运动员
+
+# 嵌套资源
+GET    /api/v1/athletes/{id}/races   # 获取运动员的比赛记录
+GET    /api/v1/races/{id}/results    # 获取比赛的成绩列表
+
+# 操作型接口 (使用动词，例外情况)
+POST   /api/v1/athletes/{id}/follow  # 关注运动员
+POST   /api/v1/analysis/request      # 请求分析
+```
+
+## 版本控制
+
+### 版本策略
+- 在 URL 中包含版本号: `/api/v1/`, `/api/v2/`
+- 主版本号变更表示不兼容的 API 变更
+- 同时支持最近 2 个主版本
+
+### 版本迁移
+```python
+# 路由注册
+from app.api import v1, v2
+
+app.include_router(v1.router, prefix="/api/v1")
+app.include_router(v2.router, prefix="/api/v2")
+
+# 版本废弃提示 Header
+response.headers["X-API-Deprecated"] = "true"
+response.headers["X-API-Sunset-Date"] = "2025-06-01"
+```
+
+## 请求格式
+
+### Query 参数 (GET 请求)
+```
+GET /api/v1/athletes?page=1&page_size=20&name=zhang&sort_by=total_time&order=asc
+```
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| page | int | 页码，从 1 开始 |
+| page_size | int | 每页数量，默认 20，最大 100 |
+| sort_by | string | 排序字段 |
+| order | string | 排序方向: asc / desc |
+| 过滤参数 | 各类型 | 字段名作为参数名 |
+
+### Body 参数 (POST/PUT/PATCH)
+```json
+{
+  "name": "张伟",
+  "nationality": "CHN",
+  "age_group": "30-34",
+  "division": "open"
+}
+```
+
+### 参数验证
+```python
+from pydantic import BaseModel, Field, validator
+
+class AthleteCreate(BaseModel):
+    """创建运动员请求"""
+    name: str = Field(..., min_length=1, max_length=100, description="姓名")
+    nationality: str = Field(..., pattern=r"^[A-Z]{3}$", description="国籍代码")
+    age_group: str | None = Field(None, description="年龄组")
+    division: str = Field("open", description="组别")
+    
+    @validator("division")
+    def validate_division(cls, v):
+        allowed = ["open", "pro", "doubles", "pro_doubles"]
+        if v not in allowed:
+            raise ValueError(f"division 必须是 {allowed} 之一")
+        return v
+```
+
+## 响应格式
+
+### 统一响应结构
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": { },
+  "timestamp": "2025-01-20T10:30:00Z",
+  "request_id": "req_abc123"
+}
+```
+
+### 成功响应示例
+
+**单个资源**
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": 1,
+    "name": "张伟",
+    "nationality": "CHN",
+    "total_races": 5,
+    "best_time": 65.5
+  }
+}
+```
+
+**列表资源（分页）**
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "items": [
+      { "id": 1, "name": "张伟" },
+      { "id": 2, "name": "李明" }
+    ],
+    "pagination": {
+      "page": 1,
+      "page_size": 20,
+      "total": 100,
+      "total_pages": 5,
+      "has_next": true,
+      "has_prev": false
+    }
+  }
+}
+```
+
+**创建成功**
+```json
+{
+  "code": 0,
+  "message": "创建成功",
+  "data": {
+    "id": 123
+  }
+}
+```
+
+### 错误响应格式
+```json
+{
+  "code": 40001,
+  "message": "参数校验失败",
+  "data": null,
+  "errors": [
+    {
+      "field": "name",
+      "message": "姓名不能为空"
+    },
+    {
+      "field": "age_group",
+      "message": "年龄组格式不正确"
+    }
+  ],
+  "request_id": "req_abc123"
+}
+```
+
+## 错误码规范
+
+### 错误码结构
+```
+错误码格式: XXYYYY
+- XX: 错误类别
+- YYYY: 具体错误
+```
+
+### 错误码分类
+| 范围 | 类别 | 说明 |
+|------|------|------|
+| 0 | 成功 | 请求成功 |
+| 400xx | 参数错误 | 请求参数问题 |
+| 401xx | 认证错误 | 登录/Token 问题 |
+| 403xx | 权限错误 | 无权限访问 |
+| 404xx | 资源错误 | 资源不存在 |
+| 409xx | 冲突错误 | 资源冲突 |
+| 429xx | 限流错误 | 请求过于频繁 |
+| 500xx | 服务错误 | 服务端内部错误 |
+
+### 错误码定义
+```python
+# app/core/error_codes.py
+from enum import IntEnum
+
+class ErrorCode(IntEnum):
+    """错误码定义"""
+    # 成功
+    SUCCESS = 0
+    
+    # 参数错误 400xx
+    INVALID_PARAMS = 40001
+    MISSING_REQUIRED_FIELD = 40002
+    INVALID_FORMAT = 40003
+    
+    # 认证错误 401xx
+    UNAUTHORIZED = 40100
+    TOKEN_EXPIRED = 40101
+    TOKEN_INVALID = 40102
+    
+    # 权限错误 403xx
+    FORBIDDEN = 40300
+    INSUFFICIENT_PERMISSION = 40301
+    
+    # 资源错误 404xx
+    NOT_FOUND = 40400
+    ATHLETE_NOT_FOUND = 40401
+    RACE_NOT_FOUND = 40402
+    
+    # 冲突错误 409xx
+    CONFLICT = 40900
+    DUPLICATE_ENTRY = 40901
+    
+    # 限流错误 429xx
+    TOO_MANY_REQUESTS = 42900
+    RATE_LIMIT_EXCEEDED = 42901
+    
+    # 服务错误 500xx
+    INTERNAL_ERROR = 50000
+    DATABASE_ERROR = 50001
+    EXTERNAL_API_ERROR = 50002
+    AGENT_ERROR = 50003
+```
+
+### HTTP 状态码映射
+| HTTP 状态码 | 场景 |
+|-------------|------|
+| 200 | 请求成功 |
+| 201 | 创建成功 |
+| 204 | 删除成功（无内容） |
+| 400 | 参数错误 |
+| 401 | 未认证 |
+| 403 | 无权限 |
+| 404 | 资源不存在 |
+| 409 | 资源冲突 |
+| 422 | 参数校验失败 |
+| 429 | 请求过于频繁 |
+| 500 | 服务器错误 |
+
+## 分页规范
+
+### 请求参数
+```
+GET /api/v1/athletes?page=1&page_size=20
+```
+
+### 响应格式
+```json
+{
+  "data": {
+    "items": [...],
+    "pagination": {
+      "page": 1,
+      "page_size": 20,
+      "total": 256,
+      "total_pages": 13,
+      "has_next": true,
+      "has_prev": false
+    }
+  }
+}
+```
+
+### 分页实现
+```python
+from pydantic import BaseModel
+
+class PaginationParams(BaseModel):
+    """分页参数"""
+    page: int = 1
+    page_size: int = 20
+    
+    @property
+    def offset(self) -> int:
+        return (self.page - 1) * self.page_size
+
+class Pagination(BaseModel):
+    """分页信息"""
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
+    has_next: bool
+    has_prev: bool
+    
+    @classmethod
+    def create(cls, page: int, page_size: int, total: int):
+        total_pages = (total + page_size - 1) // page_size
+        return cls(
+            page=page,
+            page_size=page_size,
+            total=total,
+            total_pages=total_pages,
+            has_next=page < total_pages,
+            has_prev=page > 1,
+        )
+```
+
+## 过滤与排序
+
+### 过滤参数
+```
+GET /api/v1/athletes?nationality=CHN&division=pro&age_group=30-34
+GET /api/v1/races?season=7&location=amsterdam
+```
+
+### 范围过滤
+```
+GET /api/v1/athletes?total_time_min=60&total_time_max=90
+GET /api/v1/races?date_from=2024-01-01&date_to=2024-12-31
+```
+
+### 排序参数
+```
+GET /api/v1/athletes?sort_by=total_time&order=asc
+GET /api/v1/athletes?sort_by=created_at&order=desc
+```
+
+### 多字段排序
+```
+GET /api/v1/athletes?sort=-total_time,+name
+# - 表示降序，+ 表示升序
+```
+
+## 限流规范
+
+### 限流策略
+| 接口类型 | 限制 | 窗口 |
+|----------|------|------|
+| 普通查询 | 100 次 | 1 分钟 |
+| 写入操作 | 30 次 | 1 分钟 |
+| AI 分析 | 10 次 | 1 分钟 |
+| 登录接口 | 5 次 | 1 分钟 |
+
+### 响应头
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1705747200
+```
+
+### 超限响应
+```json
+{
+  "code": 42900,
+  "message": "请求过于频繁，请稍后再试",
+  "data": {
+    "retry_after": 30
+  }
+}
+```
+
+### 限流实现
+```python
+from fastapi import Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
+
+@router.get("/athletes")
+@limiter.limit("100/minute")
+async def list_athletes(request: Request):
+    pass
+
+@router.post("/analysis/request")
+@limiter.limit("10/minute")
+async def request_analysis(request: Request):
+    pass
+```
+
+## 接口文档
+
+### OpenAPI 规范
+```python
+from fastapi import FastAPI
+
+app = FastAPI(
+    title="HyroxAgent API",
+    description="HYROX 运动数据分析平台 API",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+)
+```
+
+### 接口描述
+```python
+@router.get(
+    "/athletes/{athlete_id}",
+    response_model=AthleteResponse,
+    summary="获取运动员详情",
+    description="根据运动员 ID 获取详细信息，包括历史比赛记录统计",
+    responses={
+        200: {"description": "成功返回运动员信息"},
+        404: {"description": "运动员不存在"},
+    },
+)
+async def get_athlete(
+    athlete_id: int = Path(..., description="运动员 ID", example=123),
+):
+    """
+    获取运动员详情
+    
+    - **athlete_id**: 运动员唯一标识
+    
+    返回运动员的基本信息和比赛统计数据
+    """
+    pass
+```
+
+## CORS 配置
+
+```python
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://servicewechat.com",  # 微信小程序
+        "http://localhost:3000",       # 本地开发
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Request-Id", "X-RateLimit-*"],
+)
+```
+
+## 请求追踪
+
+### Request ID 中间件
+```python
+import uuid
+from fastapi import Request
+
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    request_id = request.headers.get("X-Request-Id") or str(uuid.uuid4())
+    request.state.request_id = request_id
+    
+    response = await call_next(request)
+    response.headers["X-Request-Id"] = request_id
+    
+    return response
+```
+
+## 缓存策略
+
+### 缓存 Header
+```python
+from fastapi import Response
+
+@router.get("/races/{race_id}")
+async def get_race(race_id: int, response: Response):
+    # 设置缓存时间 5 分钟
+    response.headers["Cache-Control"] = "public, max-age=300"
+    response.headers["ETag"] = f'"{hash(race_data)}"'
+    return race_data
+```
+
+### 条件请求
+```python
+from fastapi import Header
+
+@router.get("/athletes/{athlete_id}")
+async def get_athlete(
+    athlete_id: int,
+    if_none_match: str | None = Header(None),
+):
+    athlete = await get_athlete_data(athlete_id)
+    etag = f'"{hash(athlete)}"'
+    
+    if if_none_match == etag:
+        return Response(status_code=304)
+    
+    return athlete
+```

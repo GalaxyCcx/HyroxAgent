@@ -1,0 +1,657 @@
+# 部署规范
+
+## 部署架构
+
+```
+                    ┌─────────────────┐
+                    │   CDN / WAF     │
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │  Load Balancer  │
+                    └────────┬────────┘
+                             │
+        ┌────────────────────┼────────────────────┐
+        │                    │                    │
+┌───────▼───────┐   ┌───────▼───────┐   ┌───────▼───────┐
+│   API Pod 1   │   │   API Pod 2   │   │   API Pod 3   │
+│   (FastAPI)   │   │   (FastAPI)   │   │   (FastAPI)   │
+└───────┬───────┘   └───────┬───────┘   └───────┬───────┘
+        │                    │                    │
+        └────────────────────┼────────────────────┘
+                             │
+        ┌────────────────────┼────────────────────┐
+        │                    │                    │
+┌───────▼───────┐   ┌───────▼───────┐   ┌───────▼───────┐
+│  PostgreSQL   │   │     Redis     │   │    Celery     │
+│   (Primary)   │   │   (Cluster)   │   │   (Workers)   │
+└───────────────┘   └───────────────┘   └───────────────┘
+```
+
+## 环境定义
+
+| 环境 | 用途 | 域名 |
+|------|------|------|
+| development | 本地开发 | localhost:8000 |
+| staging | 测试环境 | staging-api.hyroxagent.com |
+| production | 生产环境 | api.hyroxagent.com |
+
+## Docker 配置
+
+### 后端 Dockerfile
+```dockerfile
+# backend/Dockerfile
+FROM python:3.11-slim as builder
+
+WORKDIR /app
+
+# 安装依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# 生产镜像
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 从 builder 复制依赖
+COPY --from=builder /root/.local /root/.local
+ENV PATH=/root/.local/bin:$PATH
+
+# 复制应用代码
+COPY app/ ./app/
+
+# 创建非 root 用户
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# 暴露端口
+EXPOSE 8000
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# 启动命令
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### Docker Compose (开发)
+```yaml
+# deploy/docker/docker-compose.yml
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=development
+      - DB_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ../../backend/app:/app/app:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=hyrox_agent
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  celery:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    environment:
+      - APP_ENV=development
+      - DB_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - postgres
+
+volumes:
+  postgres_data:
+  redis_data:
+```
+
+### Docker Compose (生产)
+```yaml
+# deploy/docker/docker-compose.prod.yml
+version: '3.8'
+
+services:
+  api:
+    image: registry.cn-hangzhou.aliyuncs.com/hyroxagent/api:${VERSION:-latest}
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    environment:
+      - APP_ENV=production
+    env_file:
+      - .env.production
+    networks:
+      - hyrox_network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+    networks:
+      - hyrox_network
+
+networks:
+  hyrox_network:
+    driver: bridge
+```
+
+## Nginx 配置
+
+```nginx
+# deploy/docker/nginx/nginx.conf
+upstream api_servers {
+    least_conn;
+    server api:8000 weight=1;
+}
+
+server {
+    listen 80;
+    server_name api.hyroxagent.com;
+    
+    # 重定向到 HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.hyroxagent.com;
+    
+    # SSL 配置
+    ssl_certificate /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
+    ssl_prefer_server_ciphers off;
+    
+    # 安全头
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    
+    # Gzip
+    gzip on;
+    gzip_types application/json text/plain;
+    
+    # API 代理
+    location /api/ {
+        proxy_pass http://api_servers;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # 超时设置
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+    
+    # 健康检查
+    location /health {
+        proxy_pass http://api_servers/health;
+    }
+}
+```
+
+## CI/CD 配置
+
+### GitHub Actions - 后端 CI
+```yaml
+# .github/workflows/backend-ci.yml
+name: Backend CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install ruff black
+      
+      - name: Run linters
+        run: |
+          cd backend
+          ruff check app/
+          black --check app/
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: hyrox_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/hyrox_test
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          pytest --cov=app --cov-report=xml
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: backend/coverage.xml
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.cn-hangzhou.aliyuncs.com
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            registry.cn-hangzhou.aliyuncs.com/hyroxagent/api:${{ github.sha }}
+            registry.cn-hangzhou.aliyuncs.com/hyroxagent/api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+```
+
+### GitHub Actions - 后端 CD
+```yaml
+# .github/workflows/backend-cd.yml
+name: Backend CD
+
+on:
+  workflow_run:
+    workflows: ["Backend CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Production
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/hyroxagent
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --no-deps api
+            
+            # 健康检查
+            sleep 10
+            curl -f http://localhost:8000/health || exit 1
+      
+      - name: Notify Success
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "✅ HyroxAgent API deployed successfully!"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+```
+
+## 部署脚本
+
+### 部署脚本
+```bash
+#!/bin/bash
+# deploy/scripts/deploy.sh
+
+set -e
+
+VERSION=${1:-latest}
+ENV=${2:-production}
+
+echo "Deploying version: $VERSION to $ENV"
+
+# 拉取最新镜像
+docker pull registry.cn-hangzhou.aliyuncs.com/hyroxagent/api:$VERSION
+
+# 备份当前版本
+CURRENT=$(docker inspect --format='{{.Image}}' hyroxagent-api 2>/dev/null || echo "none")
+echo "Current version: $CURRENT"
+
+# 滚动更新
+docker compose -f docker-compose.$ENV.yml up -d --no-deps --scale api=3 api
+
+# 等待健康检查
+echo "Waiting for health check..."
+for i in {1..30}; do
+    if curl -sf http://localhost:8000/health > /dev/null; then
+        echo "Health check passed!"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        echo "Health check failed, rolling back..."
+        ./rollback.sh $CURRENT
+        exit 1
+    fi
+    sleep 2
+done
+
+echo "Deployment completed successfully!"
+```
+
+### 回滚脚本
+```bash
+#!/bin/bash
+# deploy/scripts/rollback.sh
+
+set -e
+
+VERSION=${1:-}
+
+if [ -z "$VERSION" ]; then
+    echo "Usage: rollback.sh <version>"
+    exit 1
+fi
+
+echo "Rolling back to version: $VERSION"
+
+docker compose -f docker-compose.production.yml up -d --no-deps api
+
+echo "Rollback completed!"
+```
+
+### 健康检查脚本
+```bash
+#!/bin/bash
+# deploy/scripts/health-check.sh
+
+ENDPOINT=${1:-http://localhost:8000/health}
+MAX_RETRIES=${2:-30}
+RETRY_INTERVAL=${3:-2}
+
+echo "Checking health of $ENDPOINT"
+
+for i in $(seq 1 $MAX_RETRIES); do
+    response=$(curl -sf -o /dev/null -w "%{http_code}" $ENDPOINT 2>/dev/null || echo "000")
+    
+    if [ "$response" = "200" ]; then
+        echo "✅ Health check passed (attempt $i)"
+        exit 0
+    fi
+    
+    echo "⏳ Attempt $i/$MAX_RETRIES: HTTP $response"
+    sleep $RETRY_INTERVAL
+done
+
+echo "❌ Health check failed after $MAX_RETRIES attempts"
+exit 1
+```
+
+## 环境变量管理
+
+### 本地开发 (.env)
+```bash
+# .env (不提交到 Git)
+APP_ENV=development
+DEBUG=true
+
+# 数据库
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=hyrox_agent
+DB_USER=postgres
+DB_PASSWORD=postgres
+
+# Redis
+REDIS_URL=redis://localhost:6379/0
+
+# API Keys
+OPENAI_API_KEY=sk-xxx
+
+# 微信小程序
+WECHAT_APP_ID=wx-xxx
+WECHAT_APP_SECRET=xxx
+```
+
+### 生产环境 (使用 Secret Manager)
+```python
+# app/config/settings.py
+import boto3
+from pydantic_settings import BaseSettings
+
+class ProductionSettings(BaseSettings):
+    @classmethod
+    def from_aws_secrets(cls):
+        """从 AWS Secrets Manager 获取配置"""
+        client = boto3.client('secretsmanager')
+        response = client.get_secret_value(SecretId='hyroxagent/production')
+        secrets = json.loads(response['SecretString'])
+        return cls(**secrets)
+```
+
+## 监控配置
+
+### Prometheus 指标
+```python
+# app/middleware/metrics.py
+from prometheus_client import Counter, Histogram, generate_latest
+from fastapi import Request, Response
+
+REQUEST_COUNT = Counter(
+    'http_requests_total',
+    'Total HTTP requests',
+    ['method', 'endpoint', 'status']
+)
+
+REQUEST_LATENCY = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request latency',
+    ['method', 'endpoint']
+)
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    
+    REQUEST_COUNT.labels(
+        method=request.method,
+        endpoint=request.url.path,
+        status=response.status_code
+    ).inc()
+    
+    REQUEST_LATENCY.labels(
+        method=request.method,
+        endpoint=request.url.path
+    ).observe(duration)
+    
+    return response
+
+@app.get("/metrics")
+async def metrics():
+    return Response(generate_latest(), media_type="text/plain")
+```
+
+### 日志配置
+```python
+# app/config/logging.py
+import logging
+import json
+from datetime import datetime
+
+class JSONFormatter(logging.Formatter):
+    """JSON 格式日志"""
+    def format(self, record):
+        log_obj = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "logger": record.name,
+            "path": f"{record.pathname}:{record.lineno}",
+        }
+        if record.exc_info:
+            log_obj["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_obj)
+
+# 配置
+handler = logging.StreamHandler()
+handler.setFormatter(JSONFormatter())
+logging.getLogger().addHandler(handler)
+```
+
+## 数据库迁移
+
+### 生产环境迁移流程
+```bash
+# 1. 备份数据库
+pg_dump -Fc production_db > backup_$(date +%Y%m%d).dump
+
+# 2. 在 staging 测试迁移
+alembic upgrade head
+
+# 3. 生产环境迁移
+docker exec -it hyroxagent-api alembic upgrade head
+
+# 4. 验证
+docker exec -it hyroxagent-api python -c "from app.db.session import engine; print('OK')"
+```
+
+## 灾难恢复
+
+### 备份策略
+| 类型 | 频率 | 保留期 | 存储位置 |
+|------|------|--------|----------|
+| 数据库全量 | 每天 | 30天 | OSS |
+| 数据库增量 | 每小时 | 7天 | OSS |
+| 配置文件 | 每次变更 | 永久 | Git |
+| 日志 | 实时 | 90天 | SLS |
+
+### 恢复流程
+```bash
+# 1. 停止服务
+docker compose -f docker-compose.prod.yml stop api
+
+# 2. 恢复数据库
+pg_restore -d hyrox_agent backup.dump
+
+# 3. 启动服务
+docker compose -f docker-compose.prod.yml up -d api
+
+# 4. 验证
+./health-check.sh
+```

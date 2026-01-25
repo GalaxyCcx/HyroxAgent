@@ -1,0 +1,139 @@
+<!--pages/result/result.wxml-->
+<view class="page-container">
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+  
+  <!-- 错误状态 -->
+  <view class="error-state" wx:if="{{!loading && error}}">
+    <text class="error-icon">⚠️</text>
+    <text class="error-text">{{error}}</text>
+    <view class="retry-btn" bindtap="onRetry">重试</view>
+    <view class="back-btn" bindtap="onBack">返回</view>
+  </view>
+  
+  <!-- 内容区域 -->
+  <block wx:if="{{!loading && !error}}">
+    <!-- 头部：比赛信息 -->
+    <view class="header-section">
+      <view class="race-name">{{race.event_name}}</view>
+      <view class="race-info">
+        <text class="division-tag">{{athlete.gender === 'male' ? "Men's" : "Women's"}} {{athlete.division}}</text>
+        <text class="age-tag" wx:if="{{athlete.age_group}}">Age {{athlete.age_group}}</text>
+      </view>
+    </view>
+    
+    <!-- 运动员信息 -->
+    <view class="athlete-section">
+      <view class="athlete-avatar">
+        <text class="avatar-emoji">👤</text>
+      </view>
+      <view class="athlete-info">
+        <view class="athlete-name">{{athlete.name}}</view>
+        <view class="athlete-meta">
+          <text wx:if="{{athlete.nationality_name}}">{{athlete.nationality_name}}</text>
+          <text wx:if="{{race.date}}"> • {{race.date}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 核心成绩 -->
+    <view class="result-section card">
+      <view class="result-main">
+        <view class="total-time">{{results.total_time}}</view>
+        <view class="overall-rank">#{{rankings.overall_rank}} / {{rankings.overall_total}}</view>
+      </view>
+      <view class="result-ranks">
+        <view class="rank-item">
+          <text class="rank-label">性别排名</text>
+          <text class="rank-value">#{{rankings.gender_rank}} / {{rankings.gender_total}}</text>
+        </view>
+        <view class="rank-item">
+          <text class="rank-label">组别排名</text>
+          <text class="rank-value">#{{rankings.division_rank}} / {{rankings.division_total}}</text>
+        </view>
+        <view class="rank-item" wx:if="{{rankings.age_group_rank}}">
+          <text class="rank-label">年龄组排名</text>
+          <text class="rank-value">#{{rankings.age_group_rank}} / {{rankings.age_group_total}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 时间分布 -->
+    <view class="time-dist-section card">
+      <view class="section-title">时间分布</view>
+      
+      <!-- Running -->
+      <view class="time-bar-item">
+        <view class="bar-header">
+          <text class="bar-label">Running</text>
+          <text class="bar-time">{{results.run_time}}</text>
+          <text class="bar-percent">{{results.run_time_percent}}%</text>
+        </view>
+        <view class="bar-track">
+          <view class="bar-fill bar-running" style="width: {{results.run_time_percent}}%"></view>
+        </view>
+      </view>
+      
+      <!-- Workout -->
+      <view class="time-bar-item">
+        <view class="bar-header">
+          <text class="bar-label">Workout</text>
+          <text class="bar-time">{{results.work_time}}</text>
+          <text class="bar-percent">{{results.work_time_percent}}%</text>
+        </view>
+        <view class="bar-track">
+          <view class="bar-fill bar-workout" style="width: {{results.work_time_percent}}%"></view>
+        </view>
+      </view>
+      
+      <!-- Roxzone -->
+      <view class="time-bar-item">
+        <view class="bar-header">
+          <text class="bar-label">Roxzone</text>
+          <text class="bar-time">{{results.roxzone_time}}</text>
+          <text class="bar-percent">{{results.roxzone_time_percent}}%</text>
+        </view>
+        <view class="bar-track">
+          <view class="bar-fill bar-roxzone" style="width: {{results.roxzone_time_percent}}%"></view>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 分段成绩 -->
+    <view class="splits-section card">
+      <view class="section-title">分段成绩</view>
+      
+      <view class="splits-list">
+        <!-- 交替显示 Run 和 Workout -->
+        <block wx:for="{{8}}" wx:key="idx" wx:for-item="idx">
+          <!-- Run -->
+          <view class="split-item run-item">
+            <view class="split-icon">🏃</view>
+            <view class="split-info">
+              <text class="split-name">{{splits.runs[idx].name}}</text>
+              <text class="split-dist">{{splits.runs[idx].distance}}</text>
+            </view>
+            <text class="split-time">{{splits.runs[idx].time}}</text>
+          </view>
+          
+          <!-- Workout -->
+          <view class="split-item workout-item">
+            <view class="split-icon">💪</view>
+            <view class="split-info">
+              <text class="split-name">{{splits.workouts[idx].name}}</text>
+              <text class="split-dist">{{splits.workouts[idx].distance}}</text>
+            </view>
+            <text class="split-time">{{splits.workouts[idx].time}}</text>
+          </view>
+        </block>
+      </view>
+    </view>
+  </block>
+</view>
+
+
+
+
