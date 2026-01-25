@@ -1,0 +1,383 @@
+/**
+ * 排行榜页样式
+ */
+
+.page-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
+}
+
+/* 头部 */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(16, 16, 19, 0.95);
+  backdrop-filter: blur(20rpx);
+  border-bottom: 2rpx solid rgba(255, 255, 255, 0.05);
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 32rpx;
+}
+
+.back-btn {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-icon {
+  font-size: 48rpx;
+  color: #ffffff;
+}
+
+.header-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.search-toggle {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-icon {
+  font-size: 32rpx;
+}
+
+/* 筛选区域 */
+.filters {
+  padding: 0 32rpx 24rpx;
+}
+
+/* 一级标签 */
+.filter-tabs {
+  display: flex;
+  background: #1E2024;
+  border-radius: 16rpx;
+  padding: 8rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 24rpx;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  border-radius: 12rpx;
+}
+
+.tab.active {
+  background: #2A2D33;
+  color: #ffffff;
+  border: 2rpx solid rgba(255, 255, 255, 0.05);
+}
+
+/* 二级按钮 */
+.filter-buttons {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.filter-btn {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  background: #1E2024;
+  border: 2rpx solid rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+}
+
+.filter-btn.active {
+  background: rgba(66, 255, 158, 0.1);
+  border-color: #42ff9e;
+  color: #42ff9e;
+}
+
+/* 三级筛选 */
+.filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.gender-chips {
+  display: flex;
+  background: #1E2024;
+  border-radius: 50rpx;
+  padding: 8rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.05);
+}
+
+.chip {
+  padding: 12rpx 24rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  border-radius: 50rpx;
+}
+
+.chip.active {
+  background: #ffffff;
+  color: #000000;
+}
+
+/* 年龄组下拉 */
+.age-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 14rpx 24rpx;
+  background: #1E2024;
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 50rpx;
+}
+
+.age-label {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.dropdown-arrow {
+  font-size: 16rpx;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* 年龄组选项 */
+.age-options {
+  position: absolute;
+  top: 100%;
+  right: 32rpx;
+  background: #1E2024;
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 16rpx;
+  padding: 8rpx 0;
+  z-index: 200;
+  max-height: 400rpx;
+  overflow-y: auto;
+  margin-top: 8rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.5);
+}
+
+.age-option {
+  padding: 20rpx 32rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  border-bottom: 2rpx solid rgba(255, 255, 255, 0.05);
+}
+
+.age-option:last-child {
+  border-bottom: none;
+}
+
+.age-option.active {
+  color: #42ff9e;
+  background: rgba(66, 255, 158, 0.05);
+}
+
+/* 内容区域 */
+.content {
+  padding: 24rpx 32rpx;
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+}
+
+/* 加载状态 */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+}
+
+.loading-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border: 4rpx solid rgba(66, 255, 158, 0.3);
+  border-top-color: #42ff9e;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16rpx;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* 错误状态 */
+.error-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 120rpx 0;
+}
+
+.error-text {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 24rpx;
+}
+
+.retry-btn {
+  padding: 16rpx 48rpx;
+  background: #42ff9e;
+  color: #000000;
+  font-size: 28rpx;
+  font-weight: 600;
+  border-radius: 16rpx;
+}
+
+/* 排行榜 */
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.total-count {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 8rpx;
+}
+
+.entry-card {
+  display: flex;
+  align-items: center;
+  background: #1E2024;
+  border: 2rpx solid rgba(255, 255, 255, 0.05);
+  border-radius: 24rpx;
+  padding: 24rpx;
+}
+
+.entry-card.first {
+  background: linear-gradient(90deg, rgba(26, 46, 34, 1) 0%, #101013 100%);
+  border-color: rgba(66, 255, 158, 0.3);
+}
+
+.entry-card:active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 排名 */
+.rank {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  width: 64rpx;
+  text-align: center;
+  margin-right: 24rpx;
+}
+
+.rank.top3 {
+  color: #fbbf24;
+}
+
+/* 选手信息 */
+.entry-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.entry-name {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8rpx;
+}
+
+.gender-icon {
+  color: #ec4899;
+  font-size: 24rpx;
+}
+
+.entry-meta {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.division-tag,
+.age-tag {
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2rpx solid rgba(255, 255, 255, 0.05);
+  border-radius: 8rpx;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* 成绩 */
+.entry-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
+.total-time {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #42ff9e;
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.view-btn {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #42ff9e;
+  padding: 8rpx 24rpx;
+  border: 2rpx solid rgba(66, 255, 158, 0.3);
+  border-radius: 50rpx;
+}
+
+.entry-card.first .view-btn {
+  background: #42ff9e;
+  color: #000000;
+  border-color: #42ff9e;
+}
+
+/* 空状态 */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 24rpx;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.4);
+}

@@ -40,6 +40,15 @@ class Settings(BaseSettings):
     MAX_SEARCH_LIMIT: int = 100
     DEFAULT_SEARCH_SEASONS: list[int] = [8, 7, 6, 5, 4, 3, 2, 1]  # 搜索所有赛季（最新在前）
     
+    # 微信小程序配置
+    WECHAT_APP_ID: str = "wxcfed9bf3ed5976b7"
+    WECHAT_APP_SECRET: str = "d050ab820b90b873016e65b8360ff65f"
+    
+    # JWT 配置
+    JWT_SECRET_KEY: str = "hyrox_agent_jwt_secret_2026"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_DAYS: int = 30  # token 有效期 30 天
+    
     def get_database_path(self) -> Path:
         """
         获取数据库文件路径

@@ -1,5 +1,5 @@
 /**
- * 搜索页面
+ * 搜索页面 - 运动员搜索
  */
 const api = require('../../services/api');
 
@@ -11,30 +11,26 @@ Page({
     searched: false,
     error: null,
   },
-  
+
   // 搜索防抖定时器
   searchTimer: null,
-  
+
   onLoad() {
-    console.log('Index page loaded');
+    console.log('Search page loaded');
   },
-  
-  onShow() {
-    // 页面显示时无需重新搜索
-  },
-  
+
   /**
    * 搜索框输入事件
    */
   onSearchInput(e) {
     const value = e.detail.value;
     this.setData({ searchValue: value });
-    
+
     // 清除之前的定时器
     if (this.searchTimer) {
       clearTimeout(this.searchTimer);
     }
-    
+
     // 如果输入为空，清空结果
     if (!value.trim()) {
       this.setData({
@@ -44,26 +40,31 @@ Page({
       });
       return;
     }
-    
+
+    // 至少2个字符才搜索
+    if (value.trim().length < 2) {
+      return;
+    }
+
     // 500ms 防抖
     this.searchTimer = setTimeout(() => {
       this.doSearch(value);
     }, 500);
   },
-  
+
   /**
    * 执行搜索
    */
   async doSearch(keyword) {
-    if (!keyword.trim()) return;
-    
+    if (!keyword.trim() || keyword.trim().length < 2) return;
+
     this.setData({ loading: true, error: null });
-    
+
     try {
       const data = await api.suggestAthletes(keyword.trim(), {
         limit: 10,
       });
-      
+
       this.setData({
         results: data.suggestions || [],
         searched: true,
@@ -79,7 +80,7 @@ Page({
       });
     }
   },
-  
+
   /**
    * 点击搜索按钮
    */
@@ -89,7 +90,7 @@ Page({
     }
     this.doSearch(this.data.searchValue);
   },
-  
+
   /**
    * 清空搜索框
    */
@@ -101,30 +102,22 @@ Page({
       error: null,
     });
   },
-  
+
   /**
-   * 点击运动员卡片
+   * 点击运动员建议，跳转到比赛列表
    */
   onTapAthlete(e) {
     const { item } = e.currentTarget.dataset;
-    
-    // 跳转到详情页，传递运动员姓名
+    // 跳转到结果页，显示该运动员的所有比赛
     wx.navigateTo({
       url: `/pages/result/result?name=${encodeURIComponent(item.name)}`,
     });
   },
-  
+
   /**
-   * 下拉刷新
+   * 返回上一页
    */
-  onPullDownRefresh() {
-    if (this.data.searchValue) {
-      this.doSearch(this.data.searchValue);
-    }
-    wx.stopPullDownRefresh();
+  onBack() {
+    wx.navigateBack();
   },
 });
-
-
-
-

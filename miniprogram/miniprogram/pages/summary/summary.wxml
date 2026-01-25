@@ -1,0 +1,144 @@
+<!--比赛总结页-->
+<view class="page-container">
+  <!-- 背景网格 -->
+  <view class="bg-grid"></view>
+  
+  <!-- 头部 -->
+  <view class="header">
+    <view class="back-btn" bindtap="onBack">
+      <text class="back-icon">←</text>
+    </view>
+    <text class="header-title">比赛总结</text>
+    <button class="share-btn" open-type="share">
+      <text class="share-icon">↗</text>
+    </button>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 错误状态 -->
+  <view class="error-state" wx:if="{{!loading && error}}">
+    <text class="error-icon">⚠️</text>
+    <text class="error-text">{{error}}</text>
+    <view class="retry-btn" bindtap="loadData">重试</view>
+    <view class="back-link" bindtap="onBack">返回</view>
+  </view>
+
+  <!-- 内容区域 -->
+  <scroll-view scroll-y class="content" wx:if="{{!loading && !error}}">
+    <!-- 主卡片 -->
+    <view class="summary-card">
+      <view class="card-header">
+        <view class="race-info">
+          <text class="race-name">{{race.event_name}}</text>
+          <view class="athlete-name-row">
+            <text class="athlete-name">{{athlete.name}}</text>
+          </view>
+        </view>
+        <view class="trophy-icon">🏆</view>
+      </view>
+
+      <!-- 核心成绩 -->
+      <view class="main-result">
+        <text class="time-label">OFFICIAL TIME</text>
+        <text class="total-time">{{results.total_time}}</text>
+      </view>
+
+      <!-- 徽章和排名 -->
+      <view class="badges-row">
+        <view class="badge-item gold" wx:if="{{badge}}">
+          <text class="badge-icon">🏅</text>
+          <text class="badge-text">{{badge.text}}</text>
+        </view>
+        <view class="badge-item">
+          <text class="badge-label">组别排名</text>
+          <text class="badge-value">#{{rankings.division_rank}}<text class="badge-sub">/{{rankings.division_total}}</text></text>
+          <text class="badge-beat">击败 {{beatPercent}}%</text>
+        </view>
+        <view class="badge-item" wx:if="{{rankings.age_group_rank}}">
+          <text class="badge-label">年龄组</text>
+          <text class="badge-value">#{{rankings.age_group_rank}}<text class="badge-sub">/{{rankings.age_group_total}}</text></text>
+          <text class="badge-beat">击败 {{ageGroupBeatPercent}}%</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 时间分布 - 三列布局 -->
+    <view class="breakdown-card">
+      <view class="breakdown-col">
+        <view class="breakdown-icon run">🏃</view>
+        <text class="breakdown-title">跑步 (8圈)</text>
+        <text class="breakdown-sub">8圈总用时</text>
+        <text class="breakdown-time">{{results.run_time || '00:00:00'}}</text>
+        <view class="breakdown-link" bindtap="onGoSplits" data-tab="run">
+          <text>点击查看</text>
+          <text class="link-arrow">›</text>
+        </view>
+      </view>
+      
+      <view class="breakdown-divider-v"></view>
+      
+      <view class="breakdown-col">
+        <view class="breakdown-icon workout">💪</view>
+        <text class="breakdown-title">站点 (8个)</text>
+        <text class="breakdown-sub">8项功能站总用时</text>
+        <text class="breakdown-time">{{results.work_time || '00:00:00'}}</text>
+        <view class="breakdown-link" bindtap="onGoSplits" data-tab="station">
+          <text>点击查看</text>
+          <text class="link-arrow">›</text>
+        </view>
+      </view>
+      
+      <view class="breakdown-divider-v"></view>
+      
+      <view class="breakdown-col">
+        <view class="breakdown-icon roxzone">⚡</view>
+        <text class="breakdown-title">转换区 (8段)</text>
+        <text class="breakdown-sub">8次转换区总用时</text>
+        <text class="breakdown-time">{{results.roxzone_time || '00:00:00'}}</text>
+        <view class="breakdown-link" bindtap="onGoSplits" data-tab="overview">
+          <text>点击查看</text>
+          <text class="link-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 认领栏 -->
+    <view class="claim-bar" wx:if="{{!isClaimed}}">
+      <view class="claim-icon-wrap">
+        <text class="claim-icon">👤</text>
+      </view>
+      <view class="claim-info">
+        <text class="claim-title">这是您的成绩？</text>
+        <text class="claim-desc">认领后可永久保存并分析</text>
+      </view>
+      <view class="claim-btn" bindtap="onClaim">去认领</view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="actions">
+      <view class="primary-btn" bindtap="onGoSplits">
+        <text class="btn-icon">✨</text>
+        <view class="btn-content">
+          <text class="btn-title">查看快速分析 Lite</text>
+          <text class="btn-desc">1分钟读懂比赛表现</text>
+        </view>
+      </view>
+
+      <view class="secondary-btn" bindtap="onGeneratePoster">
+        <text class="sec-btn-icon">🖼️</text>
+        <text class="sec-btn-text">生成战报海报</text>
+      </view>
+    </view>
+
+    <!-- 底部提示 -->
+    <view class="footer-tip">
+      <text class="tip-icon">⌚</text>
+      <text class="tip-text">上传手表数据解锁精确配速分析</text>
+    </view>
+  </scroll-view>
+</view>

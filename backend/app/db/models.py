@@ -142,4 +142,28 @@ class SyncLog(Base):
         return f"<SyncLog(season={self.season}, location='{self.location}', status='{self.status}')>"
 
 
+class User(Base):
+    """用户表 - 微信登录用户"""
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True)
+    openid = Column(String(64), unique=True, nullable=False, index=True, comment="微信 OpenID")
+    nickname = Column(String(100), default="运动员", comment="用户昵称")
+    avatar_url = Column(String(500), nullable=True, comment="头像 URL")
+    created_at = Column(DateTime, server_default=func.now(), comment="注册时间")
+    updated_at = Column(DateTime, onupdate=func.now(), comment="更新时间")
+    
+    def __repr__(self):
+        return f"<User(id={self.id}, nickname='{self.nickname}')>"
+    
+    def to_dict(self):
+        """转换为字典"""
+        return {
+            "id": self.id,
+            "nickname": self.nickname,
+            "avatar_url": self.avatar_url,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 

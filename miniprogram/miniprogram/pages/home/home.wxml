@@ -1,0 +1,94 @@
+<!--首页-->
+<view class="page-container">
+  <!-- 背景图片区域 -->
+  <view class="bg-image-container">
+    <image 
+      class="bg-image" 
+      src="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800&auto=format&fit=crop"
+      mode="aspectFill"
+    />
+    <view class="bg-gradient"></view>
+  </view>
+  
+  <view class="content">
+    <!-- 主标题 -->
+    <view class="hero-section">
+      <view class="hero-title">
+        <text class="title-main">读懂比赛</text>
+        <text class="title-sub">谁偷走了你的 5 分钟?</text>
+      </view>
+    </view>
+
+    <!-- 搜索栏 -->
+    <view class="search-box" bindtap="onSearchTap">
+      <view class="search-icon">🔍</view>
+      <input 
+        class="search-input"
+        type="text"
+        placeholder="输入 姓名 / 号码 / 队名"
+        disabled="{{true}}"
+      />
+      <view class="search-btn">去诊断</view>
+    </view>
+
+    <!-- 近期赛事 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">近期赛事</text>
+      </view>
+
+      <!-- 加载状态 -->
+      <view class="loading" wx:if="{{racesLoading}}">
+        <view class="loading-spinner"></view>
+        <text class="loading-text">加载中...</text>
+      </view>
+
+      <!-- 错误状态 -->
+      <view class="error-tip" wx:if="{{!racesLoading && error}}">
+        <text class="error-text">{{error}}</text>
+        <view class="retry-btn" bindtap="loadRecentRaces">重试</view>
+      </view>
+
+      <!-- 赛事列表 -->
+      <view class="race-list" wx:if="{{!racesLoading && !error}}">
+        <view 
+          class="race-card"
+          wx:for="{{recentRaces}}"
+          wx:key="id"
+          data-race="{{item}}"
+          bindtap="onRaceTap"
+        >
+          <!-- 左侧：赛季 -->
+          <view class="race-season">
+            <text class="season-year">{{item.year || '----'}}</text>
+            <text class="season-num">S{{item.season}}</text>
+          </view>
+          
+          <!-- 中间：赛事信息 -->
+          <view class="race-info">
+            <text class="race-name">{{item.name}}</text>
+            <view class="race-meta">
+              <text class="meta-venue">📍 {{item.venue}}</text>
+              <text class="meta-participants" wx:if="{{item.participants}}">• {{item.participants}} 人参赛</text>
+            </view>
+          </view>
+          
+          <!-- 右侧：状态 -->
+          <view class="race-status">
+            <view class="status-badge">
+              <text class="status-icon">✓</text>
+              <text class="status-text">已完赛</text>
+            </view>
+            <text class="arrow">›</text>
+          </view>
+        </view>
+
+        <!-- 空状态 -->
+        <view class="empty" wx:if="{{recentRaces.length === 0}}">
+          <text class="empty-icon">🏃</text>
+          <text class="empty-text">暂无赛事数据</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

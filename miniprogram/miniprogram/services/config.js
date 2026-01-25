@@ -3,7 +3,7 @@
  */
 const config = {
   // 开发环境 API 地址
-  baseUrl: 'http://127.0.0.1:8000',
+  baseUrl: 'http://localhost:8000',
   
   // API 版本前缀
   apiPrefix: '/api/v1',

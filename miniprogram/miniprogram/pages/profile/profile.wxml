@@ -1,0 +1,112 @@
+<!--个人资料页-->
+<view class="page-container">
+  <view class="content">
+    <!-- 未登录状态 -->
+    <block wx:if="{{!isLoggedIn}}">
+      <view class="login-section">
+        <view class="login-icon">👤</view>
+        <text class="login-title">登录 HYROX Agent</text>
+        <text class="login-desc">登录后可保存比赛数据、查看历史记录</text>
+        
+        <button 
+          class="login-btn {{isLoading ? 'loading' : ''}}"
+          bindtap="onLogin"
+          disabled="{{isLoading}}"
+        >
+          <text class="btn-icon" wx:if="{{!isLoading}}">🔐</text>
+          <view class="loading-spinner" wx:if="{{isLoading}}"></view>
+          <text class="btn-text">{{isLoading ? '登录中...' : '微信一键登录'}}</text>
+        </button>
+        
+        <text class="login-tip">登录即表示同意服务条款和隐私政策</text>
+      </view>
+
+      <!-- 搜索入口 -->
+      <view class="guest-search" bindtap="onGoSearch">
+        <text class="search-icon">🔍</text>
+        <text class="search-text">不登录也可以搜索运动员</text>
+        <text class="search-arrow">→</text>
+      </view>
+    </block>
+
+    <!-- 已登录状态 -->
+    <block wx:else>
+      <!-- 头像区域 -->
+      <view class="profile-header">
+        <view class="avatar-wrapper" bindtap="onEditProfile">
+          <image 
+            class="avatar-img" 
+            src="{{user.avatar_url}}" 
+            mode="aspectFill"
+            wx:if="{{user.avatar_url}}"
+          />
+          <view class="avatar-placeholder" wx:else>
+            <text class="avatar-text">{{user.nickname ? user.nickname[0] : '?'}}</text>
+          </view>
+        </view>
+        
+        <view class="user-info" bindtap="onEditProfile">
+          <text class="user-name">{{user.nickname || '点击设置昵称'}}</text>
+          <view class="user-tags">
+            <text class="tag id-tag">ID: {{user.id}}</text>
+          </view>
+        </view>
+        
+        <view class="settings-btn" bindtap="onSettings">
+          <text class="settings-icon">⚙️</text>
+        </view>
+      </view>
+
+      <!-- 统计数据 -->
+      <view class="stats-grid">
+        <view class="stat-card">
+          <text class="stat-label">已完成比赛</text>
+          <text class="stat-value">{{stats.completed}}</text>
+        </view>
+        <view class="stat-card highlight">
+          <text class="stat-label primary">个人最佳 (PB)</text>
+          <text class="stat-value">{{stats.pb}}</text>
+        </view>
+        <view class="stat-card">
+          <text class="stat-label">年龄组</text>
+          <text class="stat-value">{{stats.ageGroup}}</text>
+        </view>
+        <view class="stat-card">
+          <text class="stat-label">最近一场排名</text>
+          <text class="stat-value">{{stats.rank}}</text>
+        </view>
+      </view>
+
+      <!-- Tab 栏 -->
+      <view class="tabs">
+        <view 
+          class="tab {{activeTab === 'races' ? 'active' : ''}}"
+          data-tab="races"
+          bindtap="onTabChange"
+        >比赛</view>
+        <view 
+          class="tab {{activeTab === 'training' ? 'active' : ''}}"
+          data-tab="training"
+          bindtap="onTabChange"
+        >训练数据</view>
+      </view>
+
+      <!-- 搜索入口 -->
+      <view class="search-entry" bindtap="onGoSearch">
+        <text class="search-icon">🔍</text>
+        <text class="search-text">搜索其他运动员...</text>
+        <text class="search-arrow">→</text>
+      </view>
+
+      <!-- 空状态 -->
+      <view class="empty-state">
+        <view class="empty-icon">🏃</view>
+        <text class="empty-title">暂无比赛数据</text>
+        <text class="empty-desc">搜索运动员查看比赛成绩</text>
+        <view class="empty-btn" bindtap="onGoSearch">
+          <text>去搜索</text>
+        </view>
+      </view>
+    </block>
+  </view>
+</view>

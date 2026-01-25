@@ -1,71 +1,80 @@
-<!--pages/index/index.wxml-->
+<!--搜索页面-->
 <view class="page-container">
   <!-- 搜索框 -->
-  <view class="search-box">
+  <view class="search-header">
+    <view class="back-btn" bindtap="onBack">
+      <text class="back-icon">‹</text>
+    </view>
     <view class="search-input-wrapper">
       <view class="search-icon">🔍</view>
       <input 
         class="search-input"
         type="text"
-        placeholder="搜索运动员姓名..."
+        placeholder="输入运动员姓名..."
         placeholder-class="search-placeholder"
         value="{{searchValue}}"
         bindinput="onSearchInput"
         bindconfirm="onSearchConfirm"
         confirm-type="search"
+        focus="{{true}}"
       />
       <view 
         class="clear-icon" 
         wx:if="{{searchValue}}"
         bindtap="onClearSearch"
       >✕</view>
+      <view 
+        class="search-btn"
+        wx:if="{{searchValue.length >= 2}}"
+        bindtap="onSearchConfirm"
+      >搜索</view>
     </view>
   </view>
-  
+
   <!-- 加载状态 -->
   <view class="loading" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
     <text class="loading-text">搜索中...</text>
+    <text class="loading-hint">首次搜索可能需要 10-15 秒</text>
   </view>
-  
+
   <!-- 错误提示 -->
-  <view class="error-tip" wx:if="{{error}}">
+  <view class="error-tip" wx:if="{{error && !loading}}">
     <text class="error-text">{{error}}</text>
     <view class="retry-btn" bindtap="onSearchConfirm">重试</view>
   </view>
-  
+
   <!-- 搜索建议列表 -->
-  <view class="results-list" wx:if="{{!loading && !error && results.length > 0}}">
-    <view 
-      class="athlete-card"
-      wx:for="{{results}}"
-      wx:key="name"
-      data-item="{{item}}"
-      bindtap="onTapAthlete"
-    >
-      <view class="card-header">
-        <view class="athlete-name">{{item.name}}</view>
-        <view class="match-count">{{item.match_count}} 场比赛</view>
+  <view class="results-section" wx:if="{{!loading && !error && results.length > 0}}">
+    <text class="results-hint">请选择运动员:</text>
+    <view class="results-list">
+      <view 
+        class="athlete-card"
+        wx:for="{{results}}"
+        wx:key="name"
+        data-item="{{item}}"
+        bindtap="onTapAthlete"
+      >
+        <view class="athlete-info">
+          <text class="athlete-name">{{item.name}}</text>
+          <text class="match-count">{{item.match_count}} 场比赛</text>
+        </view>
+        <text class="card-arrow">›</text>
       </view>
-      <view class="card-arrow">›</view>
     </view>
   </view>
-  
-  <!-- 空状态 -->
+
+  <!-- 空状态 - 无匹配 -->
   <view class="empty" wx:if="{{!loading && !error && searched && results.length === 0}}">
-    <view class="empty-icon">🏃</view>
+    <view class="empty-icon">🔍</view>
     <text class="empty-text">未找到相关运动员</text>
-    <text class="empty-hint">请尝试其他搜索关键词</text>
+    <text class="empty-hint">请检查拼写或尝试其他关键词</text>
   </view>
-  
+
   <!-- 初始状态 -->
   <view class="initial" wx:if="{{!loading && !error && !searched}}">
     <view class="initial-icon">🏅</view>
     <text class="initial-text">输入运动员姓名开始搜索</text>
-    <text class="initial-hint">支持模糊搜索，不区分大小写</text>
+    <text class="initial-hint">至少输入2个字符，支持模糊搜索</text>
   </view>
 </view>
-
-
-
-

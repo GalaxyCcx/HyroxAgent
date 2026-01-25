@@ -2,11 +2,11 @@
  * 全局样式
  */
 
-/* 深色主题变量 */
+/* 深色主题变量 - 与 React 前端保持一致 */
 page {
-  --color-primary: #00d9ff;
-  --color-primary-dark: #00b3d4;
-  --color-secondary: #ff6b35;
+  --color-primary: #42ff9e;
+  --color-primary-dark: #00cc6a;
+  --color-secondary: #00b3d4;
   --color-background: #0f0f1a;
   --color-surface: #1a1a2e;
   --color-surface-light: #252540;

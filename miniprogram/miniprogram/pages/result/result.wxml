@@ -16,6 +16,42 @@
   
   <!-- 内容区域 -->
   <block wx:if="{{!loading && !error}}">
+    <!-- 比赛列表模式 -->
+    <block wx:if="{{mode === 'list'}}">
+      <view class="list-header">
+        <view class="athlete-name-header">{{athleteName}}</view>
+        <view class="list-count">共 {{raceList.length}} 场比赛</view>
+      </view>
+      
+      <view class="race-list" wx:if="{{raceList.length > 0}}">
+        <view 
+          class="race-card"
+          wx:for="{{raceList}}"
+          wx:key="id"
+          data-item="{{item}}"
+          bindtap="onTapRace"
+        >
+          <view class="race-card-header">
+            <view class="race-event">{{item.event_name}}</view>
+            <view class="race-time">{{item.total_time}}</view>
+          </view>
+          <view class="race-card-body">
+            <text class="race-tag">Season {{item.season}}</text>
+            <text class="race-tag">{{item.location}}</text>
+            <text class="race-tag">{{item.division}}</text>
+          </view>
+          <view class="race-card-arrow">›</view>
+        </view>
+      </view>
+      
+      <view class="empty" wx:if="{{raceList.length === 0}}">
+        <view class="empty-icon">🏃</view>
+        <text class="empty-text">暂无比赛记录</text>
+      </view>
+    </block>
+    
+    <!-- 详情模式 -->
+    <block wx:if="{{mode === 'detail'}}">
     <!-- 头部：比赛信息 -->
     <view class="header-section">
       <view class="race-name">{{race.event_name}}</view>
@@ -131,6 +167,7 @@
         </block>
       </view>
     </view>
+    </block>
   </block>
 </view>
 

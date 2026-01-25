@@ -1,14 +1,42 @@
 {
   "pages": [
-    "pages/index/index",
-    "pages/result/result"
+    "pages/home/home",
+    "pages/race/race",
+    "pages/profile/profile",
+    "pages/search/search",
+    "pages/leaderboard/leaderboard",
+    "pages/summary/summary",
+    "pages/splits/splits",
+    "pages/result/result",
+    "pages/index/index"
   ],
   "window": {
     "backgroundTextStyle": "dark",
-    "navigationBarBackgroundColor": "#1a1a2e",
-    "navigationBarTitleText": "HyroxAgent",
+    "navigationBarBackgroundColor": "#101013",
+    "navigationBarTitleText": "HYROX",
     "navigationBarTextStyle": "white",
     "backgroundColor": "#0f0f1a"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#6b7280",
+    "selectedColor": "#42ff9e",
+    "backgroundColor": "#101013",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/race/race",
+        "text": "比赛"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
+    ]
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json"

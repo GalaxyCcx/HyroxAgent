@@ -1,0 +1,145 @@
+<!--排行榜页面-->
+<view class="page-container">
+  <!-- 头部 -->
+  <view class="header">
+    <view class="header-top">
+      <view class="back-btn" bindtap="onBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <text class="header-title">{{raceName || '成绩列表'}}</text>
+      <view class="search-toggle" bindtap="toggleSearch">
+        <text class="search-icon">🔍</text>
+      </view>
+    </view>
+    
+    <!-- 筛选区域 -->
+    <view class="filters">
+      <!-- 一级：单人赛/双人赛 -->
+      <view class="filter-tabs">
+        <view 
+          class="tab {{raceType === 'single' ? 'active' : ''}}"
+          data-type="single"
+          bindtap="onRaceTypeChange"
+        >单人赛</view>
+        <view 
+          class="tab {{raceType === 'doubles' ? 'active' : ''}}"
+          data-type="doubles"
+          bindtap="onRaceTypeChange"
+        >双人赛</view>
+      </view>
+      
+      <!-- 二级：组别 -->
+      <view class="filter-buttons">
+        <view 
+          class="filter-btn {{division === 'open' ? 'active' : ''}}"
+          data-division="open"
+          bindtap="onDivisionChange"
+        >{{raceType === 'doubles' ? 'Doubles' : 'Open'}}</view>
+        <view 
+          class="filter-btn {{division === 'pro' ? 'active' : ''}}"
+          data-division="pro"
+          bindtap="onDivisionChange"
+        >{{raceType === 'doubles' ? 'Pro Doubles' : 'Pro'}}</view>
+      </view>
+      
+      <!-- 三级：性别 + 年龄组 -->
+      <view class="filter-chips">
+        <view class="gender-chips">
+          <view 
+            class="chip {{gender === 'male' ? 'active' : ''}}"
+            data-gender="male"
+            bindtap="onGenderChange"
+          >男子</view>
+          <view 
+            class="chip {{gender === 'female' ? 'active' : ''}}"
+            data-gender="female"
+            bindtap="onGenderChange"
+          >女子</view>
+          <view 
+            class="chip {{gender === 'mixed' ? 'active' : ''}}"
+            data-gender="mixed"
+            bindtap="onGenderChange"
+            wx:if="{{raceType === 'doubles'}}"
+          >混双</view>
+        </view>
+        
+        <!-- 年龄组下拉 -->
+        <view class="age-dropdown" bindtap="toggleAgeDropdown">
+          <text class="age-label">年龄组: {{ageGroup === 'ALL' ? '全部' : ageGroup}}</text>
+          <text class="dropdown-arrow">{{showAgeDropdown ? '▲' : '▼'}}</text>
+        </view>
+      </view>
+      
+      <!-- 年龄组选项 -->
+      <view class="age-options" wx:if="{{showAgeDropdown}}">
+        <view 
+          class="age-option {{ageGroup === 'ALL' ? 'active' : ''}}"
+          data-age="ALL"
+          bindtap="onAgeSelect"
+        >全部 (All)</view>
+        <view 
+          class="age-option {{ageGroup === item ? 'active' : ''}}"
+          wx:for="{{ageOptions}}"
+          wx:key="*this"
+          data-age="{{item}}"
+          bindtap="onAgeSelect"
+        >{{item}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 内容区域 -->
+  <view class="content">
+    <!-- 加载状态 -->
+    <view class="loading" wx:if="{{loading}}">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">加载排行榜...</text>
+    </view>
+    
+    <!-- 错误状态 -->
+    <view class="error-tip" wx:if="{{!loading && error}}">
+      <text class="error-text">{{error}}</text>
+      <view class="retry-btn" bindtap="loadLeaderboard">重试</view>
+    </view>
+    
+    <!-- 排行榜列表 -->
+    <view class="leaderboard" wx:if="{{!loading && !error}}">
+      <text class="total-count">共 {{total}} 位选手</text>
+      
+      <view 
+        class="entry-card {{item.rank === 1 ? 'first' : ''}}"
+        wx:for="{{leaderboard}}"
+        wx:key="rank"
+        data-entry="{{item}}"
+        bindtap="onTapEntry"
+      >
+        <!-- 排名 -->
+        <view class="rank {{item.rank <= 3 ? 'top3' : ''}}">{{item.rank}}</view>
+        
+        <!-- 选手信息 -->
+        <view class="entry-info">
+          <view class="entry-name">
+            <text>{{item.name}}</text>
+            <text class="gender-icon" wx:if="{{item.gender === 'female'}}">♀</text>
+          </view>
+          <view class="entry-meta">
+            <text class="division-tag">{{division === 'pro' ? 'PRO' : 'OPEN'}}</text>
+            <text class="age-tag" wx:if="{{item.age_group}}">{{item.age_group}}</text>
+          </view>
+        </view>
+        
+        <!-- 成绩 -->
+        <view class="entry-result">
+          <text class="total-time">{{item.total_time}}</text>
+          <view class="view-btn">查看</view>
+        </view>
+      </view>
+      
+      <!-- 空状态 -->
+      <view class="empty" wx:if="{{leaderboard.length === 0}}">
+        <text class="empty-icon">📊</text>
+        <text class="empty-text">暂无排行榜数据</text>
+      </view>
+    </view>
+  </view>
+</view>

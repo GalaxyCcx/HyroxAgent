@@ -1,0 +1,9 @@
+<!--比赛 Tab-->
+<view class="page-container">
+  <view class="coming-soon">
+    <view class="icon">🏆</view>
+    <text class="title">备赛计划</text>
+    <text class="desc">功能即将上线</text>
+    <text class="hint">敬请期待</text>
+  </view>
+</view>

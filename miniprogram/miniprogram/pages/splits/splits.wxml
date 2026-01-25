@@ -1,0 +1,141 @@
+<!--分段中心页-->
+<view class="page-container">
+  <!-- 头部 -->
+  <view class="header">
+    <view class="header-top">
+      <view class="back-btn" bindtap="onBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <view class="header-title">
+        <text class="title-main">SPLIT CENTER</text>
+        <text class="title-sub">{{raceName}}</text>
+      </view>
+      <view class="more-btn">
+        <text class="more-icon">⋮</text>
+      </view>
+    </view>
+    
+    <!-- 总览卡片 -->
+    <view class="stats-card" wx:if="{{!loading && !error}}">
+      <view class="stat-item">
+        <text class="stat-label">TOTAL RANK</text>
+        <text class="stat-value">#{{rankings.overall_rank}} <text class="stat-sub">/ {{rankings.overall_total}}</text></text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-label">PERF.</text>
+        <text class="stat-value primary">{{badge.text || '-'}}</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-label">TOTAL TIME</text>
+        <text class="stat-value">{{results.total_time}}</text>
+      </view>
+    </view>
+    
+    <!-- Tab 栏 -->
+    <view class="tabs" wx:if="{{!loading && !error}}">
+      <view 
+        class="tab {{activeTab === 'overview' ? 'active' : ''}}"
+        data-tab="overview"
+        bindtap="onTabChange"
+      >总览</view>
+      <view 
+        class="tab {{activeTab === 'run' ? 'active' : ''}}"
+        data-tab="run"
+        bindtap="onTabChange"
+      >Run ({{runAnalytics.length}})</view>
+      <view 
+        class="tab {{activeTab === 'station' ? 'active' : ''}}"
+        data-tab="station"
+        bindtap="onTabChange"
+      >Station ({{stationAnalytics.length}})</view>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载分段数据...</text>
+  </view>
+
+  <!-- 错误状态 -->
+  <view class="error-state" wx:if="{{!loading && error}}">
+    <text class="error-text">{{error}}</text>
+    <view class="retry-btn" bindtap="loadData">重试</view>
+  </view>
+
+  <!-- 内容区域 -->
+  <view class="content" wx:if="{{!loading && !error}}">
+    <!-- 总览 Tab -->
+    <view class="splits-list" wx:if="{{activeTab === 'overview'}}">
+      <view class="list-header">
+        <text class="col col-item">Item</text>
+        <text class="col col-time">Time</text>
+        <text class="col col-top">Top%</text>
+        <text class="col col-diff">Δ Avg</text>
+        <text class="col col-bar"></text>
+      </view>
+      
+      <block wx:for="{{splitsAnalytics}}" wx:key="index">
+        <view class="split-row {{item.top_percent > 45 ? 'warning' : ''}}">
+          <view class="col col-item">
+            <text class="item-label {{item.type === 'run' ? 'run' : ''}}">
+              {{item.type === 'run' ? 'R' : 'S'}}{{item.type === 'run' ? runAnalytics.indexOf(item) + 1 : stationAnalytics.indexOf(item) + 1}}
+            </text>
+            <text class="item-name">{{item.name}}</text>
+          </view>
+          <text class="col col-time {{item.top_percent > 45 ? 'warning' : ''}}">{{item.time}}</text>
+          <text class="col col-top {{item.top_percent < 20 ? 'good' : item.top_percent > 45 ? 'warning' : ''}}">{{item.top_percent}}%</text>
+          <text class="col col-diff {{item.diff_seconds < 0 ? 'good' : ''}}">{{item.diff_display}}</text>
+          <view class="col col-bar">
+            <view class="bar-track">
+              <view class="bar-fill {{item.top_percent > 45 ? 'warning' : ''}}" style="width: {{100 - item.top_percent}}%"></view>
+            </view>
+          </view>
+        </view>
+      </block>
+    </view>
+
+    <!-- Run Tab -->
+    <view class="splits-list simple" wx:if="{{activeTab === 'run'}}">
+      <block wx:for="{{runAnalytics}}" wx:key="index">
+        <view class="simple-row {{item.top_percent > 50 ? 'warning' : ''}}">
+          <text class="row-label {{item.top_percent > 50 ? 'warning' : ''}}">R{{index + 1}}</text>
+          <text class="row-time {{item.top_percent > 50 ? 'warning' : 'good'}}">{{item.time}}</text>
+          <text class="row-top">{{item.top_percent}}%</text>
+          <view class="row-bar">
+            <view class="bar-track">
+              <view class="bar-fill {{item.top_percent > 50 ? 'warning' : item.top_percent > 30 ? 'neutral' : 'good'}}" style="width: {{100 - item.top_percent}}%"></view>
+            </view>
+          </view>
+          <text class="row-diff {{item.diff_seconds < 0 ? 'good' : ''}}">{{item.diff_display}}</text>
+        </view>
+      </block>
+    </view>
+
+    <!-- Station Tab -->
+    <view class="splits-list cards" wx:if="{{activeTab === 'station'}}">
+      <block wx:for="{{stationAnalytics}}" wx:key="index">
+        <view class="station-card {{item.top_percent > 60 ? 'risk' : item.top_percent > 40 ? 'warning' : ''}}">
+          <view class="station-header">
+            <view class="station-name">
+              <text>{{item.name}}</text>
+              <text class="warning-icon" wx:if="{{item.top_percent > 60}}">⚠️</text>
+            </view>
+            <view class="station-result">
+              <text class="station-time">{{item.time}}</text>
+              <text class="station-top {{item.top_percent > 40 ? 'warning' : 'good'}}">TOP {{item.top_percent}}%</text>
+            </view>
+          </view>
+          <view class="station-bar">
+            <view class="bar-track">
+              <view class="bar-fill {{item.top_percent > 40 ? 'warning' : 'good'}}" style="width: {{100 - item.top_percent}}%"></view>
+            </view>
+            <text class="bar-diff {{item.diff_seconds < 0 ? 'good' : 'warning'}}">{{item.diff_display}}</text>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+</view>
