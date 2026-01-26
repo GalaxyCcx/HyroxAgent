@@ -7,7 +7,7 @@
         <text class="back-icon">‹</text>
       </view>
       <view class="header-title">
-        <text class="title-main">SPLIT CENTER</text>
+        <text class="title-main">分段详情</text>
         <text class="title-sub">{{raceName}}</text>
       </view>
       <view class="more-btn">
@@ -18,17 +18,17 @@
     <!-- 总览卡片 -->
     <view class="stats-card" wx:if="{{!loading && !error}}">
       <view class="stat-item">
-        <text class="stat-label">TOTAL RANK</text>
+        <text class="stat-label">总排名</text>
         <text class="stat-value">#{{rankings.overall_rank}} <text class="stat-sub">/ {{rankings.overall_total}}</text></text>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item">
-        <text class="stat-label">PERF.</text>
+        <text class="stat-label">表现评级</text>
         <text class="stat-value primary">{{badge.text || '-'}}</text>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item">
-        <text class="stat-label">TOTAL TIME</text>
+        <text class="stat-label">总用时</text>
         <text class="stat-value">{{results.total_time}}</text>
       </view>
     </view>
@@ -44,12 +44,17 @@
         class="tab {{activeTab === 'run' ? 'active' : ''}}"
         data-tab="run"
         bindtap="onTabChange"
-      >Run ({{runAnalytics.length}})</view>
+      >跑步 ({{runAnalytics.length}})</view>
       <view 
         class="tab {{activeTab === 'station' ? 'active' : ''}}"
         data-tab="station"
         bindtap="onTabChange"
-      >Station ({{stationAnalytics.length}})</view>
+      >站点 ({{stationAnalytics.length}})</view>
+      <view 
+        class="tab {{activeTab === 'roxzone' ? 'active' : ''}}"
+        data-tab="roxzone"
+        bindtap="onTabChange"
+      >转换区</view>
     </view>
   </view>
 
@@ -70,20 +75,18 @@
     <!-- 总览 Tab -->
     <view class="splits-list" wx:if="{{activeTab === 'overview'}}">
       <view class="list-header">
-        <text class="col col-item">Item</text>
-        <text class="col col-time">Time</text>
-        <text class="col col-top">Top%</text>
-        <text class="col col-diff">Δ Avg</text>
-        <text class="col col-bar"></text>
+        <text class="col col-item">项目</text>
+        <text class="col col-time">用时</text>
+        <text class="col col-top">排名%</text>
+        <text class="col col-diff">均值差</text>
+        <text class="col col-bar">进度</text>
       </view>
       
       <block wx:for="{{splitsAnalytics}}" wx:key="index">
         <view class="split-row {{item.top_percent > 45 ? 'warning' : ''}}">
           <view class="col col-item">
-            <text class="item-label {{item.type === 'run' ? 'run' : ''}}">
-              {{item.type === 'run' ? 'R' : 'S'}}{{item.type === 'run' ? runAnalytics.indexOf(item) + 1 : stationAnalytics.indexOf(item) + 1}}
-            </text>
-            <text class="item-name">{{item.name}}</text>
+            <text class="item-label {{item.type === 'run' ? 'run' : ''}}">{{item.label}}</text>
+            <text class="item-name">{{item.displayName}}</text>
           </view>
           <text class="col col-time {{item.top_percent > 45 ? 'warning' : ''}}">{{item.time}}</text>
           <text class="col col-top {{item.top_percent < 20 ? 'good' : item.top_percent > 45 ? 'warning' : ''}}">{{item.top_percent}}%</text>
@@ -98,18 +101,28 @@
     </view>
 
     <!-- Run Tab -->
-    <view class="splits-list simple" wx:if="{{activeTab === 'run'}}">
+    <view class="splits-list" wx:if="{{activeTab === 'run'}}">
+      <view class="list-header">
+        <text class="col col-item">项目</text>
+        <text class="col col-time">用时</text>
+        <text class="col col-top">排名%</text>
+        <text class="col col-diff">均值差</text>
+        <text class="col col-bar">进度</text>
+      </view>
       <block wx:for="{{runAnalytics}}" wx:key="index">
-        <view class="simple-row {{item.top_percent > 50 ? 'warning' : ''}}">
-          <text class="row-label {{item.top_percent > 50 ? 'warning' : ''}}">R{{index + 1}}</text>
-          <text class="row-time {{item.top_percent > 50 ? 'warning' : 'good'}}">{{item.time}}</text>
-          <text class="row-top">{{item.top_percent}}%</text>
-          <view class="row-bar">
+        <view class="split-row {{item.top_percent > 50 ? 'warning' : ''}}">
+          <view class="col col-item">
+            <text class="item-label run">{{item.label}}</text>
+            <text class="item-name">{{item.displayName}}</text>
+          </view>
+          <text class="col col-time {{item.top_percent > 50 ? 'warning' : ''}}">{{item.time}}</text>
+          <text class="col col-top {{item.top_percent < 20 ? 'good' : item.top_percent > 50 ? 'warning' : ''}}">{{item.top_percent}}%</text>
+          <text class="col col-diff {{item.diff_seconds < 0 ? 'good' : ''}}">{{item.diff_display}}</text>
+          <view class="col col-bar">
             <view class="bar-track">
               <view class="bar-fill {{item.top_percent > 50 ? 'warning' : item.top_percent > 30 ? 'neutral' : 'good'}}" style="width: {{100 - item.top_percent}}%"></view>
             </view>
           </view>
-          <text class="row-diff {{item.diff_seconds < 0 ? 'good' : ''}}">{{item.diff_display}}</text>
         </view>
       </block>
     </view>
@@ -119,23 +132,61 @@
       <block wx:for="{{stationAnalytics}}" wx:key="index">
         <view class="station-card {{item.top_percent > 60 ? 'risk' : item.top_percent > 40 ? 'warning' : ''}}">
           <view class="station-header">
-            <view class="station-name">
-              <text>{{item.name}}</text>
+            <view class="station-info">
+              <text class="station-name">{{item.displayName}}</text>
               <text class="warning-icon" wx:if="{{item.top_percent > 60}}">⚠️</text>
             </view>
             <view class="station-result">
               <text class="station-time">{{item.time}}</text>
-              <text class="station-top {{item.top_percent > 40 ? 'warning' : 'good'}}">TOP {{item.top_percent}}%</text>
+              <text class="station-top {{item.top_percent > 40 ? 'warning' : 'good'}}">前 {{item.top_percent}}%</text>
             </view>
           </view>
           <view class="station-bar">
             <view class="bar-track">
               <view class="bar-fill {{item.top_percent > 40 ? 'warning' : 'good'}}" style="width: {{100 - item.top_percent}}%"></view>
             </view>
-            <text class="bar-diff {{item.diff_seconds < 0 ? 'good' : 'warning'}}">{{item.diff_display}}</text>
           </view>
+          <text class="station-diff {{item.diff_seconds < 0 ? 'good' : 'warning'}}">{{item.diff_display}}</text>
         </view>
       </block>
+    </view>
+
+    <!-- Roxzone Tab -->
+    <view class="roxzone-content" wx:if="{{activeTab === 'roxzone'}}">
+      <!-- 总转换区时间卡片 -->
+      <view class="roxzone-hero-card">
+        <view class="roxzone-icon">⚡</view>
+        <view class="roxzone-info">
+          <text class="roxzone-label">8次转换区总用时</text>
+          <text class="roxzone-time">{{results.roxzone_time || '--:--:--'}}</text>
+        </view>
+      </view>
+      
+      <!-- 说明卡片 -->
+      <view class="roxzone-note-card">
+        <view class="note-icon">💡</view>
+        <view class="note-content">
+          <text class="note-title">关于转换区</text>
+          <text class="note-desc">转换区 (Roxzone) 是跑步与功能站之间的过渡区域。目前仅提供总时间数据，暂无各段详细分段。</text>
+        </view>
+      </view>
+      
+      <!-- 建议卡片 -->
+      <view class="roxzone-tip-card">
+        <text class="tip-title">优化建议</text>
+        <view class="tip-item">
+          <text class="tip-bullet">•</text>
+          <text class="tip-text">进入功能站前提前规划动作，减少犹豫时间</text>
+        </view>
+        <view class="tip-item">
+          <text class="tip-bullet">•</text>
+          <text class="tip-text">保持稳定配速，避免在转换区过度喘息</text>
+        </view>
+        <view class="tip-item">
+          <text class="tip-bullet">•</text>
+          <text class="tip-text">熟悉场地布局，提前预判下一站位置</text>
+        </view>
+      </view>
     </view>
   </view>
 </view>

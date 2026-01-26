@@ -33,6 +33,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 32rpx;
+  padding-top: calc(env(safe-area-inset-top) + 24rpx);
   border-bottom: 2rpx solid rgba(255, 255, 255, 0.05);
   background: rgba(16, 16, 19, 0.95);
   backdrop-filter: blur(20rpx);

@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_DAYS: int = 30  # token 有效期 30 天
     
+    # 阿里云 LLM 配置
+    ALIYUN_LLM_API_KEY: str = "sk-5b02cdae243544b19250dca63bde621f"
+    ALIYUN_LLM_MODEL: str = "qwen-max-latest"
+    ALIYUN_LLM_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    
     def get_database_path(self) -> Path:
         """
         获取数据库文件路径

@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "比赛总结",
+  "navigationStyle": "custom",
   "navigationBarBackgroundColor": "#101013",
   "backgroundColor": "#101013"
 }

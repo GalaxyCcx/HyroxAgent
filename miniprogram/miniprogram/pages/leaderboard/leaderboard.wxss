@@ -15,6 +15,7 @@
   background: rgba(16, 16, 19, 0.95);
   backdrop-filter: blur(20rpx);
   border-bottom: 2rpx solid rgba(255, 255, 255, 0.05);
+  padding-top: env(safe-area-inset-top);
 }
 
 .header-top {

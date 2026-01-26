@@ -1,0 +1,156 @@
+<!--快速分析 (Lite) 页面-->
+<view class="page-container">
+  <!-- 头部 -->
+  <view class="header">
+    <view class="header-row">
+      <view class="back-btn" bindtap="onBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <text class="header-title">赛后分析 (Lite)</text>
+      <view class="help-btn">
+        <text class="help-icon">?</text>
+      </view>
+    </view>
+    
+    <!-- 信息栏 -->
+    <view class="info-bar" wx:if="{{!loading && !error}}">
+      <text class="info-item">{{raceName}}</text>
+      <text class="info-divider">|</text>
+      <text class="info-item">{{division}}</text>
+      <text class="info-divider">|</text>
+      <text class="info-item">{{athleteName}}</text>
+      <text class="info-divider">|</text>
+      <text class="info-item">{{totalTime}}</text>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">AI 分析生成中...</text>
+    <text class="loading-sub">首次分析需要约 10 秒</text>
+  </view>
+
+  <!-- 错误状态 -->
+  <view class="error-state" wx:if="{{!loading && error}}">
+    <text class="error-icon">⚠️</text>
+    <text class="error-text">{{error}}</text>
+    <view class="retry-btn" bindtap="loadAnalysis">重试</view>
+  </view>
+
+  <!-- 内容区域 -->
+  <scroll-view scroll-y class="content" wx:if="{{!loading && !error}}">
+    <!-- Hero 卡片 -->
+    <view class="hero-card">
+      <view class="hero-overlay"></view>
+      <image class="hero-bg" src="https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=800&auto=format&fit=crop" mode="aspectFill"></image>
+      
+      <view class="hero-top">
+        <view class="hero-badge">
+          <text class="badge-icon">📍</text>
+          <text class="badge-text">{{raceName}}</text>
+        </view>
+        <text class="hero-title">HYROX {{division}}</text>
+      </view>
+      
+      <view class="hero-bottom">
+        <view class="hero-stat">
+          <text class="stat-value-lg">{{totalTime}}</text>
+          <text class="stat-label-sm">完赛时间</text>
+        </view>
+        <view class="hero-stat">
+          <text class="stat-value-lg">{{overallRank}}<text class="stat-sub">/{{overallTotal}}</text></text>
+          <text class="stat-label-sm">总排名</text>
+        </view>
+        <view class="hero-stat">
+          <text class="stat-value-lg highlight">{{division}}</text>
+          <text class="stat-label-sm">组别</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 一句话结论 -->
+    <view class="conclusion-card">
+      <view class="card-header">
+        <text class="card-icon">🧠</text>
+        <text class="card-title">一句话结论</text>
+      </view>
+      <text class="conclusion-text">{{summary}}</text>
+      <view class="card-glow"></view>
+    </view>
+
+    <!-- 优势/短板网格 -->
+    <view class="grid-row">
+      <!-- 优势卡片 -->
+      <view class="grid-card strength">
+        <view class="grid-header">
+          <text class="grid-icon good">✓</text>
+          <text class="grid-title">优势</text>
+        </view>
+        <view class="grid-list">
+          <view class="grid-item" wx:for="{{strengths}}" wx:key="index">
+            <text class="item-dot good"></text>
+            <text class="item-text">{{item}}</text>
+          </view>
+          <view class="grid-item empty" wx:if="{{strengths.length === 0}}">
+            <text class="item-text muted">暂无数据</text>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 短板卡片 -->
+      <view class="grid-card weakness">
+        <view class="grid-header">
+          <text class="grid-icon warn">⚠</text>
+          <text class="grid-title">短板</text>
+        </view>
+        <view class="grid-list">
+          <view class="grid-item" wx:for="{{weaknesses}}" wx:key="index">
+            <text class="item-dot warn"></text>
+            <text class="item-text">{{item}}</text>
+          </view>
+          <view class="grid-item empty" wx:if="{{weaknesses.length === 0}}">
+            <text class="item-text muted">暂无数据</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 提示文案 -->
+    <text class="hint-text">想看逐段对比与省时拆解？</text>
+
+    <!-- 解锁按钮 -->
+    <view class="unlock-btn" bindtap="onUnlockPro">
+      <text class="unlock-icon">🔒</text>
+      <text class="unlock-text">¥9.9 解锁详细分段报告 (PDF)</text>
+    </view>
+
+    <!-- 底部操作 -->
+    <view class="action-row">
+      <button class="action-btn" open-type="share">
+        <text class="action-icon">↗</text>
+        <text class="action-text">分享战报</text>
+      </button>
+      <view class="action-btn" bindtap="onBackToSummary">
+        <text class="action-text">回到比赛总结</text>
+      </view>
+    </view>
+
+    <!-- 锁定的预览内容 -->
+    <view class="locked-card">
+      <view class="locked-header">
+        <view class="locked-num">3</view>
+        <text class="locked-title">心率分配控制</text>
+      </view>
+      <text class="locked-desc">跑步段落严格控制在阈值区间，为力量站点储备体能...</text>
+      <view class="locked-overlay">
+        <text class="locked-icon">🔒</text>
+      </view>
+    </view>
+
+    <!-- 缓存提示 -->
+    <view class="cache-hint" wx:if="{{cached}}">
+      <text class="cache-text">💾 已缓存的分析结果</text>
+    </view>
+  </scroll-view>
+</view>

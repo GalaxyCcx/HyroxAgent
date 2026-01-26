@@ -2,8 +2,8 @@
  * API 配置
  */
 const config = {
-  // 开发环境 API 地址
-  baseUrl: 'http://localhost:8000',
+  // 临时域名（备案期间使用 cpolar）
+  baseUrl: 'https://56213ebb.r33.cpolar.top',
   
   // API 版本前缀
   apiPrefix: '/api/v1',

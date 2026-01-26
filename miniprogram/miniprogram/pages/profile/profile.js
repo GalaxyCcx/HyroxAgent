@@ -27,6 +27,9 @@ Page({
     
     // Tab
     activeTab: 'races', // races / training
+    
+    // 卡片菜单
+    activeMenuIndex: -1,
   },
 
   onLoad() {
@@ -153,15 +156,43 @@ Page({
   },
 
   /**
+   * 查看分段详情
+   */
+  onViewSplits(e) {
+    const { item } = e.currentTarget.dataset;
+    wx.navigateTo({
+      url: `/pages/splits/splits?season=${item.season}&location=${item.location}&name=${encodeURIComponent(item.athlete_name)}`,
+    });
+  },
+
+  /**
+   * 显示卡片菜单
+   */
+  onShowCardMenu(e) {
+    const { index } = e.currentTarget.dataset;
+    this.setData({ activeMenuIndex: index });
+  },
+
+  /**
+   * 隐藏卡片菜单
+   */
+  onHideCardMenu() {
+    this.setData({ activeMenuIndex: -1 });
+  },
+
+  /**
    * 从列表中取消认领
    */
   async onUnclaimFromList(e) {
     const { item } = e.currentTarget.dataset;
     
+    // 先隐藏菜单
+    this.setData({ activeMenuIndex: -1 });
+    
     wx.showModal({
-      title: '确认取消认领',
-      content: `确定要取消认领 ${item.event_name} 的成绩吗？`,
-      confirmText: '确认取消',
+      title: '确认解除绑定',
+      content: `解除绑定后，该比赛将从您的档案中移除。`,
+      confirmText: '确认解除',
       confirmColor: '#ff4d4f',
       success: async (res) => {
         if (res.confirm) {
@@ -171,7 +202,7 @@ Page({
             wx.hideLoading();
             
             wx.showToast({
-              title: '已取消认领',
+              title: '已解除绑定',
               icon: 'success',
             });
             

@@ -163,6 +163,35 @@ Page({
   },
 
   /**
+   * 进入快速分析页面
+   */
+  onGoAnalysis() {
+    const { season, location, athleteName, race, results, rankings } = this.data;
+    
+    // 构建组别显示
+    const athlete = this.data.athlete;
+    const genderText = athlete?.gender === 'male' ? '男子' : '女子';
+    const divisionText = athlete?.division === 'open' ? '公开组' : '精英组';
+    const division = `${genderText}${divisionText}`;
+    
+    // 带上已有数据，减少重复请求
+    const params = [
+      `season=${season}`,
+      `location=${location}`,
+      `name=${encodeURIComponent(athleteName)}`,
+      `raceName=${encodeURIComponent(race?.event_name || '')}`,
+      `division=${encodeURIComponent(division)}`,
+      `totalTime=${results?.total_time || ''}`,
+      `overallRank=${rankings?.overall_rank || 0}`,
+      `overallTotal=${rankings?.overall_total || 0}`,
+    ].join('&');
+    
+    wx.navigateTo({
+      url: `/pages/analysis-lite/analysis-lite?${params}`,
+    });
+  },
+
+  /**
    * 认领成绩
    */
   async onClaim() {

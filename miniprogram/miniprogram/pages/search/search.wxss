@@ -13,6 +13,7 @@
   display: flex;
   align-items: center;
   padding: 24rpx 32rpx;
+  padding-top: calc(env(safe-area-inset-top) + 24rpx);
   background: #101013;
   border-bottom: 2rpx solid rgba(255, 255, 255, 0.05);
   position: sticky;

@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "成绩详情",
+  "navigationStyle": "custom",
   "enablePullDownRefresh": false,
   "usingComponents": {}
 }

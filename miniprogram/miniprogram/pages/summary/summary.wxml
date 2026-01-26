@@ -124,7 +124,7 @@
 
     <!-- 操作按钮 -->
     <view class="actions">
-      <view class="primary-btn" bindtap="onGoSplits">
+      <view class="primary-btn" bindtap="onGoAnalysis">
         <text class="btn-icon">✨</text>
         <view class="btn-content">
           <text class="btn-title">查看快速分析 Lite</text>

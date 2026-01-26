@@ -98,29 +98,66 @@
           <text class="loading-text">加载中...</text>
         </view>
 
-        <!-- 已认领比赛列表 -->
+        <!-- 已认领比赛列表 - Demo 风格 -->
         <view class="claimed-list" wx:if="{{!claimedLoading && claimedRaces.length > 0}}">
           <view 
-            class="claimed-card"
+            class="race-card"
             wx:for="{{claimedRaces}}"
             wx:key="id"
-            data-item="{{item}}"
-            bindtap="onTapClaimedRace"
           >
-            <view class="card-left">
-              <view class="season-badge">S{{item.season}}</view>
-            </view>
-            <view class="card-center">
-              <text class="event-name">{{item.event_name}}</text>
-              <text class="athlete-name">{{item.athlete_name}}</text>
-            </view>
-            <view class="card-right">
-              <text class="total-time">{{item.total_time}}</text>
+            <!-- 卡片头部：标题 + 徽章 + 菜单 -->
+            <view class="race-card-header">
+              <view class="race-title-row">
+                <text class="race-title">{{item.event_name}}</text>
+                <view class="verified-badge">
+                  <text class="verified-icon">✓</text>
+                  <text class="verified-text">已认领</text>
+                </view>
+              </view>
               <view 
-                class="unclaim-btn" 
-                catchtap="onUnclaimFromList" 
+                class="more-menu-btn" 
+                catchtap="onShowCardMenu" 
                 data-item="{{item}}"
-              >取消</view>
+                data-index="{{index}}"
+              >
+                <text class="more-icon">⋮</text>
+              </view>
+            </view>
+            
+            <!-- 副标题 -->
+            <view class="race-subtitle">
+              <text>{{item.athlete_name}} • S{{item.season}}</text>
+            </view>
+            
+            <!-- 大号总时间 -->
+            <view class="race-time-display">
+              <text class="race-total-time">{{item.total_time}}</text>
+              <text class="race-time-label">总时间</text>
+            </view>
+            
+            <!-- 底部按钮 -->
+            <view 
+              class="race-action-btn"
+              data-item="{{item}}"
+              bindtap="onViewSplits"
+            >
+              <text>查看分段</text>
+              <text class="action-arrow">→</text>
+            </view>
+            
+            <!-- 卡片内菜单（隐藏状态） -->
+            <view class="card-menu {{activeMenuIndex === index ? 'show' : ''}}" wx:if="{{activeMenuIndex === index}}">
+              <view class="menu-mask" catchtap="onHideCardMenu"></view>
+              <view class="menu-content">
+                <view 
+                  class="menu-item danger" 
+                  catchtap="onUnclaimFromList" 
+                  data-item="{{item}}"
+                >
+                  <text class="menu-icon">🔗</text>
+                  <text>解除绑定</text>
+                </view>
+              </view>
             </view>
           </view>
         </view>

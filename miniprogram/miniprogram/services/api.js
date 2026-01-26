@@ -81,6 +81,18 @@ function getLeaderboard(season, location, filters = {}) {
   return get(`/races/${season}/${location}/leaderboard`, params);
 }
 
+/**
+ * 获取 LLM 快速分析
+ * @param {number} season 赛季
+ * @param {string} location 比赛地点
+ * @param {string} athleteName 运动员姓名
+ * @returns {Promise} 分析数据 {summary, strengths, weaknesses, cached}
+ */
+function getAnalysisLite(season, location, athleteName) {
+  const encodedName = encodeURIComponent(athleteName);
+  return get(`/results/${season}/${location}/${encodedName}/analysis`);
+}
+
 module.exports = {
   suggestAthletes,
   searchAthletes,
@@ -88,6 +100,7 @@ module.exports = {
   getAnalytics,
   getRecentRaces,
   getLeaderboard,
+  getAnalysisLite,
 };
 
 

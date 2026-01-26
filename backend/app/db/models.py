@@ -196,4 +196,26 @@ class ClaimedRace(Base):
         }
 
 
+class AnalysisCache(Base):
+    """LLM 分析结果缓存表"""
+    __tablename__ = "analysis_cache"
+    
+    id = Column(Integer, primary_key=True)
+    season = Column(Integer, nullable=False, comment="赛季")
+    location = Column(String(50), nullable=False, comment="比赛地点")
+    athlete_name = Column(String(100), nullable=False, comment="运动员姓名")
+    
+    # LLM 生成内容
+    summary = Column(Text, comment="一句话总结")
+    strengths = Column(Text, comment="优势 (JSON 数组)")
+    weaknesses = Column(Text, comment="短板 (JSON 数组)")
+    
+    created_at = Column(DateTime, server_default=func.now(), comment="生成时间")
+    
+    __table_args__ = (
+        Index("uq_analysis_cache", "season", "location", "athlete_name", unique=True),
+    )
+    
+    def __repr__(self):
+        return f"<AnalysisCache(athlete='{self.athlete_name}', season={self.season}, location='{self.location}')>"
 

@@ -8,6 +8,7 @@
     "pages/summary/summary",
     "pages/splits/splits",
     "pages/result/result",
+    "pages/analysis-lite/analysis-lite",
     "pages/index/index"
   ],
   "window": {

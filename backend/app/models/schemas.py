@@ -148,3 +148,18 @@ class SplitAnalyticsData(BaseModel):
 class SplitAnalyticsResponse(ResponseBase[SplitAnalyticsData]):
     """分段统计响应"""
     pass
+
+
+# ==================== LLM 分析模型 ====================
+
+class AnalysisData(BaseModel):
+    """LLM 分析结果数据"""
+    summary: str = Field(..., description="一句话总结")
+    strengths: list[str] = Field(default_factory=list, description="优势列表")
+    weaknesses: list[str] = Field(default_factory=list, description="短板列表")
+    cached: bool = Field(default=False, description="是否为缓存数据")
+
+
+class AnalysisResponse(ResponseBase[AnalysisData]):
+    """LLM 分析响应"""
+    pass
