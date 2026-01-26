@@ -108,15 +108,18 @@
     </view>
 
     <!-- 认领栏 -->
-    <view class="claim-bar" wx:if="{{!isClaimed}}">
+    <view class="claim-bar">
       <view class="claim-icon-wrap">
-        <text class="claim-icon">👤</text>
+        <text class="claim-icon">{{isClaimed ? '✅' : '👤'}}</text>
       </view>
       <view class="claim-info">
-        <text class="claim-title">这是您的成绩？</text>
-        <text class="claim-desc">认领后可永久保存并分析</text>
+        <text class="claim-title">{{isClaimed ? '已认领成绩' : '这是您的成绩？'}}</text>
+        <text class="claim-desc">{{isClaimed ? '该成绩已保存到您的档案' : '认领后可永久保存并分析'}}</text>
       </view>
-      <view class="claim-btn" bindtap="onClaim">去认领</view>
+      <view 
+        class="claim-btn {{isClaimed ? 'claimed' : ''}}" 
+        bindtap="{{isClaimed ? 'onUnclaim' : 'onClaim'}}"
+      >{{isClaimed ? '取消认领' : '去认领'}}</view>
     </view>
 
     <!-- 操作按钮 -->

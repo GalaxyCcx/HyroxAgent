@@ -62,7 +62,7 @@ Page({
 
     try {
       const data = await api.suggestAthletes(keyword.trim(), {
-        limit: 10,
+        limit: 5,
       });
 
       this.setData({

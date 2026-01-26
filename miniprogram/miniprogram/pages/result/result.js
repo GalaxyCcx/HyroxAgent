@@ -1,5 +1,5 @@
 /**
- * 成绩详情页面
+ * 比赛列表页面 - 显示某运动员的所有比赛
  */
 const api = require('../../services/api');
 
@@ -8,38 +8,22 @@ Page({
     loading: true,
     error: null,
     
-    // 页面模式: 'list' 显示比赛列表, 'detail' 显示详情
-    mode: 'list',
-    
-    // 比赛列表（list 模式）
-    raceList: [],
+    // 运动员信息
     athleteName: '',
     
-    // 运动员信息（detail 模式）
-    athlete: null,
-    // 比赛信息
-    race: null,
-    // 成绩信息
-    results: null,
-    // 排名信息
-    rankings: null,
-    // 分段成绩
-    splits: null,
+    // 比赛列表
+    raceList: [],
   },
   
   // 页面参数
   params: {},
   
   onLoad(options) {
-    console.log('Result page loaded', options);
+    const name = decodeURIComponent(options.name || '');
     
-    this.params = {
-      season: parseInt(options.season) || null,
-      location: options.location || '',
-      name: decodeURIComponent(options.name || ''),
-    };
+    this.params = { name };
     
-    if (!this.params.name) {
+    if (!name) {
       this.setData({
         loading: false,
         error: '参数错误，请返回重试',
@@ -47,14 +31,8 @@ Page({
       return;
     }
     
-    // 如果有完整参数，显示详情；否则显示比赛列表
-    if (this.params.location && this.params.season) {
-      this.setData({ mode: 'detail' });
-      this.loadDetail();
-    } else {
-      this.setData({ mode: 'list', athleteName: this.params.name });
-      this.loadRaceList();
-    }
+    this.setData({ athleteName: name });
+    this.loadRaceList();
   },
   
   /**
@@ -68,9 +46,12 @@ Page({
         limit: 50,
       });
       
+      // 按赛季降序排列
+      const raceList = (data.items || []).sort((a, b) => b.season - a.season);
+      
       this.setData({
         loading: false,
-        raceList: data.items || [],
+        raceList,
       });
       
       // 设置页面标题
@@ -87,67 +68,20 @@ Page({
   },
   
   /**
-   * 点击比赛项
+   * 点击比赛项，跳转到比赛总结页
    */
   onTapRace(e) {
     const { item } = e.currentTarget.dataset;
-    this.params.season = item.season;
-    this.params.location = item.location;
-    this.setData({ mode: 'detail' });
-    this.loadDetail();
-  },
-  
-  /**
-   * 加载详情数据
-   */
-  async loadDetail() {
-    this.setData({ loading: true, error: null });
-    
-    try {
-      const data = await api.getAthleteResult(
-        this.params.season,
-        this.params.location,
-        this.params.name
-      );
-      
-      this.setData({
-        loading: false,
-        athlete: data.athlete,
-        race: data.race,
-        results: data.results,
-        rankings: data.rankings,
-        splits: data.splits,
-      });
-      
-      // 设置页面标题
-      wx.setNavigationBarTitle({
-        title: data.athlete?.name || '成绩详情',
-      });
-    } catch (err) {
-      console.error('Load detail failed:', err);
-      this.setData({
-        loading: false,
-        error: err.message || '加载失败，请重试',
-      });
-    }
-  },
-  
-  /**
-   * 加载数据（兼容旧调用）
-   */
-  async loadData() {
-    if (this.data.mode === 'list') {
-      this.loadRaceList();
-    } else {
-      this.loadDetail();
-    }
+    wx.navigateTo({
+      url: `/pages/summary/summary?season=${item.season}&location=${item.location}&name=${encodeURIComponent(this.params.name)}`,
+    });
   },
   
   /**
    * 重试加载
    */
   onRetry() {
-    this.loadData();
+    this.loadRaceList();
   },
   
   /**
@@ -161,14 +95,9 @@ Page({
    * 分享
    */
   onShareAppMessage() {
-    const { athlete, race, results } = this.data;
     return {
-      title: `${athlete?.name} - ${race?.event_name} ${results?.total_time}`,
-      path: `/pages/result/result?season=${this.params.season}&location=${this.params.location}&name=${encodeURIComponent(this.params.name)}`,
+      title: `${this.data.athleteName} 的 HYROX 比赛记录`,
+      path: `/pages/result/result?name=${encodeURIComponent(this.params.name)}`,
     };
   },
 });
-
-
-
-

@@ -15,6 +15,7 @@ Page({
     division: 'open',    // open / pro
     gender: 'male',      // male / female / mixed
     ageGroup: 'ALL',     // ALL / 16-24 / 25-29 ...
+    divisionLabel: 'OPEN', // 用于显示的标签
     
     // 年龄组选项
     ageOptions: [],
@@ -46,9 +47,21 @@ Page({
       location,
       raceName: name,
       ageOptions: this.getAgeOptions('single', 'open'),
+      divisionLabel: this.getDivisionLabel('single', 'open'),
     });
     
     this.loadLeaderboard();
+  },
+  
+  /**
+   * 获取组别显示标签
+   */
+  getDivisionLabel(raceType, division) {
+    if (division === 'pro') {
+      return raceType === 'doubles' ? 'PRO DOUBLES' : 'PRO';
+    } else {
+      return raceType === 'doubles' ? 'DOUBLES' : 'OPEN';
+    }
   },
   
   /**
@@ -126,6 +139,7 @@ Page({
   onRaceTypeChange(e) {
     const type = e.currentTarget.dataset.type;
     const ageOptions = this.getAgeOptions(type, 'open');
+    const divisionLabel = this.getDivisionLabel(type, 'open');
     
     this.setData({
       raceType: type,
@@ -133,6 +147,7 @@ Page({
       gender: 'male',
       ageGroup: 'ALL',
       ageOptions,
+      divisionLabel,
     });
     
     this.loadLeaderboard();
@@ -144,6 +159,7 @@ Page({
   onDivisionChange(e) {
     const div = e.currentTarget.dataset.division;
     const ageOptions = this.getAgeOptions(this.data.raceType, div);
+    const divisionLabel = this.getDivisionLabel(this.data.raceType, div);
     
     // 如果当前年龄组不在新选项中，重置
     let ageGroup = this.data.ageGroup;
@@ -155,6 +171,7 @@ Page({
       division: div,
       ageGroup,
       ageOptions,
+      divisionLabel,
     });
     
     this.loadLeaderboard();

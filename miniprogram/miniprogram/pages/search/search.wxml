@@ -55,11 +55,8 @@
         data-item="{{item}}"
         bindtap="onTapAthlete"
       >
-        <view class="athlete-info">
-          <text class="athlete-name">{{item.name}}</text>
-          <text class="match-count">{{item.match_count}} 场比赛</text>
-        </view>
-        <text class="card-arrow">›</text>
+        <text class="athlete-name">{{item.name}}</text>
+        <text class="match-count">({{item.match_count}}场比赛)</text>
       </view>
     </view>
   </view>

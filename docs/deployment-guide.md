@@ -4,7 +4,7 @@
 
 - **平台**: 腾讯云轻量服务器
 - **系统**: Ubuntu 22.04 + 宝塔面板
-- **项目路径**: `/www/wwwroot/HyroxAgent`
+- **项目路径**: `/www/wwwroot/hyrox-agent`
 - **后端端口**: 8000
 
 ---
@@ -21,22 +21,22 @@ ssh root@<服务器IP>
 ### 2. 拉取最新代码
 
 ```bash
-cd /www/wwwroot/HyroxAgent
+cd /www/wwwroot/hyrox-agent
 git pull origin main
 ```
 
 ### 3. 安装新依赖（如有）
 
 ```bash
-cd /www/wwwroot/HyroxAgent/backend
-pip install -r requirements.txt
+cd /www/wwwroot/hyrox-agent/backend
+pip3 install -r requirements.txt
 ```
 
 ### 4. 重启后端服务
 
 **方法 A: 通过宝塔面板**
 1. 进入「软件商店」→「Python 项目管理器」
-2. 找到 HyroxAgent 项目
+2. 找到 hyrox-agent 项目
 3. 点击「重启」
 
 **方法 B: 通过命令行**
@@ -46,8 +46,8 @@ ps aux | grep uvicorn
 kill <PID>
 
 # 重新启动
-cd /www/wwwroot/HyroxAgent/backend
-nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /var/log/hyrox.log 2>&1 &
+cd /www/wwwroot/hyrox-agent/backend
+nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /var/log/hyrox.log 2>&1 &
 ```
 
 ### 5. 验证服务状态
@@ -171,7 +171,7 @@ const config = {
 | 后端配置 | `backend/app/config/settings.py` |
 | 小程序 API 地址 | `miniprogram/miniprogram/services/config.js` |
 | 小程序 AppID | `miniprogram/project.config.json` |
-| 数据库文件 | `data/db/hyrox.db` (本地) 或 `/www/wwwroot/HyroxAgent/data/db/hyrox.db` (服务器) |
+| 数据库文件 | `data/db/hyrox.db` (本地) 或 `/www/wwwroot/hyrox-agent/data/db/hyrox.db` (服务器) |
 
 ---
 
@@ -181,18 +181,18 @@ const config = {
 
 ```bash
 #!/bin/bash
-cd /www/wwwroot/HyroxAgent
+cd /www/wwwroot/hyrox-agent
 echo ">>> 拉取最新代码..."
 git pull origin main
 
 echo ">>> 安装依赖..."
 cd backend
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 
 echo ">>> 重启服务..."
 pkill -f "uvicorn app.main:app"
 sleep 2
-nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /var/log/hyrox.log 2>&1 &
+nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /var/log/hyrox.log 2>&1 &
 
 echo ">>> 等待服务启动..."
 sleep 3

@@ -36,6 +36,7 @@
   
   <!-- 搜索建议列表 -->
   <view class="results-list" wx:if="{{!loading && !error && results.length > 0}}">
+    <text class="results-hint">请选择运动员:</text>
     <view 
       class="athlete-card"
       wx:for="{{results}}"
@@ -43,11 +44,8 @@
       data-item="{{item}}"
       bindtap="onTapAthlete"
     >
-      <view class="card-header">
-        <view class="athlete-name">{{item.name}}</view>
-        <view class="match-count">{{item.match_count}} 场比赛</view>
-      </view>
-      <view class="card-arrow">›</view>
+      <text class="athlete-name">{{item.name}}</text>
+      <text class="match-count">({{item.match_count}}场比赛)</text>
     </view>
   </view>
   

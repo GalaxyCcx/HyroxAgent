@@ -437,6 +437,12 @@
   border-radius: 12rpx;
 }
 
+.claim-btn.claimed {
+  background: transparent;
+  border: 2rpx solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .claim-btn:active {
   opacity: 0.9;
 }

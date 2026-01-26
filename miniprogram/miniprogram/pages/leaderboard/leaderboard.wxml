@@ -6,7 +6,7 @@
       <view class="back-btn" bindtap="onBack">
         <text class="back-icon">‹</text>
       </view>
-      <text class="header-title">{{raceName || '成绩列表'}}</text>
+      <text class="header-title">{{raceName ? raceName + ' - 成绩列表' : '成绩列表'}}</text>
       <view class="search-toggle" bindtap="toggleSearch">
         <text class="search-icon">🔍</text>
       </view>
@@ -34,12 +34,12 @@
           class="filter-btn {{division === 'open' ? 'active' : ''}}"
           data-division="open"
           bindtap="onDivisionChange"
-        >{{raceType === 'doubles' ? 'Doubles' : 'Open'}}</view>
+        >{{raceType === 'doubles' ? 'Doubles (双人组)' : 'Open (公开组)'}}</view>
         <view 
           class="filter-btn {{division === 'pro' ? 'active' : ''}}"
           data-division="pro"
           bindtap="onDivisionChange"
-        >{{raceType === 'doubles' ? 'Pro Doubles' : 'Pro'}}</view>
+        >{{raceType === 'doubles' ? 'Pro Doubles (精英组)' : 'Pro (精英组)'}}</view>
       </view>
       
       <!-- 三级：性别 + 年龄组 -->
@@ -123,7 +123,7 @@
             <text class="gender-icon" wx:if="{{item.gender === 'female'}}">♀</text>
           </view>
           <view class="entry-meta">
-            <text class="division-tag">{{division === 'pro' ? 'PRO' : 'OPEN'}}</text>
+            <text class="division-tag">{{divisionLabel}}</text>
             <text class="age-tag" wx:if="{{item.age_group}}">{{item.age_group}}</text>
           </view>
         </view>

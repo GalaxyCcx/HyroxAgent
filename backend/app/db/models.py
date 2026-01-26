@@ -166,4 +166,34 @@ class User(Base):
         }
 
 
+class ClaimedRace(Base):
+    """用户认领的比赛"""
+    __tablename__ = "claimed_races"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False, index=True, comment="用户 ID")
+    season = Column(Integer, nullable=False, comment="赛季")
+    location = Column(String(50), nullable=False, comment="比赛地点")
+    athlete_name = Column(String(100), nullable=False, comment="运动员姓名")
+    created_at = Column(DateTime, server_default=func.now(), comment="认领时间")
+    
+    __table_args__ = (
+        Index("uq_claimed_race", "user_id", "season", "location", "athlete_name", unique=True),
+    )
+    
+    def __repr__(self):
+        return f"<ClaimedRace(user_id={self.user_id}, athlete='{self.athlete_name}', season={self.season}, location='{self.location}')>"
+    
+    def to_dict(self):
+        """转换为字典"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "season": self.season,
+            "location": self.location,
+            "athlete_name": self.athlete_name,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 
