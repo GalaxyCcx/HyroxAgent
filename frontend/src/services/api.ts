@@ -16,6 +16,7 @@ import type {
   SplitAnalyticsData,
   RecentRacesData,
   RaceLeaderboardData,
+  AnalysisLiteData,
 } from '../types';
 
 // API 基础地址，可通过环境变量覆盖
@@ -103,6 +104,23 @@ export const athleteApi = {
   ): Promise<ApiResponse<SplitAnalyticsData>> => {
     const url = `${API_BASE_URL}/results/${season}/${location}/${encodeURIComponent(athleteName)}/analytics`;
     return request<SplitAnalyticsData>(url);
+  },
+
+  /**
+   * v4.0 新增：获取 LLM 快速分析
+   * 获取 AI 生成的比赛分析，包括一句话总结、优势、短板
+   * 
+   * @param season - 赛季
+   * @param location - 比赛地点（如 hong-kong）
+   * @param athleteName - 运动员姓名
+   */
+  getAnalysisLite: async (
+    season: number,
+    location: string,
+    athleteName: string
+  ): Promise<ApiResponse<AnalysisLiteData>> => {
+    const url = `${API_BASE_URL}/results/${season}/${location}/${encodeURIComponent(athleteName)}/analysis`;
+    return request<AnalysisLiteData>(url);
   },
 };
 

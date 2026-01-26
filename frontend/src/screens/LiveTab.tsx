@@ -20,7 +20,8 @@ import type {
   SplitItem,
   LeaderboardEntry,
   RaceEvent,
-  RaceLeaderboardData
+  RaceLeaderboardData,
+  AnalysisLiteData
 } from '../types';
 import { athleteApi, racesApi } from '../services/api';
 
@@ -81,6 +82,11 @@ const LiveTab: React.FC = () => {
   const [isClaimed, setIsClaimed] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  
+  // --- LLM 分析状态 ---
+  const [analysisData, setAnalysisData] = useState<AnalysisLiteData | null>(null);
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   // --- 年龄组下拉点击外部关闭 ---
   useEffect(() => {
@@ -213,6 +219,57 @@ const LiveTab: React.FC = () => {
       loadLeaderboard(selectedRace.season, selectedRace.location, division, gender, raceTypeFilter, ageGroup);
     }
   }, [raceTypeFilter, divisionFilter, genderFilter, ageGroupFilter, selectedRace, currentView, searchResults.length, loadLeaderboard]);
+
+  // --- LLM 分析加载 ---
+  const loadAnalysis = useCallback(async () => {
+    if (!selectedAthlete) return;
+    
+    setIsLoadingAnalysis(true);
+    setAnalysisError(null);
+    
+    try {
+      const response = await athleteApi.getAnalysisLite(
+        selectedAthlete.race.season,
+        selectedAthlete.race.location,
+        selectedAthlete.athlete.name
+      );
+      
+      if (response.code === 0 && response.data) {
+        setAnalysisData(response.data);
+      } else {
+        setAnalysisError('分析生成失败，请重试');
+      }
+    } catch (err) {
+      console.error('Failed to load analysis:', err);
+      setAnalysisError('网络错误，请检查连接后重试');
+    } finally {
+      setIsLoadingAnalysis(false);
+    }
+  }, [selectedAthlete]);
+
+  // --- 关键词高亮函数 ---
+  const highlightKeywords = (text: string): React.ReactNode[] => {
+    const keywords = [
+      'SkiErg', 'Sled Push', 'Sled Pull', 'Burpee Broad Jump', 
+      'Rowing', 'Farmers Carry', 'Sandbag Lunges', 'Wall Balls',
+      'Roxzone', '转换区', '站点效率', '跑步', '滑雪机', '雪橇推',
+      '雪橇拉', '波比跳', '划船', '农夫行走', '沙袋弓步', '墙球'
+    ];
+    
+    // 创建正则表达式匹配所有关键词
+    const pattern = keywords.map(kw => kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    const regex = new RegExp(`(${pattern})`, 'gi');
+    
+    const parts = text.split(regex);
+    
+    return parts.map((part, i) => {
+      const isKeyword = keywords.some(kw => kw.toLowerCase() === part.toLowerCase());
+      if (isKeyword) {
+        return <span key={i} className="text-primary font-bold border-b border-primary/30">{part}</span>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
 
   // --- 导航函数 ---
   const goToSearch = () => {
@@ -1040,7 +1097,10 @@ const LiveTab: React.FC = () => {
             {/* Actions */}
             <div className="space-y-3">
               <button 
-                onClick={() => setCurrentView('ANALYSIS_LITE')}
+                onClick={() => {
+                  setCurrentView('ANALYSIS_LITE');
+                  loadAnalysis();
+                }}
                 className="w-full h-20 bg-gradient-to-r from-primary to-primary-dark rounded-2xl flex items-center justify-center gap-4 shadow-[0_0_20px_rgba(66,255,158,0.4)] hover:brightness-110 active:scale-[0.98] transition-all group"
               >
                 <span className="material-symbols-outlined text-black text-2xl group-hover:rotate-12 transition-transform">auto_awesome</span>
@@ -1075,6 +1135,8 @@ const LiveTab: React.FC = () => {
       division: selectedAthlete.athlete.division,
       divisionRank: selectedAthlete.rankings.division_rank,
       divisionTotal: selectedAthlete.rankings.division_total,
+      overallRank: selectedAthlete.rankings.overall_rank,
+      overallTotal: selectedAthlete.rankings.overall_total,
     } : {
       eventName: 'HYROX 北京站 2026',
       name: '陈悦',
@@ -1082,7 +1144,13 @@ const LiveTab: React.FC = () => {
       division: 'Men Open',
       divisionRank: 1,
       divisionTotal: 200,
+      overallRank: 1,
+      overallTotal: 500,
     };
+
+    // 从 event_name 提取地点
+    const locationMatch = displayData.eventName.match(/(\d{4})\s+(.+)/);
+    const locationName = locationMatch ? locationMatch[2].toUpperCase() : 'BEIJING';
 
     return (
       <div className="flex flex-col min-h-screen bg-background-dark animate-in slide-in-from-right-8 duration-300">
@@ -1094,7 +1162,7 @@ const LiveTab: React.FC = () => {
           <span className="material-symbols-outlined text-white/60">help</span>
         </header>
 
-        <div className="bg-[#15171A] border-b border-white/5 px-4 py-2 flex justify-between text-[10px] text-white/40 font-mono">
+        <div className="bg-[#15171A] border-b border-white/5 px-4 py-2 flex justify-center gap-2 text-[10px] text-white/40 font-mono">
           <span>{displayData.eventName}</span>
           <span>|</span>
           <span>{displayData.division}</span>
@@ -1105,115 +1173,146 @@ const LiveTab: React.FC = () => {
         </div>
 
         <main className="flex-1 px-4 py-5 space-y-5 pb-32 overflow-y-auto no-scrollbar">
-          {/* Hero Card with Image */}
-          <div className="relative rounded-2xl overflow-hidden h-48 border border-white/10 group">
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10"></div>
-            <img src="https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=800&auto=format&fit=crop" className="w-full h-full object-cover grayscale opacity-60 group-hover:scale-105 transition-transform duration-700" />
-            
-            <div className="absolute top-4 left-4 z-20">
-              <span className="px-2 py-1 bg-primary text-black text-[10px] font-bold rounded flex items-center gap-1 w-fit">
-                <span className="material-symbols-outlined text-[10px]">location_on</span> BEIJING
-              </span>
-              <h2 className="text-xl font-bold text-white mt-2">HYROX {displayData.division}</h2>
-              <div className="text-[10px] text-white/60">2026.10.15</div>
+          {/* Loading State */}
+          {isLoadingAnalysis && (
+            <div className="flex flex-col items-center justify-center pt-20">
+              <div className="size-12 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-white font-bold mb-2">AI 分析生成中...</p>
+              <p className="text-[10px] text-white/40">首次分析需要约 10 秒</p>
             </div>
+          )}
 
-            <div className="absolute bottom-4 left-4 right-4 z-20 flex justify-between items-end">
-              <div className="text-center bg-black/40 backdrop-blur-md rounded-lg p-2 border border-white/10">
-                <div className="text-2xl font-bold text-white font-display">{displayData.totalTime}</div>
-                <div className="text-[9px] text-white/40">完赛时间</div>
+          {/* Error State */}
+          {!isLoadingAnalysis && analysisError && (
+            <div className="flex flex-col items-center justify-center pt-20">
+              <span className="material-symbols-outlined text-4xl text-white/40 mb-4">error</span>
+              <p className="text-white/60 mb-4">{analysisError}</p>
+              <button 
+                onClick={loadAnalysis}
+                className="px-6 py-2 bg-primary text-black font-bold rounded-lg"
+              >
+                重试
+              </button>
+            </div>
+          )}
+
+          {/* Content - show when not loading and no error */}
+          {!isLoadingAnalysis && !analysisError && (
+            <>
+              {/* Hero Card with Image */}
+              <div className="relative rounded-2xl overflow-hidden h-48 border border-white/10 group">
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10"></div>
+                <img src="https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=800&auto=format&fit=crop" className="w-full h-full object-cover grayscale opacity-60 group-hover:scale-105 transition-transform duration-700" />
+                
+                <div className="absolute top-4 left-4 z-20">
+                  <span className="px-2 py-1 bg-primary text-black text-[10px] font-bold rounded flex items-center gap-1 w-fit">
+                    <span className="material-symbols-outlined text-[10px]">location_on</span> {locationName}
+                  </span>
+                  <h2 className="text-xl font-bold text-white mt-2">HYROX {displayData.division}</h2>
+                </div>
+
+                <div className="absolute bottom-4 left-4 right-4 z-20 flex justify-between items-end">
+                  <div className="text-center bg-black/40 backdrop-blur-md rounded-lg p-2 border border-white/10">
+                    <div className="text-2xl font-bold text-white font-display">{displayData.totalTime}</div>
+                    <div className="text-[9px] text-white/40">完赛时间</div>
+                  </div>
+                  <div className="text-center bg-black/40 backdrop-blur-md rounded-lg p-2 border border-white/10">
+                    <div className="text-xl font-bold text-white font-display">{displayData.overallRank}<span className="text-xs text-white/40 font-normal">/{displayData.overallTotal}</span></div>
+                    <div className="text-[9px] text-white/40">总排名</div>
+                  </div>
+                  <div className="text-center bg-black/40 backdrop-blur-md rounded-lg p-2 border border-white/10">
+                    <div className="text-xl font-bold text-primary font-display">{displayData.division.includes('pro') ? 'PRO' : 'OPEN'}</div>
+                    <div className="text-[9px] text-white/40">组别</div>
+                  </div>
+                </div>
               </div>
-              <div className="text-center bg-black/40 backdrop-blur-md rounded-lg p-2 border border-white/10">
-                <div className="text-xl font-bold text-white font-display">{displayData.divisionRank}<span className="text-xs text-white/40 font-normal">/{displayData.divisionTotal}</span></div>
-                <div className="text-[9px] text-white/40">组别排名</div>
+
+              {/* Conclusion Card */}
+              <div className="bg-[#1E2024] border border-primary/20 rounded-2xl p-5 relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="material-symbols-outlined text-primary text-lg">psychology</span>
+                  <h3 className="text-sm font-bold text-white">一句话结论</h3>
+                </div>
+                <p className="text-sm text-white/80 leading-relaxed relative z-10">
+                  {analysisData?.summary ? highlightKeywords(analysisData.summary) : '暂无分析数据'}
+                </p>
+                <div className="absolute top-0 right-0 size-24 bg-primary/5 rounded-full blur-2xl -mt-8 -mr-8"></div>
               </div>
-              <div className="text-center bg-black/40 backdrop-blur-md rounded-lg p-2 border border-white/10">
-                <div className="text-xl font-bold text-primary font-display">OPEN</div>
-                <div className="text-[9px] text-white/40">组别</div>
+
+              {/* Strength/Weakness Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#1E2024] border border-white/5 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="material-symbols-outlined text-primary text-sm filled">check_circle</span>
+                    <h3 className="text-xs font-bold text-white">优势</h3>
+                  </div>
+                  <ul className="space-y-2">
+                    {analysisData?.strengths && analysisData.strengths.length > 0 ? (
+                      analysisData.strengths.map((item, i) => (
+                        <li key={i} className="flex items-center gap-2 text-xs text-white/60">
+                          <span className="size-1 bg-primary rounded-full flex-shrink-0"></span>
+                          {item}
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-xs text-white/30">暂无数据</li>
+                    )}
+                  </ul>
+                </div>
+                <div className="bg-[#1E2024] border border-white/5 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="material-symbols-outlined text-yellow-500 text-sm filled">warning</span>
+                    <h3 className="text-xs font-bold text-white">短板</h3>
+                  </div>
+                  <ul className="space-y-2">
+                    {analysisData?.weaknesses && analysisData.weaknesses.length > 0 ? (
+                      analysisData.weaknesses.map((item, i) => (
+                        <li key={i} className="flex items-center gap-2 text-xs text-white/60">
+                          <span className="size-1 bg-yellow-500 rounded-full flex-shrink-0"></span>
+                          {item}
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-xs text-white/30">暂无数据</li>
+                    )}
+                  </ul>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Conclusion Card */}
-          <div className="bg-[#1E2024] border border-primary/20 rounded-2xl p-5 relative overflow-hidden">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="material-symbols-outlined text-primary text-lg">psychology</span>
-              <h3 className="text-sm font-bold text-white">一句话结论</h3>
-            </div>
-            <p className="text-sm text-white/80 leading-relaxed relative z-10">
-              你跑步很稳，关键差距在<span className="text-white font-bold">站点效率</span>；下一次最值得先补：<span className="text-primary font-bold border-b border-primary/30">Wall Balls</span> 与 <span className="text-primary font-bold border-b border-primary/30">Roxzone</span>。
-            </p>
-            <div className="absolute top-0 right-0 size-24 bg-primary/5 rounded-full blur-2xl -mt-8 -mr-8"></div>
-          </div>
-
-          {/* Strength/Weakness Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#1E2024] border border-white/5 rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="material-symbols-outlined text-primary text-sm filled">check_circle</span>
-                <h3 className="text-xs font-bold text-white">优势</h3>
+              <div className="text-[10px] text-white/30 text-center pt-2">
+                想看逐段对比与省时拆解？
               </div>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-xs text-white/60">
-                  <span className="size-1 bg-primary rounded-full"></span>
-                  跑步节奏稳定
-                </li>
-                <li className="flex items-center gap-2 text-xs text-white/60">
-                  <span className="size-1 bg-primary rounded-full"></span>
-                  Sled Push 爆发力
-                </li>
-              </ul>
-            </div>
-            <div className="bg-[#1E2024] border border-white/5 rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="material-symbols-outlined text-yellow-500 text-sm filled">warning</span>
-                <h3 className="text-xs font-bold text-white">短板</h3>
+
+              {/* Upsell Button */}
+              <button className="w-full py-4 bg-gradient-to-r from-primary to-primary-dark rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(66,255,158,0.3)] hover:brightness-110 active:scale-[0.98] transition-all">
+                <span className="material-symbols-outlined text-black">lock</span>
+                <span className="text-black font-bold">¥9.9 解锁详细分段报告 (PDF)</span>
+              </button>
+
+              {/* Secondary Actions */}
+              <div className="grid grid-cols-2 gap-3">
+                <button className="py-3 bg-[#1E2024] border border-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:bg-white/5">
+                  <span className="material-symbols-outlined text-sm">ios_share</span>
+                  分享这份战报
+                </button>
+                <button onClick={() => setCurrentView('SUMMARY')} className="py-3 bg-[#1E2024] border border-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:bg-white/5">
+                  回到比赛总结
+                </button>
               </div>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-xs text-white/60">
-                  <span className="size-1 bg-yellow-500 rounded-full"></span>
-                  Wall Balls 后段波动
-                </li>
-                <li className="flex items-center gap-2 text-xs text-white/60">
-                  <span className="size-1 bg-yellow-500 rounded-full"></span>
-                  Burpees 节奏混乱
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="text-[10px] text-white/30 text-center pt-2">
-            想看逐段对比与省时拆解？
-          </div>
-
-          {/* Upsell Button */}
-          <button className="w-full py-4 bg-gradient-to-r from-primary to-primary-dark rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(66,255,158,0.3)] hover:brightness-110 active:scale-[0.98] transition-all">
-            <span className="material-symbols-outlined text-black">lock</span>
-            <span className="text-black font-bold">¥9.9 解锁详细分段报告 (PDF)</span>
-          </button>
-
-          {/* Secondary Actions */}
-          <div className="grid grid-cols-2 gap-3">
-            <button className="py-3 bg-[#1E2024] border border-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:bg-white/5">
-              <span className="material-symbols-outlined text-sm">ios_share</span>
-              分享这份战报
-            </button>
-            <button onClick={() => setCurrentView('SUMMARY')} className="py-3 bg-[#1E2024] border border-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:bg-white/5">
-              回到比赛总结
-            </button>
-          </div>
-          
-          {/* Teaser Content (Locked) */}
-          <div className="bg-[#1E2024] border border-white/5 rounded-2xl p-4 opacity-50 relative overflow-hidden">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="bg-[#2A2D33] text-primary text-xs font-bold size-6 rounded flex items-center justify-center">3</span>
-              <h3 className="font-bold text-white text-sm">心率分配控制</h3>
-            </div>
-            <p className="text-xs text-white/50">跑步段落严格控制在阈值区间，为力量站点储备体能...</p>
-            <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px] flex items-center justify-center z-10">
-              <span className="material-symbols-outlined text-white/40">lock</span>
-            </div>
-          </div>
+              
+              {/* Teaser Content (Locked) */}
+              <div className="bg-[#1E2024] border border-white/5 rounded-2xl p-4 opacity-50 relative overflow-hidden">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="bg-[#2A2D33] text-primary text-xs font-bold size-6 rounded flex items-center justify-center">3</span>
+                  <h3 className="font-bold text-white text-sm">心率分配控制</h3>
+                </div>
+                <p className="text-xs text-white/50">跑步段落严格控制在阈值区间，为力量站点储备体能...</p>
+                <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px] flex items-center justify-center z-10">
+                  <span className="material-symbols-outlined text-white/40">lock</span>
+                </div>
+              </div>
+            </>
+          )}
         </main>
       </div>
     );

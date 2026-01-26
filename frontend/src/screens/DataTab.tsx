@@ -71,6 +71,7 @@ const DataTab: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState<SplitAnalyticsData | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  
 
   // --- Handlers ---
   const handleStartSearch = () => {
@@ -531,19 +532,6 @@ const DataTab: React.FC = () => {
             <span className="material-symbols-outlined text-white/60">image</span> 生成战报海报
           </button>
 
-          {/* AI Analysis Placeholder */}
-          <div className="mt-6 bg-[#1E2024] border border-white/10 rounded-xl p-4">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-full bg-white/5 flex items-center justify-center">
-                <span className="material-symbols-outlined text-white/40">smart_toy</span>
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white/60">AI 智能诊断</h3>
-                <p className="text-[10px] text-white/30">AI 分析功能即将上线</p>
-              </div>
-              <span className="material-symbols-outlined text-white/20 ml-auto">lock</span>
-            </div>
-          </div>
         </main>
       </div>
     );

@@ -236,3 +236,11 @@ export interface AthleteResult {
   // 后端数据关联
   _searchItem?: AthleteSearchItem;
 }
+
+// ========== LLM 分析数据 ==========
+export interface AnalysisLiteData {
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  cached: boolean;
+}
