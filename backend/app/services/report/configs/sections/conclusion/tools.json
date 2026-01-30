@@ -1,0 +1,6 @@
+{
+  "section_id": "conclusion",
+  "type": "static",
+  "description": "总结章节 - 静态内容，汇总各章节 highlights",
+  "note": "conclusion 的内容由各章节的 highlights 自动汇总生成，无需独立的 LLM 调用"
+}

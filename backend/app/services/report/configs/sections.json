@@ -1,0 +1,73 @@
+{
+  "version": "3.0",
+  "description": "HYROX 专业分析报告章节配置",
+  "report_title_template": "{athlete_name} - HYROX {location} S{season} 專業分析報告",
+  
+  "sections": [
+    {
+      "section_id": "introduction",
+      "title": "報告概覽",
+      "type": "static",
+      "order": 0,
+      "enabled": true,
+      "description": "报告引言和核心摘要卡片（数据来自 summary 章节）"
+    },
+    {
+      "section_id": "summary",
+      "title": "核心摘要：ZONEØ 戰力值",
+      "type": "dynamic",
+      "order": 1,
+      "enabled": true,
+      "config_path": "sections/summary",
+      "description": "运动员整体成绩定位和能力评估，包含 ROXSCAN 综合评分和三维能力值"
+    },
+    {
+      "section_id": "time_loss",
+      "title": "消失的五分鐘",
+      "type": "dynamic",
+      "order": 2,
+      "enabled": true,
+      "config_path": "sections/time_loss",
+      "description": "找出成绩中隐藏的时间损耗，量化改进空间"
+    },
+    {
+      "section_id": "deep_dive",
+      "title": "ZONEØ 引擎深度複盤",
+      "type": "dynamic",
+      "order": 3,
+      "enabled": true,
+      "config_path": "sections/deep_dive",
+      "description": "基于心率数据的配速-心率解耦分析（可降级为纯配速分析）",
+      "conditional": {
+        "requires_data": ["heart_rate_data"],
+        "fallback_mode": "degraded"
+      }
+    },
+    {
+      "section_id": "prediction",
+      "title": "下一站成績預測",
+      "type": "dynamic",
+      "order": 4,
+      "enabled": true,
+      "config_path": "sections/prediction",
+      "description": "基于同水平运动员历史数据的五档预测和分段拆解"
+    },
+    {
+      "section_id": "training",
+      "title": "定制化訓練建議",
+      "type": "dynamic",
+      "order": 5,
+      "enabled": true,
+      "config_path": "sections/training",
+      "description": "基于弱项分析的个性化训练计划"
+    },
+    {
+      "section_id": "conclusion",
+      "title": "總結與展望",
+      "type": "static",
+      "order": 99,
+      "enabled": true,
+      "description": "报告总结（数据来自各章节 highlights）"
+    }
+  ]
+}

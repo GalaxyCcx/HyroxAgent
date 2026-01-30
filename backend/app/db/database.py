@@ -7,9 +7,11 @@ SQLite 数据库连接管理
 """
 import logging
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Generator
+from contextlib import contextmanager
 
-from sqlalchemy import text
+from sqlalchemy import text, create_engine
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -54,6 +56,42 @@ async_session_maker = async_sessionmaker(
     autocommit=False,
     autoflush=False,
 )
+
+
+# 创建同步引擎（用于报告生成等长时间任务）
+def get_sync_database_url() -> str:
+    """获取同步数据库连接 URL"""
+    db_path = get_db_path()
+    return f"sqlite:///{db_path}"
+
+
+sync_engine = create_engine(
+    get_sync_database_url(),
+    echo=False,
+    connect_args={"check_same_thread": False},
+)
+
+# 创建同步会话工厂
+sync_session_maker = sessionmaker(
+    bind=sync_engine,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
+
+
+@contextmanager
+def get_sync_db() -> Generator[Session, None, None]:
+    """获取同步数据库会话（用于后台任务）"""
+    session = sync_session_maker()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

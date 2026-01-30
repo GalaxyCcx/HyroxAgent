@@ -163,3 +163,60 @@ class AnalysisData(BaseModel):
 class AnalysisResponse(ResponseBase[AnalysisData]):
     """LLM 分析响应"""
     pass
+
+
+# ==================== 心率图片上传模型 ====================
+
+class HeartRateImageCreate(BaseModel):
+    """创建心率图片请求"""
+    report_id: str = Field(..., description="关联的报告ID")
+    user_id: Optional[int] = Field(None, description="用户ID（可选）")
+
+
+class HeartRateExtractedData(BaseModel):
+    """VL 提取的心率数据"""
+    avg_heart_rate: Optional[int] = Field(None, description="平均心率")
+    max_heart_rate: Optional[int] = Field(None, description="最大心率")
+    min_heart_rate: Optional[int] = Field(None, description="最小心率")
+    heart_rate_zones: Optional[dict] = Field(None, description="心率区间分布")
+    duration_seconds: Optional[int] = Field(None, description="记录时长（秒）")
+    raw_text: Optional[str] = Field(None, description="OCR 原始文本")
+
+
+class HeartRateImageItem(BaseModel):
+    """心率图片数据项"""
+    id: int = Field(..., description="图片ID")
+    report_id: str = Field(..., description="关联报告ID")
+    user_id: Optional[int] = Field(None, description="用户ID")
+    image_path: str = Field(..., description="图片存储路径")
+    original_filename: str = Field(..., description="原始文件名")
+    extracted_data: Optional[HeartRateExtractedData] = Field(None, description="提取的心率数据")
+    extraction_status: str = Field(..., description="提取状态: pending/processing/completed/failed")
+    created_at: Optional[str] = Field(None, description="创建时间")
+
+
+class HeartRateImageUploadData(BaseModel):
+    """上传响应数据"""
+    uploaded: list[HeartRateImageItem] = Field(default_factory=list, description="上传成功的图片列表")
+    failed: list[str] = Field(default_factory=list, description="上传失败的文件名列表")
+
+
+class HeartRateImageUploadResponse(ResponseBase[HeartRateImageUploadData]):
+    """上传响应"""
+    pass
+
+
+class HeartRateImageListData(BaseModel):
+    """图片列表数据"""
+    images: list[HeartRateImageItem] = Field(default_factory=list, description="图片列表")
+    total: int = Field(default=0, description="总数")
+
+
+class HeartRateImageListResponse(ResponseBase[HeartRateImageListData]):
+    """图片列表响应"""
+    pass
+
+
+class HeartRateImageDeleteResponse(ResponseBase[None]):
+    """删除响应"""
+    pass

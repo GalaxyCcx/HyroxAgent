@@ -1,0 +1,33 @@
+{
+  "api_key": "sk-5b02cdae243544b19250dca63bde621f",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "default": {
+    "model": "qwen-max-latest",
+    "enable_thinking": false,
+    "max_tokens": 8192,
+    "temperature": 0.7,
+    "top_p": 0.9
+  },
+  "agents": {
+    "center": {
+      "model": "qwen-max-latest",
+      "temperature": 0.7,
+      "max_tokens": 8192
+    },
+    "research": {
+      "model": "qwen-max-latest",
+      "temperature": 0.5,
+      "max_tokens": 8192
+    },
+    "summary": {
+      "model": "qwen-max-latest",
+      "temperature": 0.7,
+      "max_tokens": 8192
+    },
+    "report_section": {
+      "model": "qwen-max-latest",
+      "temperature": 0.5,
+      "max_tokens": 8192
+    }
+  }
+}

@@ -3,7 +3,7 @@
  */
 const config = {
   // 临时域名（备案期间使用 cpolar）
-  baseUrl: 'https://56213ebb.r33.cpolar.top',
+  baseUrl: 'https://765c95c6.r11.vip.cpolar.cn',
   
   // API 版本前缀
   apiPrefix: '/api/v1',

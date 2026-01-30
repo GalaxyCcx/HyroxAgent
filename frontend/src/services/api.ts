@@ -17,6 +17,12 @@ import type {
   RecentRacesData,
   RaceLeaderboardData,
   AnalysisLiteData,
+  CreateReportResponse,
+  ProReportSummary,
+  ProReportDetail,
+  ProReport,
+  HeartRateImage,
+  HeartRateUploadResponse,
 } from '../types';
 
 // API 基础地址，可通过环境变量覆盖
@@ -171,6 +177,193 @@ export const racesApi = {
     }
     
     return request<RaceLeaderboardData>(url);
+  },
+};
+
+/**
+ * 专业报告 API
+ */
+export const reportApi = {
+  /**
+   * V2 创建专业分析报告（新架构）
+   * 
+   * @param season - 赛季
+   * @param location - 比赛地点
+   * @param athleteName - 运动员姓名
+   * @param userId - 用户ID（可选）
+   * @param heartRateImages - 心率图片路径列表（可选）
+   * @param forceRegenerate - 强制重新生成（默认 true）
+   */
+  create: async (
+    season: number,
+    location: string,
+    athleteName: string,
+    userId?: number,
+    heartRateImages?: string[],
+    forceRegenerate: boolean = true
+  ): Promise<CreateReportResponse> => {
+    const url = `${API_BASE_URL}/reports/v2/create`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        season,
+        location,
+        athlete_name: athleteName,
+        user_id: userId,
+        heart_rate_images: heartRateImages,
+        force_regenerate: forceRegenerate,
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+    
+    return response.json();
+  },
+
+  /**
+   * V2 订阅报告生成进度（SSE）- 新架构
+   * 返回 EventSource 实例，调用者需要自行处理事件
+   * 
+   * @param reportId - 报告ID
+   * @param heartRateImagePaths - 心率图片路径数组（可选）
+   */
+  subscribeGenerate: (reportId: string, heartRateImagePaths?: string[]): EventSource => {
+    let url = `${API_BASE_URL}/reports/v2/generate/${reportId}`;
+    
+    // 如果有心率图片，添加到 query parameter
+    if (heartRateImagePaths && heartRateImagePaths.length > 0) {
+      const imagePaths = heartRateImagePaths.join(',');
+      url += `?heart_rate_images=${encodeURIComponent(imagePaths)}`;
+    }
+    
+    return new EventSource(url);
+  },
+
+  /**
+   * 获取报告状态
+   * 
+   * @param reportId - 报告ID
+   */
+  getStatus: async (reportId: string): Promise<{
+    report_id: string;
+    status: string;
+    progress: number;
+    current_step: string | null;
+    title: string | null;
+  }> => {
+    const url = `${API_BASE_URL}/reports/status/${reportId}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+    
+    return response.json();
+  },
+
+  /**
+   * 获取报告详情
+   * 
+   * @param reportId - 报告ID
+   */
+  getDetail: async (reportId: string): Promise<ProReportDetail> => {
+    const url = `${API_BASE_URL}/reports/detail/${reportId}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+    
+    return response.json();
+  },
+
+  /**
+   * 列出用户的报告
+   * 
+   * @param options - 筛选条件
+   */
+  list: async (options?: {
+    userId?: number;
+    athleteName?: string;
+  }): Promise<{ reports: ProReportSummary[] }> => {
+    const params = new URLSearchParams();
+    if (options?.userId) params.append('user_id', String(options.userId));
+    if (options?.athleteName) params.append('athlete_name', options.athleteName);
+    
+    const url = `${API_BASE_URL}/reports/list?${params.toString()}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+    
+    return response.json();
+  },
+
+  /**
+   * 获取报告（用于渲染页面）
+   * 返回完整的报告数据，包含所有章节和图表配置
+   * 
+   * @param reportId - 报告ID
+   */
+  getReport: async (reportId: string): Promise<ApiResponse<ProReport>> => {
+    const url = `${API_BASE_URL}/reports/detail/${reportId}`;
+    return request<ProReport>(url);
+  },
+
+  /**
+   * 上传心率图片
+   * 支持多文件上传，返回上传后的图片列表
+   * 
+   * @param reportId - 报告ID
+   * @param files - 图片文件数组（支持 PNG/JPG/JPEG）
+   */
+  uploadHeartRateImages: async (
+    reportId: string, 
+    files: File[]
+  ): Promise<ApiResponse<HeartRateUploadResponse>> => {
+    const url = `${API_BASE_URL}/upload/heart-rate`;
+    const formData = new FormData();
+    
+    // report_id 作为 Form 字段
+    formData.append('report_id', reportId);
+    
+    // 多个文件
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+    
+    return response.json();
+  },
+
+  /**
+   * 获取心率图片列表
+   * 获取报告关联的所有心率图片及其提取状态
+   * 
+   * @param reportId - 报告ID
+   */
+  getHeartRateImages: async (reportId: string): Promise<ApiResponse<HeartRateImage[]>> => {
+    const url = `${API_BASE_URL}/reports/${reportId}/heart-rate-images`;
+    return request<HeartRateImage[]>(url);
   },
 };
 

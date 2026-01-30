@@ -1,0 +1,83 @@
+{
+  "section_id": "prediction",
+  "description": "预测章节的输入数据定义",
+  
+  "required_inputs": [
+    {
+      "data_type": "athlete_result",
+      "name": "運動員成績",
+      "describe": "運動員在本場比賽的完整成績數據",
+      "summary_template": "總用時 {total_time}（{total_time_seconds} 秒）",
+      "fields": {
+        "key_params": ["season", "location", "athlete_name", "division"],
+        "summary": ["total_time", "total_time_seconds"],
+        "details": ["splits"]
+      }
+    },
+    {
+      "data_type": "prediction_data",
+      "name": "五檔預測數據",
+      "describe": "基於同水平運動員歷史數據計算的五檔預測結果",
+      "summary_template": "預期成績 {expected_time}，樣本量 {sample_size}",
+      "fields": {
+        "key_params": ["time_bin"],
+        "summary": ["expected_time", "sample_size", "improvement_rate"],
+        "details": ["excellent", "great", "expected", "subpar", "poor", "variance", "curve_data"]
+      }
+    },
+    {
+      "data_type": "prediction_split_breakdown",
+      "name": "分段拆解目標",
+      "describe": "達到各目標時間所需的各分段參考值",
+      "summary_template": "",
+      "fields": {
+        "key_params": [],
+        "summary": [],
+        "details": ["splits_by_tier", "priority_segments"]
+      }
+    },
+    {
+      "data_type": "division_stats",
+      "name": "組別統計",
+      "describe": "同組別選手的統計數據",
+      "summary_template": "組別共 {total_count} 人",
+      "fields": {
+        "key_params": ["division"],
+        "summary": ["total_count"],
+        "details": ["avg_time", "percentile_thresholds"]
+      }
+    }
+  ],
+  
+  "optional_inputs": [
+    {
+      "data_type": "athlete_history",
+      "name": "歷史成績",
+      "describe": "運動員的歷史比賽成績記錄",
+      "summary_template": "歷史比賽 {race_count} 場",
+      "fields": {
+        "key_params": [],
+        "summary": ["race_count"],
+        "details": ["races", "trend", "best_time", "avg_time"]
+      }
+    }
+  ],
+  
+  "output_data_refs": [
+    {
+      "data_type": "prediction_data",
+      "for_component": "prediction_tiers",
+      "description": "五档预测卡片引用预测数据"
+    },
+    {
+      "data_type": "prediction_data",
+      "for_component": "density_chart",
+      "description": "概率密度曲线引用预测数据"
+    },
+    {
+      "data_type": "prediction_split_breakdown",
+      "for_component": "split_breakdown_table",
+      "description": "分段拆解表格引用数据"
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+{
+  "section_id": "prediction",
+  "description": "预测章节 - 五档预测和分段拆解",
+  
+  "tool": {
+    "type": "function",
+    "function": {
+      "name": "generate_prediction_section",
+      "description": "生成成绩预测章节的完整内容，包含五档预测、概率分布和分段拆解目标",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          
+          "prediction_tiers": {
+            "type": "object",
+            "description": "五档预测时间",
+            "properties": {
+              "data_id": {
+                "type": "string",
+                "description": "引用的预测数据ID（由系统填充）"
+              },
+              "tiers": {
+                "type": "object",
+                "properties": {
+                  "excellent": {
+                    "type": "object",
+                    "properties": {
+                      "percentile": {"type": "integer", "description": "百分位 (5)"},
+                      "time_seconds": {"type": "integer", "description": "预测时间（秒）"},
+                      "time_display": {"type": "string", "description": "显示格式，如 '1:15:30'"},
+                      "delta": {"type": "integer", "description": "相对当前差值（秒，负数表示提升）"}
+                    }
+                  },
+                  "great": {
+                    "type": "object",
+                    "properties": {
+                      "percentile": {"type": "integer"},
+                      "time_seconds": {"type": "integer"},
+                      "time_display": {"type": "string"},
+                      "delta": {"type": "integer"}
+                    }
+                  },
+                  "expected": {
+                    "type": "object",
+                    "properties": {
+                      "percentile": {"type": "integer"},
+                      "time_seconds": {"type": "integer"},
+                      "time_display": {"type": "string"},
+                      "delta": {"type": "integer"}
+                    }
+                  },
+                  "subpar": {
+                    "type": "object",
+                    "properties": {
+                      "percentile": {"type": "integer"},
+                      "time_seconds": {"type": "integer"},
+                      "time_display": {"type": "string"},
+                      "delta": {"type": "integer"}
+                    }
+                  },
+                  "poor": {
+                    "type": "object",
+                    "properties": {
+                      "percentile": {"type": "integer"},
+                      "time_seconds": {"type": "integer"},
+                      "time_display": {"type": "string"},
+                      "delta": {"type": "integer"}
+                    }
+                  }
+                },
+                "required": ["excellent", "great", "expected", "subpar", "poor"]
+              }
+            },
+            "required": ["tiers"]
+          },
+          
+          "statistics": {
+            "type": "object",
+            "description": "预测统计信息",
+            "properties": {
+              "sample_size": {"type": "integer", "description": "样本量"},
+              "improvement_rate": {"type": "number", "description": "进步比例 (0-1)"},
+              "avg_improvement": {"type": "integer", "description": "平均进步秒数"},
+              "variance": {"type": "integer", "description": "典型方差（秒）"},
+              "time_bin": {"type": "string", "description": "时间区间，如 '1:20-1:30'"}
+            }
+          },
+          
+          "density_chart": {
+            "type": "object",
+            "description": "预测概率密度曲线",
+            "properties": {
+              "data_id": {
+                "type": "string",
+                "description": "引用的数据ID（由系统填充）"
+              },
+              "show_current_marker": {
+                "type": "boolean",
+                "default": true,
+                "description": "是否显示当前成绩标记"
+              }
+            }
+          },
+          
+          "recommended_target": {
+            "type": "string",
+            "enum": ["excellent", "great", "expected"],
+            "description": "推荐的目标档位"
+          },
+          
+          "key_improvements": {
+            "type": "array",
+            "description": "关键提升项目（按优先级排序）",
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "properties": {
+                "segment": {"type": "string", "description": "分段名称"},
+                "current_seconds": {"type": "integer", "description": "当前成绩（秒）"},
+                "target_seconds": {"type": "integer", "description": "目标成绩（秒）"},
+                "improvement_needed": {"type": "integer", "description": "需提升秒数"},
+                "priority": {
+                  "type": "string",
+                  "enum": ["high", "medium", "low"],
+                  "description": "优先级"
+                }
+              },
+              "required": ["segment", "current_seconds", "target_seconds", "improvement_needed", "priority"]
+            }
+          },
+          
+          "split_breakdown_table": {
+            "type": "object",
+            "description": "分段拆解表格",
+            "properties": {
+              "data_id": {
+                "type": "string",
+                "description": "引用的数据ID（由系统填充）"
+              }
+            }
+          },
+          
+          "analysis_text": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "预测分析解读（150-300字）"
+          }
+          
+        },
+        "required": ["prediction_tiers", "statistics", "recommended_target", "analysis_text"]
+      }
+    }
+  },
+  
+  "tool_choice": {
+    "type": "function",
+    "function": {
+      "name": "generate_prediction_section"
+    }
+  },
+  
+  "blocks_mapping": {
+    "prediction_tiers": {
+      "type": "card",
+      "component": "PredictionTiers"
+    },
+    "density_chart": {
+      "type": "chart",
+      "component": "PredictionDensity"
+    },
+    "key_improvements": {
+      "type": "list",
+      "component": "ImprovementsList"
+    },
+    "split_breakdown_table": {
+      "type": "table",
+      "component": "SplitBreakdownTable"
+    },
+    "analysis_text": {
+      "type": "text",
+      "component": "Paragraph"
+    }
+  }
+}

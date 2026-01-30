@@ -25,9 +25,16 @@ Page({
     strengths: [],
     weaknesses: [],
     cached: false,
+    
+    // 导航栏相关
+    statusBarHeight: 0,
+    navBarHeight: 0,
+    menuRight: 0,
   },
 
   onLoad(options) {
+    // 获取胶囊按钮位置
+    this.initNavBar();
     const season = parseInt(options.season) || 8;
     const location = options.location || '';
     const name = decodeURIComponent(options.name || '');
@@ -58,6 +65,26 @@ Page({
         error: '参数错误，请返回重试',
       });
     }
+  },
+
+  /**
+   * 初始化导航栏高度
+   */
+  initNavBar() {
+    const systemInfo = wx.getSystemInfoSync();
+    const menuButton = wx.getMenuButtonBoundingClientRect();
+    
+    const statusBarHeight = systemInfo.statusBarHeight;
+    // 导航栏高度 = 胶囊按钮高度 + 上下间距
+    const navBarHeight = (menuButton.top - statusBarHeight) * 2 + menuButton.height;
+    // 右侧需要预留的空间 = 屏幕宽度 - 胶囊按钮左边距
+    const menuRight = systemInfo.windowWidth - menuButton.left;
+    
+    this.setData({
+      statusBarHeight,
+      navBarHeight,
+      menuRight,
+    });
   },
 
   /**

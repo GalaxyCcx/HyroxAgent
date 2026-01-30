@@ -1,8 +1,0 @@
-{
-  "name": "HYROX 备赛中心",
-  "description": "为 HYROX 运动员打造的综合训练与表现分析应用，提供自动化训练计划、深度比赛诊断和实时赛事追踪。",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
-}

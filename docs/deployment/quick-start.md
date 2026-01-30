@@ -64,15 +64,47 @@ npm install
 
 ```
 HyroxAgent/
-├── backend/          ← 后端 (FastAPI, Python)
-│   └── app/main.py   ← 入口文件
-├── frontend/         ← 前端 (React + Vite) ⚠️ 注意是根目录，不是 hyrox-demo
+├── backend/              ← 后端 (FastAPI, Python)
+│   ├── app/main.py       ← 入口文件
+│   ├── app/services/report/  ← 报告生成服务 (v8.0)
+│   └── data/llm_config.json  ← LLM 配置文件
+├── frontend/             ← 前端 (React + Vite) ⚠️ 注意是根目录，不是 hyrox-demo
 │   └── src/
-├── data/db/          ← SQLite 数据库
-└── docs/             ← 文档
+├── data/db/              ← SQLite 数据库
+└── docs/                 ← 文档
 ```
 
 > ⚠️ **注意**：前端项目在 `frontend/` 根目录，**不是** `frontend/hyrox-demo/`
+
+---
+
+## LLM 配置 (v8.0 专业报告功能)
+
+专业分析报告功能需要配置阿里云百炼 LLM 服务。
+
+### 配置文件位置
+```
+backend/data/llm_config.json
+```
+
+### 配置内容
+```json
+{
+  "api_key": "sk-your-api-key",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "agents": {
+    "default": { "model": "qwen-max-latest", "temperature": 0.7, "max_tokens": 4096 },
+    "research": { "model": "qwen-max-latest", "temperature": 0.5, "max_tokens": 8192 },
+    "chart": { "model": "qwen-max-latest", "temperature": 0.3, "max_tokens": 2048 },
+    "summary": { "model": "qwen-max-latest", "temperature": 0.6, "max_tokens": 4096 }
+  }
+}
+```
+
+### 获取 API Key
+1. 访问 [阿里云百炼控制台](https://bailian.console.aliyun.com/)
+2. 创建应用并获取 API Key
+3. 将 API Key 填入配置文件
 
 ---
 
@@ -95,6 +127,16 @@ python -m uvicorn app.main:app --reload --port 8001
 ### Q: 前端启动了错误的项目
 确保在 `frontend/` 目录下运行 `npm run dev`，而不是 `frontend/hyrox-demo/`
 
+### Q: 报告生成失败 (v8.0)
+1. 检查 LLM 配置文件 `backend/data/llm_config.json` 中的 API Key 是否正确
+2. 确保 `max_tokens` 不超过 8192（阿里云限制）
+3. 查看后端控制台输出的详细错误信息
+
+### Q: 报告页面图表不显示
+1. 确保前端已安装 `echarts-for-react` 依赖
+2. 检查浏览器控制台是否有 JavaScript 错误
+3. 图表数据由 LLM 生成，部分章节可能没有输出图表需求
+
 ---
 
 ## 验证服务
@@ -105,4 +147,11 @@ python -m uvicorn app.main:app --reload --port 8001
 
 ---
 
-*最后更新：2026-01-25*
+## 相关文档
+
+- [PRD v8.0 - 专业分析报告](../prd/v8.0-pro-analysis-report.md)
+- [API v8.0 - 报告接口](../api/v8.0-report-api.md)
+
+---
+
+*最后更新：2026-01-27*

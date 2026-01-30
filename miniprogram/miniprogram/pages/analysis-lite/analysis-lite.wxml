@@ -1,19 +1,17 @@
 <!--快速分析 (Lite) 页面-->
 <view class="page-container">
   <!-- 头部 -->
-  <view class="header">
-    <view class="header-row">
+  <view class="header" style="padding-top: {{statusBarHeight}}px;">
+    <view class="header-row" style="height: {{navBarHeight}}px; padding-right: {{menuRight + 10}}px;">
       <view class="back-btn" bindtap="onBack">
         <text class="back-icon">‹</text>
       </view>
       <text class="header-title">赛后分析 (Lite)</text>
-      <view class="help-btn">
-        <text class="help-icon">?</text>
-      </view>
+      <view class="header-placeholder"></view>
     </view>
     
     <!-- 信息栏 -->
-    <view class="info-bar" wx:if="{{!loading && !error}}">
+    <view class="info-bar" style="padding-right: {{menuRight + 10}}px;" wx:if="{{!loading && !error}}">
       <text class="info-item">{{raceName}}</text>
       <text class="info-divider">|</text>
       <text class="info-item">{{division}}</text>

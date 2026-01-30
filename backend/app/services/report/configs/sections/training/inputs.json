@@ -1,0 +1,61 @@
+{
+  "section_id": "training",
+  "description": "训练建议章节的输入数据定义",
+  
+  "required_inputs": [
+    {
+      "data_type": "athlete_result",
+      "name": "運動員成績",
+      "describe": "運動員在本場比賽的完整成績數據",
+      "summary_template": "總用時 {total_time}",
+      "fields": {
+        "key_params": ["season", "location", "athlete_name", "division"],
+        "summary": ["total_time"],
+        "details": ["splits"]
+      }
+    },
+    {
+      "data_type": "segment_comparison",
+      "name": "分段對比",
+      "describe": "16個分段與組別平均/TOP25%的對比",
+      "summary_template": "優於平均 {above_avg_count} 項，弱於平均 {below_avg_count} 項",
+      "fields": {
+        "key_params": [],
+        "summary": ["above_avg_count", "below_avg_count"],
+        "details": ["segments", "vs_avg", "vs_top25", "weakness_segments"]
+      }
+    },
+    {
+      "data_type": "time_loss_analysis",
+      "name": "時間損耗分析",
+      "describe": "各類時間損耗的計算結果",
+      "summary_template": "總損耗 {total_loss_seconds} 秒",
+      "fields": {
+        "key_params": [],
+        "summary": ["total_loss_seconds"],
+        "details": ["loss_items", "priority_items"]
+      }
+    },
+    {
+      "data_type": "pacing_analysis",
+      "name": "配速分析",
+      "describe": "8段跑步的配速數據和穩定性分析",
+      "summary_template": "配速波動 {pace_variance}%",
+      "fields": {
+        "key_params": [],
+        "summary": ["pace_variance"],
+        "details": ["run_paces", "decay_point", "stability_rating"]
+      }
+    }
+  ],
+  
+  "optional_inputs": [],
+  
+  "output_data_refs": [
+    {
+      "data_type": "time_loss_analysis",
+      "for_component": "priority_matrix",
+      "description": "优先级矩阵引用时间损耗数据"
+    }
+  ]
+}

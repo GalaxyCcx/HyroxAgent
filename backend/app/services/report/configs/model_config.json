@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "description": "LLM 模型参数配置",
+  
+  "default": {
+    "model_name": "qwen-plus",
+    "max_tokens": 4096,
+    "temperature": 0.3,
+    "enable_thinking": false
+  },
+  
+  "section_overrides": {
+    "deep_dive": {
+      "model_name": "qwen-max",
+      "max_tokens": 6000,
+      "enable_thinking": true
+    },
+    "training": {
+      "max_tokens": 5000
+    }
+  },
+  
+  "vl_extraction": {
+    "model_name": "qwen-vl-max",
+    "max_tokens": 2000,
+    "description": "心率图片提取使用的视觉语言模型"
+  }
+}

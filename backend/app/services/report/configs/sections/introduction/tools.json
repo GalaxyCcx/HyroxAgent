@@ -1,0 +1,6 @@
+{
+  "section_id": "introduction",
+  "type": "static",
+  "description": "引言章节 - 静态内容，不需要 LLM 生成",
+  "note": "introduction 的内容由 summary 章节的输出填充，无需独立的 tool"
+}

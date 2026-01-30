@@ -1,0 +1,134 @@
+{
+  "section_id": "summary",
+  "description": "核心摘要章节 - One Call 输出完整内容",
+  
+  "tool": {
+    "type": "function",
+    "function": {
+      "name": "generate_summary_section",
+      "description": "生成核心摘要章节的完整内容，包含 ROXSCAN 评分卡片、三维能力雷达图、总结文本和重点发现",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          
+          "roxscan_card": {
+            "type": "object",
+            "description": "ROXSCAN 综合评分卡片",
+            "properties": {
+              "score": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "ROXSCAN 综合评分 (0-100)"
+              },
+              "level": {
+                "type": "string",
+                "enum": ["S", "A", "B", "C", "D"],
+                "description": "能力等级"
+              },
+              "level_name": {
+                "type": "string",
+                "description": "等级名称，如'頂尖精英'、'進階精英'、'中高級'、'進步中'、'入門級'"
+              }
+            },
+            "required": ["score", "level", "level_name"]
+          },
+          
+          "radar_chart": {
+            "type": "object",
+            "description": "三维能力雷达图",
+            "properties": {
+              "data_id": {
+                "type": "string",
+                "description": "引用的数据ID（由系统填充）"
+              },
+              "dimensions": {
+                "type": "object",
+                "description": "三维能力值",
+                "properties": {
+                  "strength": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "力量维度评分"
+                  },
+                  "aerobic_base": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "有氧基础评分"
+                  },
+                  "transition": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "转换效率评分"
+                  }
+                },
+                "required": ["strength", "aerobic_base", "transition"]
+              }
+            },
+            "required": ["dimensions"]
+          },
+          
+          "summary_text": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "总结文本段落（繁体中文，不超过300字），用一句话精准概括运动员的整体表现"
+          },
+          
+          "highlights": {
+            "type": "array",
+            "description": "重点发现列表（2-5条），至少包含1个优势和1个改进点",
+            "minItems": 2,
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["strength", "weakness", "insight"],
+                  "description": "类型：strength=优势, weakness=弱项, insight=洞察"
+                },
+                "content": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "description": "具体内容描述"
+                }
+              },
+              "required": ["type", "content"]
+            }
+          }
+          
+        },
+        "required": ["roxscan_card", "radar_chart", "highlights"]
+      }
+    }
+  },
+  
+  "tool_choice": {
+    "type": "function",
+    "function": {
+      "name": "generate_summary_section"
+    }
+  },
+  
+  "blocks_mapping": {
+    "roxscan_card": {
+      "type": "card",
+      "component": "RoxscanCard"
+    },
+    "radar_chart": {
+      "type": "chart",
+      "component": "RadarChart"
+    },
+    "summary_text": {
+      "type": "text",
+      "component": "Paragraph"
+    },
+    "highlights": {
+      "type": "list",
+      "component": "HighlightsList"
+    }
+  }
+}

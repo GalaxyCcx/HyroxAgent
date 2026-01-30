@@ -1,0 +1,61 @@
+{
+  "section_id": "summary",
+  "description": "核心摘要章节的输入数据定义",
+  
+  "required_inputs": [
+    {
+      "data_type": "athlete_result",
+      "name": "運動員成績",
+      "describe": "運動員在本場比賽的完整成績數據，包含總用時、各分段成績、組別排名等",
+      "summary_template": "總用時 {total_time}，組別排名 {division_rank}/{division_total}，性別排名 {gender_rank}",
+      "fields": {
+        "key_params": ["season", "location", "athlete_name", "gender", "division", "age_group"],
+        "summary": ["total_time", "division_rank", "division_total", "gender_rank"],
+        "details": ["total_time_seconds", "roxzone_time", "roxzone_time_seconds", "splits"]
+      }
+    },
+    {
+      "data_type": "percentile_ranking",
+      "name": "百分位排名",
+      "describe": "運動員各分段與組別的百分位對比，用於計算三維能力值",
+      "summary_template": "綜合百分位 前{overall_percentile}%",
+      "fields": {
+        "key_params": ["comparison_group"],
+        "summary": ["overall_percentile"],
+        "details": ["segment_percentiles", "workout_avg_percentile", "running_avg_percentile", "roxzone_percentile"]
+      }
+    },
+    {
+      "data_type": "division_stats",
+      "name": "組別統計",
+      "describe": "同組別選手的統計數據，用於定位運動員水平",
+      "summary_template": "組別共 {total_count} 人，平均用時 {avg_time}",
+      "fields": {
+        "key_params": ["division", "gender"],
+        "summary": ["total_count", "avg_time"],
+        "details": ["median_time", "top25_threshold", "top10_threshold", "time_distribution"]
+      }
+    },
+    {
+      "data_type": "segment_comparison",
+      "name": "分段對比",
+      "describe": "16個分段（8段跑步+8個功能站）與組別平均的對比",
+      "summary_template": "優於平均的分段：{above_avg_count} 個，弱於平均的分段：{below_avg_count} 個",
+      "fields": {
+        "key_params": [],
+        "summary": ["above_avg_count", "below_avg_count"],
+        "details": ["segments"]
+      }
+    }
+  ],
+  
+  "optional_inputs": [],
+  
+  "output_data_refs": [
+    {
+      "data_type": "percentile_ranking",
+      "for_component": "radar_chart",
+      "description": "雷达图引用百分位数据"
+    }
+  ]
+}

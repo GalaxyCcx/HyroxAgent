@@ -1,0 +1,181 @@
+{
+  "section_id": "deep_dive",
+  "description": "深度复盘章节 - 心率配速解耦分析（支持降级模式）",
+  
+  "tool": {
+    "type": "function",
+    "function": {
+      "name": "generate_deep_dive_section",
+      "description": "生成深度复盘章节的完整内容，包含心率配速解耦分析（或降级为纯配速分析）",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          
+          "has_heart_rate_data": {
+            "type": "boolean",
+            "description": "是否有心率数据"
+          },
+          
+          "analysis_type": {
+            "type": "string",
+            "enum": ["full", "degraded"],
+            "description": "分析类型：full=完整心率分析，degraded=降级配速分析"
+          },
+          
+          "hr_pace_chart": {
+            "type": "object",
+            "description": "心率配速双轴图（仅完整分析模式）",
+            "properties": {
+              "data_id": {
+                "type": "string",
+                "description": "引用的心率数据ID（由系统填充）"
+              },
+              "show_zones": {
+                "type": "boolean",
+                "default": true,
+                "description": "是否显示心率区间"
+              }
+            }
+          },
+          
+          "phases": {
+            "type": "array",
+            "description": "三阶段分析：稳态期、脱钩期、崩盘区",
+            "items": {
+              "type": "object",
+              "properties": {
+                "phase_name": {
+                  "type": "string",
+                  "enum": ["steady_state", "decoupling", "collapse"],
+                  "description": "阶段名称"
+                },
+                "segments": {
+                  "type": "array",
+                  "items": {"type": "string"},
+                  "description": "包含的分段（如 ['Run1', 'Run2', 'Run3', 'Run4']）"
+                },
+                "avg_hr": {
+                  "type": "number",
+                  "description": "阶段平均心率（完整分析模式）"
+                },
+                "avg_pace": {
+                  "type": "number",
+                  "description": "阶段平均配速（分钟/公里）"
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 300,
+                  "description": "阶段详细分析描述（自然语言段落，包含数据和生理学解释）"
+                }
+              },
+              "required": ["phase_name", "segments", "description"]
+            }
+          },
+          
+          "decoupling_metrics": {
+            "type": "object",
+            "description": "解耦指标（仅完整分析模式）",
+            "properties": {
+              "hr_drift_rate": {
+                "type": "number",
+                "description": "心率漂移率（%）"
+              },
+              "decoupling_point": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8,
+                "description": "解耦发生点（第几段跑步）"
+              },
+              "efficiency_rating": {
+                "type": "string",
+                "enum": ["excellent", "good", "fair", "poor"],
+                "description": "心率效率评级"
+              }
+            }
+          },
+          
+          "pace_trend_chart": {
+            "type": "object",
+            "description": "配速趋势图（降级模式或辅助图表）",
+            "properties": {
+              "data_id": {
+                "type": "string",
+                "description": "引用的配速数据ID（由系统填充）"
+              },
+              "show_decay_points": {
+                "type": "boolean",
+                "default": true,
+                "description": "是否标记衰减点"
+              }
+            }
+          },
+          
+          "degraded_analysis": {
+            "type": "object",
+            "description": "降级分析（无心率数据时使用）",
+            "properties": {
+              "pace_stability": {
+                "type": "string",
+                "enum": ["stable", "moderate_decline", "significant_decline"],
+                "description": "配速稳定性评估"
+              },
+              "estimated_fatigue_point": {
+                "type": "integer",
+                "description": "估计疲劳点（第几段）"
+              },
+              "recommendation": {
+                "type": "string",
+                "description": "建议（如建议下次佩戴心率设备）"
+              }
+            }
+          },
+          
+          "analysis_text": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "分析总结文字（100-200字），包含整体评价和训练建议"
+          }
+          
+        },
+        "required": ["has_heart_rate_data", "analysis_type", "phases", "analysis_text"]
+      }
+    }
+  },
+  
+  "tool_choice": {
+    "type": "function",
+    "function": {
+      "name": "generate_deep_dive_section"
+    }
+  },
+  
+  "blocks_mapping": {
+    "hr_pace_chart": {
+      "type": "chart",
+      "component": "HRPaceDualAxis",
+      "condition": "has_heart_rate_data === true"
+    },
+    "phases": {
+      "type": "list",
+      "component": "PhaseAnalysisList"
+    },
+    "decoupling_metrics": {
+      "type": "card",
+      "component": "DecouplingMetrics",
+      "condition": "has_heart_rate_data === true"
+    },
+    "pace_trend_chart": {
+      "type": "chart",
+      "component": "PaceTrendChart"
+    },
+    "degraded_analysis": {
+      "type": "card",
+      "component": "DegradedAnalysisCard",
+      "condition": "has_heart_rate_data === false"
+    },
+    "analysis_text": {
+      "type": "text",
+      "component": "Paragraph"
+    }
+  }
+}

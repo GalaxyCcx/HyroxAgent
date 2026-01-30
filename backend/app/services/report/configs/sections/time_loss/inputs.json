@@ -1,0 +1,77 @@
+{
+  "section_id": "time_loss",
+  "description": "时间损耗章节的输入数据定义",
+  
+  "required_inputs": [
+    {
+      "data_type": "athlete_result",
+      "name": "運動員成績",
+      "describe": "運動員在本場比賽的完整成績數據",
+      "summary_template": "總用時 {total_time}",
+      "fields": {
+        "key_params": ["season", "location", "athlete_name"],
+        "summary": ["total_time", "total_time_seconds"],
+        "details": ["splits", "roxzone_time", "roxzone_time_seconds"]
+      }
+    },
+    {
+      "data_type": "time_loss_analysis",
+      "name": "時間損耗分析",
+      "describe": "各類時間損耗的計算結果，包含 ROXZONE 損耗、配速損耗、功能站損耗",
+      "summary_template": "總損耗 {total_loss_seconds} 秒，理論最佳 {theoretical_best}",
+      "fields": {
+        "key_params": [],
+        "summary": ["total_loss_seconds", "theoretical_best"],
+        "details": ["roxzone_loss", "pacing_loss", "station_losses", "vs_top25_gaps"]
+      }
+    },
+    {
+      "data_type": "pacing_analysis",
+      "name": "配速分析",
+      "describe": "8段跑步的配速數據和穩定性分析",
+      "summary_template": "平均配速 {avg_pace}，配速波動 {pace_variance}%",
+      "fields": {
+        "key_params": [],
+        "summary": ["avg_pace", "pace_variance"],
+        "details": ["run_paces", "run_times", "pace_trend", "decay_point"]
+      }
+    },
+    {
+      "data_type": "division_stats",
+      "name": "組別統計",
+      "describe": "同組別選手的統計數據，用於對比",
+      "summary_template": "組別平均 ROXZONE 時間 {avg_roxzone_time}",
+      "fields": {
+        "key_params": ["division"],
+        "summary": ["avg_roxzone_time"],
+        "details": ["top25_roxzone", "top25_run_pace"]
+      }
+    },
+    {
+      "data_type": "segment_comparison",
+      "name": "分段對比",
+      "describe": "各分段與 TOP25% 的對比數據",
+      "summary_template": "",
+      "fields": {
+        "key_params": [],
+        "summary": [],
+        "details": ["segments", "vs_top25"]
+      }
+    }
+  ],
+  
+  "optional_inputs": [],
+  
+  "output_data_refs": [
+    {
+      "data_type": "time_loss_analysis",
+      "for_component": "loss_table",
+      "description": "损耗表格引用时间损耗数据"
+    },
+    {
+      "data_type": "time_loss_analysis",
+      "for_component": "waterfall_chart",
+      "description": "瀑布图引用时间损耗数据"
+    }
+  ]
+}

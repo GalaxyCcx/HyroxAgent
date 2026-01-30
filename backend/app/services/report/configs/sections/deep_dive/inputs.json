@@ -1,0 +1,74 @@
+{
+  "section_id": "deep_dive",
+  "description": "深度复盘章节的输入数据定义",
+  
+  "required_inputs": [
+    {
+      "data_type": "athlete_result",
+      "name": "運動員成績",
+      "describe": "運動員在本場比賽的完整成績數據",
+      "summary_template": "總用時 {total_time}",
+      "fields": {
+        "key_params": ["season", "location", "athlete_name"],
+        "summary": ["total_time"],
+        "details": ["splits", "run_splits"]
+      }
+    },
+    {
+      "data_type": "pacing_analysis",
+      "name": "配速分析",
+      "describe": "8段跑步的配速數據和穩定性分析",
+      "summary_template": "平均配速 {avg_pace}，配速波動 {pace_variance}%",
+      "fields": {
+        "key_params": [],
+        "summary": ["avg_pace", "pace_variance"],
+        "details": ["run_paces", "run_times", "pace_trend", "decay_point", "decay_percent"]
+      }
+    },
+    {
+      "data_type": "pacing_consistency",
+      "name": "配速一致性",
+      "describe": "Lap-to-Lap Swing 和 Spread 分析數據",
+      "summary_template": "Lap Swing {lap_swing}秒，Spread {spread}%",
+      "fields": {
+        "key_params": [],
+        "summary": ["lap_swing", "spread"],
+        "details": ["lap_deviations", "fastest_lap", "slowest_lap", "rating", "vs_cohort"]
+      }
+    }
+  ],
+  
+  "optional_inputs": [
+    {
+      "data_type": "heart_rate_data",
+      "name": "心率數據（VL提取）",
+      "describe": "從心率圖片中通過VL模型提取的心率時序數據",
+      "source": "vl_extraction",
+      "summary_template": "平均心率 {avg_hr} bpm，最大心率 {max_hr} bpm",
+      "fields": {
+        "key_params": [],
+        "summary": ["avg_hr", "max_hr", "min_hr"],
+        "details": ["data_points", "zones", "peak_moments", "low_moments"]
+      },
+      "fallback_mode": "degraded"
+    }
+  ],
+  
+  "output_data_refs": [
+    {
+      "data_type": "heart_rate_data",
+      "for_component": "hr_pace_chart",
+      "description": "心率配速双轴图引用心率数据"
+    },
+    {
+      "data_type": "pacing_analysis",
+      "for_component": "pace_trend_chart",
+      "description": "配速趋势图引用配速数据"
+    },
+    {
+      "data_type": "pacing_consistency",
+      "for_component": "pacing_consistency_card",
+      "description": "配速一致性卡片引用数据"
+    }
+  ]
+}

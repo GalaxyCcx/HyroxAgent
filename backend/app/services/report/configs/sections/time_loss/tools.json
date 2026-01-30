@@ -1,0 +1,121 @@
+{
+  "section_id": "time_loss",
+  "description": "时间损耗章节 - One Call 输出完整内容",
+  
+  "tool": {
+    "type": "function",
+    "function": {
+      "name": "generate_time_loss_section",
+      "description": "生成时间损耗分析章节的完整内容，包含价值主张、损耗表格和瀑布图数据",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          
+          "value_proposition": {
+            "type": "string",
+            "description": "价值主张，格式如「同樣的體能付出，通過戰術執行修正，你本場比賽的理論上限是 1:21:06」"
+          },
+          
+          "intro_text": {
+            "type": "string",
+            "description": "导言段落，解释这些时间损耗的性质（不需要提升体能，只需改变策略）"
+          },
+          
+          "loss_table": {
+            "type": "object",
+            "description": "损耗分析表格",
+            "properties": {
+              "data_id": {
+                "type": "string",
+                "description": "引用的时间损耗数据ID（由系统填充）"
+              },
+              "total_loss_seconds": {
+                "type": "number",
+                "description": "总损耗秒数"
+              },
+              "theoretical_best": {
+                "type": "string",
+                "description": "理论最佳成绩，格式如 '1:21:06'"
+              },
+              "items": {
+                "type": "array",
+                "description": "损耗明细列表，按损耗大小排序",
+                "minItems": 2,
+                "maxItems": 5,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "description": "损耗来源，如 'ROXZONE (轉換區)', 'Run 8 (配速崩盤)', 'SkiErg (滑雪機)'"
+                    },
+                    "loss_seconds": {
+                      "type": "number",
+                      "description": "损耗秒数"
+                    },
+                    "root_cause_analysis": {
+                      "type": "string",
+                      "maxLength": 200,
+                      "description": "深度归因分析（50-150字），必须包含具体数据"
+                    },
+                    "difficulty": {
+                      "type": "string",
+                      "enum": ["极易", "技术", "节奏", "体能"],
+                      "description": "挽回难度：极易(⭐)/技术(⭐⭐)/节奏(⭐⭐)/体能(⭐⭐⭐)"
+                    }
+                  },
+                  "required": ["source", "loss_seconds", "root_cause_analysis", "difficulty"]
+                }
+              }
+            },
+            "required": ["total_loss_seconds", "theoretical_best", "items"]
+          },
+          
+          "waterfall_chart": {
+            "type": "object",
+            "description": "时间损耗瀑布图配置",
+            "properties": {
+              "data_id": {
+                "type": "string",
+                "description": "引用的数据ID（由系统填充）"
+              },
+              "show_categories": {
+                "type": "boolean",
+                "default": true,
+                "description": "是否按类别分组显示"
+              }
+            }
+          }
+          
+        },
+        "required": ["value_proposition", "loss_table"]
+      }
+    }
+  },
+  
+  "tool_choice": {
+    "type": "function",
+    "function": {
+      "name": "generate_time_loss_section"
+    }
+  },
+  
+  "blocks_mapping": {
+    "value_proposition": {
+      "type": "text",
+      "component": "ValueProposition"
+    },
+    "intro_text": {
+      "type": "text",
+      "component": "Paragraph"
+    },
+    "loss_table": {
+      "type": "table",
+      "component": "LossTable"
+    },
+    "waterfall_chart": {
+      "type": "chart",
+      "component": "HorizontalBar"
+    }
+  }
+}

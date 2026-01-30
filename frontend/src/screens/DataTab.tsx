@@ -10,19 +10,21 @@
  * - 搜索其他运动员数据
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAthleteSearch } from '../hooks/useAthleteSearch';
-import { athleteApi } from '../services/api';
+import { athleteApi, reportApi } from '../services/api';
 import type { 
   AthleteSearchItem, 
   AthleteResultData, 
   SplitAnalyticsData,
-  UserProfile
+  UserProfile,
+  ProReportSummary,
+  ProReportDetail
 } from '../types';
 import AthleteSearchView from '../components/AthleteSearchView';
 
 // --- Types ---
-type ViewState = 'PROFILE' | 'SEARCH_ACTIVE' | 'HUB' | 'SUMMARY' | 'SPLIT_CENTER' | 'STATION_DETAIL' | 'POSTER';
+type ViewState = 'PROFILE' | 'SEARCH_ACTIVE' | 'HUB' | 'SUMMARY' | 'SPLIT_CENTER' | 'STATION_DETAIL' | 'POSTER' | 'PRO_REPORT';
 type SplitTab = 'OVERVIEW' | 'RUN' | 'STATION';
 
 // --- Mock Data: 用户个人资料 ---
@@ -72,6 +74,57 @@ const DataTab: React.FC = () => {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   
+  // --- 专业报告状态 ---
+  const [proReports, setProReports] = useState<ProReportSummary[]>([]);
+  const [isLoadingReports, setIsLoadingReports] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<ProReportDetail | null>(null);
+  const [isLoadingReportDetail, setIsLoadingReportDetail] = useState(false);
+  
+
+  // --- 加载报告列表 ---
+  const loadReports = useCallback(async () => {
+    setIsLoadingReports(true);
+    try {
+      // 使用运动员姓名查询（本地测试用）
+      const result = await reportApi.list({ athleteName: MOCK_PROFILE.name.split(' ')[0] });
+      setProReports(result.reports || []);
+    } catch (err) {
+      console.error('Failed to load reports:', err);
+    } finally {
+      setIsLoadingReports(false);
+    }
+  }, []);
+
+  // 页面加载时获取报告列表
+  useEffect(() => {
+    loadReports();
+  }, [loadReports]);
+
+  // 定期刷新报告状态（每 5 秒，如果有进行中的报告）
+  useEffect(() => {
+    const hasGenerating = proReports.some(r => r.status === 'generating');
+    if (!hasGenerating) return;
+
+    const interval = setInterval(() => {
+      loadReports();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [proReports, loadReports]);
+
+  // --- 查看报告详情 ---
+  const handleViewReport = async (reportId: string) => {
+    setIsLoadingReportDetail(true);
+    try {
+      const detail = await reportApi.getDetail(reportId);
+      setSelectedReport(detail);
+      setCurrentView('PRO_REPORT');
+    } catch (err) {
+      console.error('Failed to load report detail:', err);
+    } finally {
+      setIsLoadingReportDetail(false);
+    }
+  };
 
   // --- Handlers ---
   const handleStartSearch = () => {
@@ -142,6 +195,10 @@ const DataTab: React.FC = () => {
         break;
       case 'POSTER':
         setCurrentView('SUMMARY');
+        break;
+      case 'PRO_REPORT':
+        setSelectedReport(null);
+        setCurrentView('PROFILE');
         break;
       default:
         setCurrentView('PROFILE');
@@ -235,6 +292,101 @@ const DataTab: React.FC = () => {
           <span className="text-white/40 text-sm font-medium flex-1">搜索其他运动员...</span>
           <span className="material-symbols-outlined text-white/20 text-sm">arrow_forward</span>
         </button>
+
+        {/* 专业分析报告区域 - 始终显示 */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-lg">description</span>
+              专业分析报告
+            </h3>
+            {proReports.length > 0 && (
+              <span className="text-[10px] text-white/40">{proReports.length} 份报告</span>
+            )}
+          </div>
+          
+          {isLoadingReports ? (
+            <div className="bg-[#1E2024] border border-white/10 rounded-xl p-6 flex items-center justify-center">
+              <div className="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></div>
+              <span className="text-sm text-white/40">加载中...</span>
+            </div>
+          ) : proReports.length === 0 ? (
+            <div className="bg-[#1E2024] border border-white/10 rounded-xl p-6 text-center">
+              <div className="size-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3">
+                <span className="material-symbols-outlined text-white/20 text-2xl">article</span>
+              </div>
+              <p className="text-sm text-white/40 mb-1">暂无专业分析报告</p>
+              <p className="text-[10px] text-white/30">在比赛总结页面点击「¥9.9 解锁」生成报告</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {proReports.map((report) => (
+                <div 
+                  key={report.report_id}
+                  onClick={() => report.status === 'completed' && handleViewReport(report.report_id)}
+                  className={`bg-[#1E2024] border rounded-xl p-4 transition-all ${
+                    report.status === 'completed' 
+                      ? 'border-primary/20 cursor-pointer hover:border-primary/40' 
+                      : 'border-white/10'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-bold text-white truncate">
+                        {report.title || `${report.location} 分析报告`}
+                      </h4>
+                      <p className="text-[10px] text-white/40 mt-0.5">
+                        S{report.season} • {report.athlete_name}
+                      </p>
+                    </div>
+                    {report.status === 'completed' ? (
+                      <span className="px-2 py-1 bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold rounded flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[10px]">check_circle</span>
+                        已完成
+                      </span>
+                    ) : report.status === 'generating' ? (
+                      <span className="px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 text-yellow-500 text-[10px] font-bold rounded flex items-center gap-1">
+                        <div className="size-2 border border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                        生成中
+                      </span>
+                    ) : report.status === 'error' ? (
+                      <span className="px-2 py-1 bg-red-500/20 border border-red-500/30 text-red-500 text-[10px] font-bold rounded">
+                        失败
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-white/10 border border-white/20 text-white/40 text-[10px] font-bold rounded">
+                        等待中
+                      </span>
+                    )}
+                  </div>
+                  
+                  {report.status === 'generating' && (
+                    <div className="mt-2">
+                      <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-yellow-500 transition-all duration-300"
+                          style={{ width: `${report.progress}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-[10px] text-white/40 mt-1">{report.current_step} ({report.progress}%)</p>
+                    </div>
+                  )}
+                  
+                  {report.status === 'completed' && (
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+                      <span className="text-[10px] text-white/30">
+                        {new Date(report.completed_at || '').toLocaleDateString()}
+                      </span>
+                      <span className="text-[10px] text-primary flex items-center gap-1">
+                        查看详情 <span className="material-symbols-outlined text-[10px]">arrow_forward</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Race List */}
         <div className="space-y-4 pb-32">
@@ -791,6 +943,130 @@ const DataTab: React.FC = () => {
     );
   };
 
+  // --- VIEW: PRO REPORT (专业分析报告详情) ---
+  const renderProReport = () => {
+    if (isLoadingReportDetail || !selectedReport) {
+      return (
+        <div className="flex flex-col min-h-screen bg-background-dark">
+          <header className="px-4 py-4 flex items-center justify-between border-b border-white/5">
+            <button onClick={goBack} className="text-white"><span className="material-symbols-outlined">arrow_back</span></button>
+            <h1 className="text-white font-bold">专业分析报告</h1>
+            <div className="w-8"></div>
+          </header>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="size-10 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+      );
+    }
+
+    // 导出 PDF 功能
+    const handleExportPDF = async () => {
+      // 动态导入 html2pdf
+      const html2pdf = await import('html2pdf.js');
+      const element = document.getElementById('report-content');
+      if (!element) return;
+      
+      const opt = {
+        margin: 10,
+        filename: `${selectedReport.title || '分析报告'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      html2pdf.default().set(opt).from(element).save();
+    };
+
+    return (
+      <div className="flex flex-col min-h-screen bg-background-dark animate-in slide-in-from-right-8 duration-300">
+        <header className="px-4 py-4 flex items-center justify-between border-b border-white/5 sticky top-0 bg-background-dark/95 backdrop-blur-md z-30">
+          <button onClick={goBack} className="text-white"><span className="material-symbols-outlined">arrow_back</span></button>
+          <h1 className="text-white font-bold text-sm">专业分析报告</h1>
+          <button onClick={handleExportPDF} className="text-primary">
+            <span className="material-symbols-outlined">download</span>
+          </button>
+        </header>
+
+        <main id="report-content" className="flex-1 p-4 pb-32 overflow-y-auto no-scrollbar">
+          {/* 报告头部 */}
+          <div className="bg-gradient-to-br from-[#1a2e22] to-[#101013] border border-primary/20 rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="material-symbols-outlined text-primary">description</span>
+              <span className="text-[10px] text-primary font-bold uppercase tracking-widest">Professional Report</span>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">{selectedReport.title}</h1>
+            <div className="flex items-center gap-3 text-[10px] text-white/40">
+              <span>S{selectedReport.season}</span>
+              <span>•</span>
+              <span>{selectedReport.location}</span>
+              <span>•</span>
+              <span>{selectedReport.athlete_name}</span>
+            </div>
+          </div>
+
+          {/* 引言 */}
+          {selectedReport.introduction && (
+            <div className="bg-[#1E2024] border border-white/10 rounded-2xl p-5 mb-4">
+              <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-lg">auto_awesome</span>
+                引言
+              </h2>
+              <div className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">
+                {selectedReport.introduction}
+              </div>
+            </div>
+          )}
+
+          {/* 章节内容 */}
+          {selectedReport.sections && selectedReport.sections.map((section, index) => (
+            <div key={section.section_id} className="bg-[#1E2024] border border-white/10 rounded-2xl p-5 mb-4">
+              <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                <span className="size-6 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center">
+                  {index + 1}
+                </span>
+                {section.title}
+              </h2>
+              <div className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap prose prose-invert prose-sm max-w-none">
+                {section.content}
+              </div>
+            </div>
+          ))}
+
+          {/* 总结 */}
+          {selectedReport.conclusion && (
+            <div className="bg-[#1E2024] border border-primary/20 rounded-2xl p-5 mb-4">
+              <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-lg">tips_and_updates</span>
+                总结与建议
+              </h2>
+              <div className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">
+                {selectedReport.conclusion}
+              </div>
+            </div>
+          )}
+
+          {/* 底部信息 */}
+          <div className="text-center text-[10px] text-white/20 mt-8">
+            <p>报告生成时间: {selectedReport.completed_at ? new Date(selectedReport.completed_at).toLocaleString() : '-'}</p>
+            <p className="mt-1">Powered by HYROX AI Analysis</p>
+          </div>
+        </main>
+
+        {/* 底部操作栏 */}
+        <div className="fixed bottom-0 left-0 right-0 bg-[#101013] border-t border-white/10 p-4 pb-safe-bottom">
+          <button 
+            onClick={handleExportPDF}
+            className="w-full py-3 bg-primary text-black font-bold rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(66,255,158,0.3)]"
+          >
+            <span className="material-symbols-outlined">picture_as_pdf</span>
+            下载 PDF 报告
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // --- Main Render Switch ---
   switch (currentView) {
     case 'PROFILE': return renderProfile();
@@ -800,6 +1076,7 @@ const DataTab: React.FC = () => {
     case 'SPLIT_CENTER': return renderSplitCenter();
     case 'STATION_DETAIL': return renderStationDetail();
     case 'POSTER': return renderPoster();
+    case 'PRO_REPORT': return renderProReport();
     default: return renderProfile();
   }
 };

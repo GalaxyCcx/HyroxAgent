@@ -13,6 +13,9 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { 
   AthleteSearchItem, 
   AthleteResultData, 
@@ -21,12 +24,18 @@ import type {
   LeaderboardEntry,
   RaceEvent,
   RaceLeaderboardData,
-  AnalysisLiteData
+  AnalysisLiteData,
+  ProReportSummary
 } from '../types';
-import { athleteApi, racesApi } from '../services/api';
+import { athleteApi, racesApi, reportApi } from '../services/api';
+import ReportChart, { parseChartMarkers } from '../components/ReportChart';
+import ImageUploader from '../components/ImageUploader';
+import DeepDiveRenderer from '../components/DeepDiveRenderer';
+import BlockRenderer from '../components/BlockRenderer';
+import type { HeartRateImage, ContentBlock, DataSnapshot } from '../types';
 
 // --- 视图状态类型 ---
-type LiveView = 'HOME' | 'SEARCH' | 'RESULTS' | 'SUMMARY' | 'ANALYSIS_LITE';
+type LiveView = 'HOME' | 'SEARCH' | 'RESULTS' | 'SUMMARY' | 'ANALYSIS_LITE' | 'PRO_REPORT';
 
 // --- 筛选类型 ---
 type RaceTypeFilter = 'single' | 'doubles';  // 一级标签：单人赛/双人赛
@@ -43,7 +52,174 @@ const AGE_GROUPS_DOUBLES = [
   '16-29', '30-39', '40-49', '50-59', '60-70+'
 ];
 
+// ========== IntroductionCard - 核心摘要卡片 ==========
+interface SummaryData {
+  roxscan_score: number;
+  level: string;
+  level_name: string;
+  dimensions: {
+    strength: number;
+    aerobic_base: number;
+    transition: number;
+  };
+  summary_text?: string;
+  highlights: Array<{
+    type: 'strength' | 'weakness' | 'insight';
+    content: string;
+  }>;
+}
+
+const IntroductionCard: React.FC<{ introduction: string; charts?: Record<string, any> }> = ({ introduction, charts }) => {
+  // 尝试解析 JSON 格式的核心摘要数据
+  let summaryData: SummaryData | null = null;
+  
+  try {
+    const parsed = JSON.parse(introduction);
+    if (parsed && typeof parsed.roxscan_score === 'number') {
+      summaryData = parsed as SummaryData;
+    }
+  } catch {
+    summaryData = null;
+  }
+
+  // 等级颜色映射
+  const levelColors: Record<string, string> = {
+    'S': '#fbbf24',
+    'A': '#a855f7',
+    'B': '#3b82f6',
+    'C': '#22c55e',
+    'D': '#9ca3af',
+  };
+
+  // 如果成功解析为结构化数据，渲染 ROXSCAN 卡片
+  if (summaryData) {
+    const levelColor = levelColors[summaryData.level] || '#42ff9e';
+    
+    return (
+      <div className="relative overflow-hidden rounded-2xl mb-4 bg-gradient-to-br from-[#12171f] to-[#0d1117] border border-[#42ff9e]/20 shadow-[0_0_30px_rgba(66,255,158,0.05)]">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#42ff9e] via-cyan-500 to-blue-500"></div>
+        <div className="p-5">
+          {/* 标题 */}
+          <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+            <span className="size-6 rounded-lg bg-gradient-to-br from-[#42ff9e]/20 to-cyan-500/20 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[#42ff9e] text-sm">analytics</span>
+            </span>
+            <span className="bg-gradient-to-r from-[#42ff9e] to-cyan-400 bg-clip-text text-transparent">核心摘要：ZONEØ 战力值</span>
+          </h2>
+
+          {/* ROXSCAN 评分卡片 */}
+          <div className="bg-gradient-to-r from-[#42ff9e]/10 to-transparent rounded-xl p-4 border border-[#42ff9e]/20 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] text-white/40 uppercase tracking-wider mb-1">ROXSCAN Score</div>
+                <div className="text-4xl font-bold text-[#42ff9e] font-display">{summaryData.roxscan_score}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold" style={{ color: levelColor }}>{summaryData.level}</div>
+                <div className="text-sm text-white/60">{summaryData.level_name}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 三维能力值 */}
+          {summaryData.dimensions && (
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[
+                { key: 'strength', label: '力量', icon: 'fitness_center', color: '#42ff9e' },
+                { key: 'aerobic_base', label: '有氧底座', icon: 'directions_run', color: '#3b82f6' },
+                { key: 'transition', label: '转换效率', icon: 'swap_horiz', color: '#a855f7' },
+              ].map((item) => (
+                <div key={item.key} className="bg-[#101013] rounded-xl p-3 text-center border border-white/5">
+                  <span className="material-symbols-outlined text-lg mb-1" style={{ color: item.color }}>
+                    {item.icon}
+                  </span>
+                  <div className="text-xl font-bold text-white">
+                    {summaryData!.dimensions[item.key as keyof typeof summaryData.dimensions]}
+                  </div>
+                  <div className="text-[10px] text-white/40">{item.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 总结文本 */}
+          {summaryData.summary_text && (
+            <div className="bg-[#101013] rounded-xl p-4 text-sm text-white/70 leading-relaxed mb-4 border border-white/5">
+              {summaryData.summary_text}
+            </div>
+          )}
+
+          {/* 亮点 */}
+          {summaryData.highlights && summaryData.highlights.length > 0 && (
+            <div className="space-y-2">
+              {summaryData.highlights.map((highlight, i) => {
+                const isStrength = highlight.type === 'strength';
+                const isWeakness = highlight.type === 'weakness';
+                const dotColor = isStrength ? 'bg-[#42ff9e]' : isWeakness ? 'bg-red-400' : 'bg-blue-400';
+                const icon = isStrength ? '💪' : isWeakness ? '📊' : '💡';
+                
+                return (
+                  <div key={i} className="flex items-start gap-2 text-sm text-white/70">
+                    <span className={`size-1.5 ${dotColor} rounded-full mt-1.5 shrink-0`}></span>
+                    <span>
+                      <span className="mr-1">{icon}</span>
+                      {highlight.content}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 雷达图 - 从 charts 中查找 radar 类型的图表 */}
+          {charts && (() => {
+            // 查找 radar 类型的图表
+            const radarChart = Object.values(charts).find(
+              (chart: any) => chart.chart_type === 'radar'
+            );
+            if (radarChart && radarChart.config) {
+              return (
+                <div className="mt-4 p-4 bg-[#0a0d12] rounded-xl border border-white/5">
+                  <ReportChart
+                    chartId={radarChart.chart_id || 'summary-radar'}
+                    config={radarChart.config}
+                    purpose="ZONEØ 三维能力雷达图"
+                    chartType="radar"
+                  />
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </div>
+      </div>
+    );
+  }
+
+  // 回退到 Markdown 渲染（旧版本兼容）
+  return (
+    <div className="relative overflow-hidden rounded-2xl mb-4 bg-gradient-to-br from-[#12171f] to-[#0d1117] border border-cyan-500/10 shadow-[0_0_30px_rgba(0,255,255,0.03)]">
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500"></div>
+      <div className="p-5">
+        <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <span className="size-6 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center">
+            <span className="material-symbols-outlined text-cyan-400 text-sm">auto_awesome</span>
+          </span>
+          <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">报告摘要</span>
+        </h2>
+        <div className="prose prose-sm prose-invert max-w-none text-white/70 prose-p:leading-relaxed">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {introduction}
+          </ReactMarkdown>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const LiveTab: React.FC = () => {
+  const navigate = useNavigate();
+  
   // --- 视图状态 ---
   const [currentView, setCurrentView] = useState<LiveView>('HOME');
   
@@ -87,6 +263,19 @@ const LiveTab: React.FC = () => {
   const [analysisData, setAnalysisData] = useState<AnalysisLiteData | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  
+  // --- 专业报告状态 ---
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportProgress, setReportProgress] = useState(0);
+  const [reportStep, setReportStep] = useState<string>('');
+  const [completedReportId, setCompletedReportId] = useState<string | null>(null);
+  const [proReportDetail, setProReportDetail] = useState<any>(null);
+  const [isLoadingReportDetail, setIsLoadingReportDetail] = useState(false);
+  
+  // --- 心率图片上传状态 ---
+  const [showImageUploader, setShowImageUploader] = useState(false);
+  const [heartRateImages, setHeartRateImages] = useState<HeartRateImage[]>([]);
+  const [pendingReportId, setPendingReportId] = useState<string | null>(null);
 
   // --- 年龄组下拉点击外部关闭 ---
   useEffect(() => {
@@ -247,6 +436,125 @@ const LiveTab: React.FC = () => {
     }
   }, [selectedAthlete]);
 
+  // --- 生成专业报告（步骤1：创建报告并显示图片上传） ---
+  const handleGenerateReport = useCallback(async () => {
+    if (!selectedAthlete) return;
+    
+    setIsGeneratingReport(true);
+    setReportProgress(0);
+    setReportStep('正在创建报告...');
+    
+    try {
+      // 1. 创建报告（强制重新生成）
+      const createResult = await reportApi.create(
+        selectedAthlete.race.season,
+        selectedAthlete.race.location,
+        selectedAthlete.athlete.name
+      );
+      
+      // 保存报告ID，显示图片上传界面
+      setPendingReportId(createResult.report_id);
+      setShowImageUploader(true);
+      setIsGeneratingReport(false);
+      setReportStep('');
+      
+    } catch (err) {
+      console.error('Failed to create report:', err);
+      setIsGeneratingReport(false);
+      setToastMsg('报告创建失败，请稍后重试');
+      setTimeout(() => setToastMsg(null), 3000);
+    }
+  }, [selectedAthlete]);
+
+  // --- 处理心率图片上传成功 ---
+  const handleHeartRateUploadSuccess = useCallback((images: HeartRateImage[]) => {
+    setHeartRateImages(images);
+    setToastMsg(`成功上传 ${images.length} 张心率图片`);
+    setTimeout(() => setToastMsg(null), 3000);
+  }, []);
+
+  // --- 开始生成报告（步骤2：实际生成） ---
+  const handleStartGeneration = useCallback(async () => {
+    if (!pendingReportId) return;
+    
+    setShowImageUploader(false);
+    setIsGeneratingReport(true);
+    setReportProgress(5);
+    setReportStep('正在生成报告...');
+    
+    try {
+      // 提取心率图片路径
+      const imagePaths = heartRateImages.map(img => img.image_path).filter(Boolean);
+      console.log('[Report] Starting generation with heart rate images:', imagePaths);
+      
+      // 订阅生成进度，传递心率图片路径
+      const eventSource = reportApi.subscribeGenerate(pendingReportId, imagePaths);
+      
+      eventSource.addEventListener('progress', (event) => {
+        const data = JSON.parse(event.data);
+        setReportProgress(data.progress);
+        setReportStep(data.step);
+      });
+      
+      eventSource.addEventListener('complete', (event) => {
+        eventSource.close();
+        setIsGeneratingReport(false);
+        setReportProgress(100);
+        setReportStep('报告生成完成！');
+        setCompletedReportId(pendingReportId);
+        setPendingReportId(null);
+        setHeartRateImages([]);
+        setToastMsg('专业报告生成完成！');
+        setTimeout(() => setToastMsg(null), 3000);
+      });
+      
+      eventSource.addEventListener('error', (event) => {
+        eventSource.close();
+        setIsGeneratingReport(false);
+        setReportStep('生成失败');
+        if (event instanceof MessageEvent) {
+          const data = JSON.parse(event.data);
+          setToastMsg(`报告生成失败: ${data.message}`);
+        } else {
+          setToastMsg('报告生成失败，请稍后重试');
+        }
+        setTimeout(() => setToastMsg(null), 3000);
+      });
+      
+      eventSource.onerror = () => {
+        eventSource.close();
+        setIsGeneratingReport(false);
+        setToastMsg('连接中断，请稍后重试');
+        setTimeout(() => setToastMsg(null), 3000);
+      };
+      
+    } catch (err) {
+      console.error('Failed to generate report:', err);
+      setIsGeneratingReport(false);
+      setToastMsg('报告生成失败，请稍后重试');
+      setTimeout(() => setToastMsg(null), 3000);
+    }
+  }, [pendingReportId, heartRateImages]);
+
+  // --- 跳过图片上传，直接生成 ---
+  const handleSkipImageUpload = useCallback(() => {
+    handleStartGeneration();
+  }, [handleStartGeneration]);
+
+  // --- 取消图片上传 ---
+  const handleCancelImageUpload = useCallback(() => {
+    setShowImageUploader(false);
+    setPendingReportId(null);
+    setHeartRateImages([]);
+  }, []);
+
+  // --- 查看报告详情 ---
+  const handleViewReport = useCallback(() => {
+    if (!completedReportId) return;
+    // 使用路由导航到报告页面
+    navigate(`/report/${completedReportId}`);
+  }, [completedReportId, navigate]);
+
   // --- 关键词高亮函数 ---
   const highlightKeywords = (text: string): React.ReactNode[] => {
     const keywords = [
@@ -278,6 +586,10 @@ const LiveTab: React.FC = () => {
 
   const goBack = () => {
     switch (currentView) {
+      case 'PRO_REPORT':
+        setProReportDetail(null);
+        setCurrentView('ANALYSIS_LITE');
+        break;
       case 'ANALYSIS_LITE':
         setCurrentView('SUMMARY');
         break;
@@ -1283,11 +1595,53 @@ const LiveTab: React.FC = () => {
                 想看逐段对比与省时拆解？
               </div>
 
-              {/* Upsell Button */}
-              <button className="w-full py-4 bg-gradient-to-r from-primary to-primary-dark rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(66,255,158,0.3)] hover:brightness-110 active:scale-[0.98] transition-all">
-                <span className="material-symbols-outlined text-black">lock</span>
-                <span className="text-black font-bold">¥9.9 解锁详细分段报告 (PDF)</span>
-              </button>
+              {/* Upsell Button - 三种状态：未生成、生成中、已完成 */}
+              {isGeneratingReport ? (
+                // 生成中状态
+                <div className="w-full py-4 bg-[#1E2024] border border-primary/30 rounded-xl flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-primary font-bold text-sm">正在产出专业分析报告...</span>
+                  </div>
+                  <div className="w-full px-4">
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${reportProgress}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-[10px] text-white/40 mt-1 text-center">{reportStep} ({reportProgress}%)</div>
+                  </div>
+                </div>
+              ) : completedReportId ? (
+                // 已完成状态 - 显示查看报告按钮（蓝色）
+                <button 
+                  onClick={handleViewReport}
+                  disabled={isLoadingReportDetail}
+                  className="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {isLoadingReportDetail ? (
+                    <>
+                      <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-white font-bold">加载中...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-white">description</span>
+                      <span className="text-white font-bold">查看分析报告</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                // 未生成状态 - 显示解锁按钮
+                <button 
+                  onClick={handleGenerateReport}
+                  className="w-full py-4 bg-gradient-to-r from-primary to-primary-dark rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(66,255,158,0.3)] hover:brightness-110 active:scale-[0.98] transition-all"
+                >
+                  <span className="material-symbols-outlined text-black">lock</span>
+                  <span className="text-black font-bold">¥9.9 解锁详细分段报告 (PDF)</span>
+                </button>
+              )}
 
               {/* Secondary Actions */}
               <div className="grid grid-cols-2 gap-3">
@@ -1314,6 +1668,351 @@ const LiveTab: React.FC = () => {
             </>
           )}
         </main>
+
+        {/* 心率图片上传模态框 */}
+        {showImageUploader && pendingReportId && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#1A1D21] rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-white/10">
+              {/* 模态框头部 */}
+              <div className="sticky top-0 bg-[#1A1D21] p-4 border-b border-white/10 flex items-center justify-between">
+                <h2 className="text-white font-bold">上传心率截图（可选）</h2>
+                <button onClick={handleCancelImageUpload} className="text-white/60 hover:text-white">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              
+              {/* 说明 */}
+              <div className="p-4 bg-cyan-500/5 border-b border-cyan-500/20">
+                <p className="text-xs text-cyan-400">
+                  上传您的运动手表心率截图，AI 将分析您的心率数据并提供更详细的训练建议。
+                </p>
+              </div>
+              
+              {/* 图片上传组件 */}
+              <div className="p-4">
+                <ImageUploader
+                  reportId={pendingReportId}
+                  onUploadSuccess={handleHeartRateUploadSuccess}
+                  maxFiles={3}
+                />
+              </div>
+              
+              {/* 已上传图片列表 */}
+              {heartRateImages.length > 0 && (
+                <div className="px-4 pb-4">
+                  <p className="text-xs text-white/60 mb-2">已上传 {heartRateImages.length} 张图片</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {heartRateImages.map((img, idx) => (
+                      <div key={idx} className="size-16 bg-white/5 rounded border border-white/10 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-primary">check_circle</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* 操作按钮 */}
+              <div className="p-4 border-t border-white/10 flex gap-3">
+                <button
+                  onClick={handleSkipImageUpload}
+                  className="flex-1 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm hover:bg-white/10 transition-colors"
+                >
+                  跳过，直接生成
+                </button>
+                <button
+                  onClick={handleStartGeneration}
+                  className="flex-1 py-3 bg-gradient-to-r from-primary to-cyan-500 rounded-xl text-black font-bold text-sm hover:brightness-110 transition-all"
+                >
+                  开始生成报告
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // --- VIEW: PRO REPORT (专业分析报告详情) ---
+  const renderProReport = () => {
+    try {
+      console.log('[DEBUG renderProReport] called, proReportDetail:', proReportDetail ? 'exists' : 'null');
+      if (proReportDetail) {
+        console.log('[DEBUG renderProReport] sections:', proReportDetail.sections?.length, 'charts:', proReportDetail.charts ? Object.keys(proReportDetail.charts).length : 0);
+      }
+    } catch (e) {
+      console.error('[DEBUG renderProReport] error:', e);
+    }
+    if (!proReportDetail) {
+      return (
+        <div className="flex flex-col min-h-screen bg-[#0a0d12]">
+          <header className="px-4 py-4 flex items-center justify-between border-b border-cyan-500/10 sticky top-0 bg-[#0a0d12]/95 backdrop-blur-md z-30">
+            <button onClick={goBack} className="text-white"><span className="material-symbols-outlined">arrow_back</span></button>
+            <h1 className="text-white font-bold">专业分析报告</h1>
+            <div className="w-8"></div>
+          </header>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="size-12 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-[0_0_20px_rgba(0,255,255,0.3)]"></div>
+          </div>
+        </div>
+      );
+    }
+
+    // DEBUG_SIMPLE_MODE 已关闭，使用完整渲染
+
+    // 导出 PDF 功能
+    const handleExportPDF = async () => {
+      const html2pdf = await import('html2pdf.js');
+      const element = document.getElementById('report-content');
+      if (!element) return;
+      
+      const opt = {
+        margin: 10,
+        filename: `${proReportDetail.title || '分析报告'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      html2pdf.default().set(opt).from(element).save();
+    };
+
+    // 从第一个章节提取核心数据（用于指标卡片）
+    const extractMetrics = () => {
+      // 尝试从 sections 中提取数据
+      const firstSection = proReportDetail.sections?.[0];
+      return {
+        totalTime: proReportDetail.athlete_name ? '待分析' : '--:--',
+        ranking: '--',
+        percentile: '--',
+      };
+    };
+    const metrics = extractMetrics();
+
+    return (
+      <div className="flex flex-col min-h-screen bg-[#0a0d12] animate-in slide-in-from-right-8 duration-300">
+        {/* 顶部导航 */}
+        <header className="px-4 py-4 flex items-center justify-between border-b border-cyan-500/10 sticky top-0 bg-[#0a0d12]/95 backdrop-blur-md z-30">
+          <button onClick={goBack} className="text-white hover:text-cyan-400 transition-colors">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <h1 className="text-white font-bold text-sm tracking-wide">专业分析报告</h1>
+          <button onClick={handleExportPDF} className="text-cyan-400 hover:text-cyan-300 transition-colors">
+            <span className="material-symbols-outlined">download</span>
+          </button>
+        </header>
+
+        <main id="report-content" className="flex-1 p-4 pb-32 overflow-y-auto no-scrollbar">
+          {/* 报告头部 - 科技风渐变 */}
+          <div className="relative overflow-hidden rounded-2xl mb-6">
+            {/* 背景渐变层 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#0f1923] via-[#0a1628] to-[#0d1117]"></div>
+            {/* 发光网格效果 */}
+            <div className="absolute inset-0 opacity-20" style={{
+              backgroundImage: 'linear-gradient(rgba(0,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,255,0.1) 1px, transparent 1px)',
+              backgroundSize: '40px 40px'
+            }}></div>
+            {/* 边框发光 */}
+            <div className="absolute inset-0 rounded-2xl border border-cyan-500/30 shadow-[inset_0_0_30px_rgba(0,255,255,0.05)]"></div>
+            {/* 角落装饰 */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-cyan-500/20 to-transparent rounded-bl-full"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-500/20 to-transparent rounded-tr-full"></div>
+            
+            {/* 内容 */}
+            <div className="relative p-6 z-10">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="size-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_15px_rgba(0,255,255,0.4)]">
+                  <span className="material-symbols-outlined text-white text-lg">analytics</span>
+                </div>
+                <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-[0.2em]">Professional Analysis</span>
+              </div>
+              <h1 className="text-xl font-bold text-white mb-1 leading-tight">{proReportDetail.athlete_name}</h1>
+              <h2 className="text-sm text-white/60 mb-4">HYROX {proReportDetail.location?.toUpperCase()} S{proReportDetail.season}</h2>
+              
+              {/* 信息标签 */}
+              <div className="flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-full text-[10px] text-cyan-400 font-medium">
+                  {proReportDetail.gender === 'male' ? '男子' : proReportDetail.gender === 'female' ? '女子' : '公开'}组
+                </span>
+                <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/30 rounded-full text-[10px] text-purple-400 font-medium">
+                  {proReportDetail.division || 'Open'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 引言 - 科技风卡片 */}
+          {proReportDetail.introduction && (
+            <IntroductionCard 
+              introduction={proReportDetail.introduction} 
+              charts={proReportDetail.charts}
+            />
+          )}
+
+          {/* 章节内容 - 科技风卡片 */}
+          {/* 过滤掉 introduction 章节（它有专门的 IntroductionCard），渲染其他所有章节 */}
+          {proReportDetail.sections && proReportDetail.sections
+            .filter((section: any) => section.section_id !== "introduction")
+            .map((section: any, index: number) => {
+            // V3: 检查是否有 blocks 数组
+            const hasBlocks = section.blocks && Array.isArray(section.blocks) && section.blocks.length > 0;
+            // V3: dataSnapshots 从 charts 字段获取
+            const dataSnapshots = (proReportDetail.data_snapshots || proReportDetail.charts) as Record<string, DataSnapshot> | undefined;
+            
+            // V2 兼容：解析 content 中的图表标记
+            const globalCharts = proReportDetail.charts || {};
+            const sectionCharts = section.charts || [];
+            const contentParts = !hasBlocks ? parseChartMarkers(section.content || '', globalCharts) : [];
+            
+            // 章节颜色主题
+            const sectionColors = [
+              { from: 'from-cyan-500', to: 'to-blue-500', border: 'border-cyan-500/20', glow: 'rgba(0,255,255,0.05)' },
+              { from: 'from-purple-500', to: 'to-pink-500', border: 'border-purple-500/20', glow: 'rgba(147,51,234,0.05)' },
+              { from: 'from-green-500', to: 'to-cyan-500', border: 'border-green-500/20', glow: 'rgba(16,185,129,0.05)' },
+              { from: 'from-orange-500', to: 'to-yellow-500', border: 'border-orange-500/20', glow: 'rgba(249,115,22,0.05)' },
+            ];
+            const color = sectionColors[index % sectionColors.length];
+            
+            return (
+              <div 
+                key={section.section_id} 
+                className={`relative overflow-hidden rounded-2xl mb-4 bg-gradient-to-br from-[#12171f] to-[#0d1117] border ${color.border}`}
+                style={{ boxShadow: `0 0 30px ${color.glow}` }}
+              >
+                {/* 顶部渐变条 */}
+                <div className={`absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r ${color.from} ${color.to}`}></div>
+                
+                <div className="p-5">
+                  {/* 章节标题 */}
+                  <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-3">
+                    <span className={`size-8 rounded-lg bg-gradient-to-br ${color.from} ${color.to} flex items-center justify-center text-white text-xs font-bold shadow-lg`}>
+                      {index + 2}
+                    </span>
+                    <span>{section.title}</span>
+                  </h2>
+                  
+                  {/* 章节内容 */}
+                  <div className="space-y-4">
+                    {/* V3 模式：使用 BlockRenderer 渲染 blocks */}
+                    {hasBlocks ? (
+                      <div className="space-y-4">
+                        {section.blocks.map((block: ContentBlock, blockIndex: number) => (
+                          <BlockRenderer 
+                            key={`block-${blockIndex}`}
+                            block={block}
+                            dataSnapshots={dataSnapshots}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      /* V2 兼容：使用旧的 Markdown 渲染 */
+                      <div className="prose prose-sm prose-invert max-w-none text-white/70">
+                        {section.section_id === 'deep_dive' ? (
+                          <>
+                            <DeepDiveRenderer content={section.content || ''} />
+                            {contentParts.filter(part => part.type === 'chart').map((part, partIndex) => (
+                              <div key={`chart-${partIndex}`} className="my-4 p-4 bg-[#0a0d12] rounded-xl border border-white/5">
+                                <ReportChart
+                                  chartId={part.chartId || `chart-${partIndex}`}
+                                  config={part.config!}
+                                  purpose={part.purpose}
+                                  chartType={part.chartType}
+                                />
+                              </div>
+                            ))}
+                          </>
+                        ) : (
+                          <>
+                            {contentParts.map((part, partIndex) => {
+                              if (part.type === 'chart' && part.config) {
+                                return (
+                                  <div key={`chart-${partIndex}`} className="my-4 p-4 bg-[#0a0d12] rounded-xl border border-white/5">
+                                    <ReportChart
+                                      chartId={part.chartId || `chart-${partIndex}`}
+                                      config={part.config}
+                                      purpose={part.purpose}
+                                      chartType={part.chartType}
+                                    />
+                                  </div>
+                                );
+                              }
+                              return (
+                                <ReactMarkdown key={`text-${partIndex}`} remarkPlugins={[remarkGfm]}>
+                                  {part.content || ''}
+                                </ReactMarkdown>
+                              );
+                            })}
+                            {sectionCharts.length > 0 && (
+                              <div className="mt-4 space-y-4">
+                                {sectionCharts.map((chart: any, chartIndex: number) => (
+                                  <div key={`section-chart-${chartIndex}`} className="p-4 bg-[#0a0d12] rounded-xl border border-white/5">
+                                    <ReportChart
+                                      chartId={chart.chart_id || `section-chart-${chartIndex}`}
+                                      config={chart.config || {}}
+                                      purpose={chart.title || chart.description || ''}
+                                      chartType={chart.chart_type}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* 总结 - 特殊高亮卡片 */}
+          {proReportDetail.conclusion && (
+            <div className="relative overflow-hidden rounded-2xl mb-4 bg-gradient-to-br from-[#1a1f2e] to-[#0d1117] border border-cyan-500/30 shadow-[0_0_40px_rgba(0,255,255,0.08)]">
+              {/* 渐变边框效果 */}
+              <div className="absolute inset-0 rounded-2xl" style={{
+                background: 'linear-gradient(135deg, rgba(0,255,255,0.1) 0%, transparent 50%, rgba(147,51,234,0.1) 100%)'
+              }}></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500"></div>
+              
+              <div className="relative p-5 z-10">
+                <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                  <span className="size-7 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center shadow-[0_0_15px_rgba(0,255,255,0.3)]">
+                    <span className="material-symbols-outlined text-white text-sm">tips_and_updates</span>
+                  </span>
+                  <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">总结与建议</span>
+                </h2>
+                <div className="prose prose-sm prose-invert max-w-none text-white/80 prose-p:leading-relaxed prose-strong:text-cyan-400">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {proReportDetail.conclusion}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 底部信息 */}
+          <div className="text-center mt-8 mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
+              <span className="size-2 bg-cyan-400 rounded-full animate-pulse"></span>
+              <span className="text-[10px] text-white/40">
+                生成于 {proReportDetail.completed_at ? new Date(proReportDetail.completed_at).toLocaleString() : '-'}
+              </span>
+            </div>
+            <p className="text-[10px] text-white/20 mt-2">Powered by HYROX AI Analysis</p>
+          </div>
+        </main>
+
+        {/* 底部操作栏 */}
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#0a0d12] via-[#0a0d12] to-transparent pt-8 pb-8 px-4">
+          <button 
+            onClick={handleExportPDF}
+            className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(0,255,255,0.3)] hover:shadow-[0_0_40px_rgba(0,255,255,0.4)] transition-all active:scale-[0.98]"
+          >
+            <span className="material-symbols-outlined">picture_as_pdf</span>
+            下载 PDF 报告
+          </button>
+        </div>
       </div>
     );
   };
@@ -1331,6 +2030,9 @@ const LiveTab: React.FC = () => {
         return renderSummary();
       case 'ANALYSIS_LITE':
         return renderAnalysisLite();
+      case 'PRO_REPORT':
+        // PRO_REPORT 现在使用独立路由 /report/:reportId
+        return renderHome();
       default:
         return renderHome();
     }

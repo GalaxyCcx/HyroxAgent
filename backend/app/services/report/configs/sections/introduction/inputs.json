@@ -1,0 +1,10 @@
+{
+  "section_id": "introduction",
+  "type": "static",
+  "description": "引言章节 - 数据来自 summary 章节",
+  
+  "data_source": {
+    "from_section": "summary",
+    "fields": ["roxscan_card", "radar_chart"]
+  }
+}

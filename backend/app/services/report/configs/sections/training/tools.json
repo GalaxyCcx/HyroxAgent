@@ -1,0 +1,224 @@
+{
+  "section_id": "training",
+  "description": "训练建议章节 - 个性化训练计划",
+  
+  "tool": {
+    "type": "function",
+    "function": {
+      "name": "generate_training_section",
+      "description": "生成定制化训练建议章节的完整内容，包含弱项分析、周训练计划和关键训练课程",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          
+          "weakness_analysis": {
+            "type": "array",
+            "description": "弱项分析（按严重程度排序）",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "properties": {
+                "area": {
+                  "type": "string",
+                  "description": "弱项领域，如 '跑步耐力', 'Sled Push', '轉換效率'"
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": ["critical", "moderate", "minor"],
+                  "description": "严重程度"
+                },
+                "root_cause": {
+                  "type": "string",
+                  "description": "根本原因分析"
+                },
+                "training_focus": {
+                  "type": "string",
+                  "description": "训练重点方向"
+                }
+              },
+              "required": ["area", "severity", "root_cause", "training_focus"]
+            }
+          },
+          
+          "training_week": {
+            "type": "object",
+            "description": "周训练计划",
+            "properties": {
+              "data_id": {
+                "type": "string",
+                "description": "数据ID（由系统填充）"
+              },
+              "week_number": {
+                "type": "integer",
+                "description": "周次"
+              },
+              "phase": {
+                "type": "string",
+                "description": "训练阶段名称，如 '基礎期', '強化期', '比賽期'"
+              },
+              "focus_areas": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "本周重点领域"
+              },
+              "days": {
+                "type": "array",
+                "description": "7天训练计划",
+                "minItems": 7,
+                "maxItems": 7,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "day": {
+                      "type": "string",
+                      "enum": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                      "description": "星期几"
+                    },
+                    "day_name": {
+                      "type": "string",
+                      "description": "中文名称（週一/週二...）"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["Key", "Recovery", "Rest", "Long", "Easy"],
+                      "description": "训练类型"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "训练内容描述"
+                    },
+                    "duration_minutes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "训练时长（分钟）"
+                    },
+                    "intensity": {
+                      "type": "string",
+                      "enum": ["low", "medium", "high"],
+                      "description": "训练强度"
+                    }
+                  },
+                  "required": ["day", "type", "content"]
+                }
+              }
+            },
+            "required": ["phase", "days"]
+          },
+          
+          "priority_matrix": {
+            "type": "object",
+            "description": "训练优先级矩阵（2x2 象限图）",
+            "properties": {
+              "data_id": {
+                "type": "string",
+                "description": "数据ID（由系统填充）"
+              },
+              "items": {
+                "type": "array",
+                "description": "训练项目列表",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {"type": "string", "description": "项目名称"},
+                    "impact": {"type": "number", "minimum": 0, "maximum": 100, "description": "影响程度 (0-100)"},
+                    "difficulty": {"type": "number", "minimum": 0, "maximum": 100, "description": "改进难度 (0-100)"},
+                    "loss_seconds": {"type": "integer", "description": "可节省秒数"},
+                    "quadrant": {
+                      "type": "string",
+                      "enum": ["topRight", "topLeft", "bottomRight", "bottomLeft"],
+                      "description": "所在象限"
+                    }
+                  },
+                  "required": ["name", "impact", "difficulty", "quadrant"]
+                }
+              }
+            }
+          },
+          
+          "key_workouts": {
+            "type": "array",
+            "description": "关键训练课程",
+            "minItems": 3,
+            "maxItems": 6,
+            "items": {
+              "type": "object",
+              "properties": {
+                "workout_name": {
+                  "type": "string",
+                  "description": "训练名称"
+                },
+                "target_area": {
+                  "type": "string",
+                  "description": "针对的弱项"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "训练内容描述"
+                },
+                "frequency": {
+                  "type": "string",
+                  "description": "频率建议，如 '每週1-2次'"
+                },
+                "progression": {
+                  "type": "string",
+                  "description": "进阶方式"
+                }
+              },
+              "required": ["workout_name", "target_area", "description", "frequency"]
+            }
+          },
+          
+          "nutrition_tips": {
+            "type": "array",
+            "description": "营养建议",
+            "maxItems": 5,
+            "items": {"type": "string"}
+          },
+          
+          "analysis_text": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "训练建议总结（150-300字）"
+          }
+          
+        },
+        "required": ["weakness_analysis", "training_week", "key_workouts", "analysis_text"]
+      }
+    }
+  },
+  
+  "tool_choice": {
+    "type": "function",
+    "function": {
+      "name": "generate_training_section"
+    }
+  },
+  
+  "blocks_mapping": {
+    "weakness_analysis": {
+      "type": "list",
+      "component": "WeaknessAnalysisList"
+    },
+    "training_week": {
+      "type": "card",
+      "component": "TrainingWeekView"
+    },
+    "priority_matrix": {
+      "type": "chart",
+      "component": "PriorityMatrix"
+    },
+    "key_workouts": {
+      "type": "list",
+      "component": "KeyWorkoutsList"
+    },
+    "nutrition_tips": {
+      "type": "list",
+      "component": "NutritionTipsList"
+    },
+    "analysis_text": {
+      "type": "text",
+      "component": "Paragraph"
+    }
+  }
+}
