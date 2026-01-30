@@ -103,7 +103,7 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
       console.error('Failed to load report:', err);
       setError('网络错误，请稍后重试');
     } finally {
-      setLoading(false);
+      setLoading(false);//测试注释
     }
   }, [reportId]);
 
