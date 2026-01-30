@@ -46,26 +46,6 @@
         .prose strong { color: rgba(255,255,255,0.9); }
         .prose hr { border-color: rgba(255,255,255,0.1); margin: 1.5em 0; }
     </style>
-    <!-- #region agent log -->
-    <script>
-        window.addEventListener('DOMContentLoaded', function() {
-            // 假设 A: 检查 Tailwind 是否加载
-            var twLoaded = typeof tailwind !== 'undefined';
-            fetch('http://127.0.0.1:7243/ingest/ea459f39-dc54-4fb8-8f0d-e94da347a2c9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:DOMContentLoaded',message:'Tailwind load check',data:{tailwindLoaded:twLoaded,tailwindConfig:typeof tailwind!=='undefined'?!!tailwind.config:false},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(function(){});
-            
-            // 假设 D: 检查配置是否正确应用
-            var computedBg = getComputedStyle(document.body).backgroundColor;
-            fetch('http://127.0.0.1:7243/ingest/ea459f39-dc54-4fb8-8f0d-e94da347a2c9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:DOMContentLoaded',message:'Style config check',data:{bodyBgColor:computedBg,darkClass:document.documentElement.classList.contains('dark')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(function(){});
-            
-            // 假设 E: 检查字体加载
-            document.fonts.ready.then(function() {
-                var fonts = [];
-                document.fonts.forEach(function(f) { fonts.push(f.family + ':' + f.status); });
-                fetch('http://127.0.0.1:7243/ingest/ea459f39-dc54-4fb8-8f0d-e94da347a2c9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:fonts.ready',message:'Font load status',data:{fontCount:fonts.length,fonts:fonts.slice(0,10)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(function(){});
-            });
-        });
-    </script>
-    <!-- #endregion -->
 </head>
 <body class="antialiased">
     <div id="root"></div>

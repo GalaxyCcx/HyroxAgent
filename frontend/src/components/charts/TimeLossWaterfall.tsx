@@ -36,9 +36,6 @@ const TimeLossWaterfall: React.FC<TimeLossWaterfallProps> = ({
 }) => {
   // 安全检查：确保 data 是数组
   const safeData = useMemo(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/c8808ce8-dcad-4626-9391-90f90312b4f6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TimeLossWaterfall.tsx:safeData',message:'Received data',data:{isArray:Array.isArray(data),dataLength:Array.isArray(data)?data.length:0,dataPreview:Array.isArray(data)?data.slice(0,3):data},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C,D'})}).catch(()=>{});
-    // #endregion
     if (!Array.isArray(data) || data.length === 0) {
       return [];
     }

@@ -356,14 +356,13 @@ export const reportApi = {
   },
 
   /**
-   * 获取心率图片列表
-   * 获取报告关联的所有心率图片及其提取状态
-   * 
-   * @param reportId - 报告ID
+   * 获取心率图片列表（后端: GET /api/v1/upload/{report_id}/images，返回 { code, data: { images, total } }）
    */
   getHeartRateImages: async (reportId: string): Promise<ApiResponse<HeartRateImage[]>> => {
-    const url = `${API_BASE_URL}/reports/${reportId}/heart-rate-images`;
-    return request<HeartRateImage[]>(url);
+    const url = `${API_BASE_URL}/upload/${reportId}/images`;
+    const raw = await fetch(url).then(r => r.ok ? r.json() : { code: 1, data: { images: [], total: 0 } }).catch(() => ({ code: 1, data: { images: [], total: 0 } }));
+    const list = (raw?.data?.images ?? []) as HeartRateImage[];
+    return { code: 0, data: list } as ApiResponse<HeartRateImage[]>;
   },
 };
 

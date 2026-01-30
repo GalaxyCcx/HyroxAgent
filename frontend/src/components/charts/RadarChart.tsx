@@ -64,8 +64,8 @@ const RadarChart: React.FC<RadarChartProps> = ({
   const option = useMemo<EChartsOption>(() => {
     // 默认颜色
     const defaultColors = [CHART_COLORS.cyan, CHART_COLORS.purple, CHART_COLORS.success];
-    
-    const indicator = dimensions.map(d => ({
+    const dims = dimensions ?? [];
+    const indicator = dims.map(d => ({
       name: d.name,
       max: d.max,
     }));
@@ -107,7 +107,7 @@ const RadarChart: React.FC<RadarChartProps> = ({
         formatter: (params: any) => {
           const data = params.data;
           let html = `<div style="font-weight:bold;margin-bottom:8px">${data.name}</div>`;
-          dimensions.forEach((dim, idx) => {
+          dims.forEach((dim, idx) => {
             const value = data.value[idx];
             const color = value >= 70 ? CHART_COLORS.success : value >= 40 ? CHART_COLORS.warning : CHART_COLORS.danger;
             html += `<div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:2px">
@@ -119,7 +119,7 @@ const RadarChart: React.FC<RadarChartProps> = ({
         },
       },
       legend: showLegend ? {
-        data: dataSets.map(d => d.name),
+        data: (dataSets ?? []).map(d => d.name),
         top: 0,
         textStyle: {
           color: CHART_COLORS.textSecondary,
@@ -165,11 +165,13 @@ const RadarChart: React.FC<RadarChartProps> = ({
 
   // 计算各数据集的综合得分
   const scores = useMemo(() => {
-    return dataSets.map(ds => ({
+    const dims = dimensions ?? [];
+    const sets = dataSets ?? [];
+    return sets.map(ds => ({
       name: ds.name,
-      avgScore: Math.round(ds.values.reduce((sum, v) => sum + v, 0) / ds.values.length),
-      maxDim: dimensions[ds.values.indexOf(Math.max(...ds.values))]?.name || '',
-      minDim: dimensions[ds.values.indexOf(Math.min(...ds.values))]?.name || '',
+      avgScore: (ds.values?.length ? Math.round(ds.values.reduce((sum, v) => sum + v, 0) / ds.values.length) : 0),
+      maxDim: dims[ds.values?.indexOf(Math.max(...(ds.values || []))) ?? -1]?.name || '',
+      minDim: dims[ds.values?.indexOf(Math.min(...(ds.values || []))) ?? -1]?.name || '',
     }));
   }, [dataSets, dimensions]);
 
@@ -191,7 +193,7 @@ const RadarChart: React.FC<RadarChartProps> = ({
       />
       
       {/* 综合得分 */}
-      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(dataSets.length, 3)}, 1fr)` }}>
+      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min((dataSets ?? []).length, 3)}, 1fr)` }}>
         {scores.map((score, idx) => (
           <div key={idx} className="bg-[#252525] rounded-lg p-3 text-center">
             <div className="text-[10px] text-gray-400 mb-1">{score.name}</div>
@@ -206,9 +208,9 @@ const RadarChart: React.FC<RadarChartProps> = ({
       </div>
       
       {/* 维度说明 */}
-      {dimensions.some(d => d.description) && (
+      {(dimensions ?? []).some(d => d.description) && (
         <div className="mt-3 flex flex-wrap gap-2 text-[9px] text-gray-500">
-          {dimensions.filter(d => d.description).map((dim, idx) => (
+          {(dimensions ?? []).filter(d => d.description).map((dim, idx) => (
             <span key={idx} className="bg-[#252525] px-2 py-1 rounded">
               {dim.name}: {dim.description}
             </span>

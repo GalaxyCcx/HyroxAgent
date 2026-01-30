@@ -87,11 +87,12 @@ const TrainingWeekView: React.FC<TrainingWeekViewProps> = ({
 }) => {
   // 计算周统计数据
   const weekStats = useMemo(() => {
-    const keyDays = weeklyPlan.filter(d => d.type === 'Key').length;
-    const recoveryDays = weeklyPlan.filter(d => d.type === 'Recovery' || d.type === 'Easy').length;
-    const restDays = weeklyPlan.filter(d => d.type === 'Rest').length;
-    const longDays = weeklyPlan.filter(d => d.type === 'Long').length;
-    const totalMinutes = weeklyPlan.reduce((sum, d) => sum + (d.duration_minutes || 0), 0);
+    const plan = weeklyPlan ?? [];
+    const keyDays = plan.filter(d => d.type === 'Key').length;
+    const recoveryDays = plan.filter(d => d.type === 'Recovery' || d.type === 'Easy').length;
+    const restDays = plan.filter(d => d.type === 'Rest').length;
+    const longDays = plan.filter(d => d.type === 'Long').length;
+    const totalMinutes = plan.reduce((sum, d) => sum + (d.duration_minutes || 0), 0);
     
     return {
       keyDays,
@@ -159,7 +160,7 @@ const TrainingWeekView: React.FC<TrainingWeekViewProps> = ({
 
       {/* 7天日历卡片 */}
       <div className="grid grid-cols-7 gap-2">
-        {weeklyPlan.map((day, index) => {
+        {(weeklyPlan ?? []).map((day, index) => {
           const colors = TYPE_COLORS[day.type] || TYPE_COLORS.Rest;
           
           return (

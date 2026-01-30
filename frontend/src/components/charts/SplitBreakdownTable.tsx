@@ -98,8 +98,9 @@ const SplitBreakdownTable: React.FC<SplitBreakdownTableProps> = ({
   className = '',
 }) => {
   // 分组：功能站和跑步
-  const stationSplits = splits.filter(s => !s.segment.startsWith('Run'));
-  const runningSplits = splits.filter(s => s.segment.startsWith('Run'));
+  const splitsList = splits ?? [];
+  const stationSplits = splitsList.filter(s => !s.segment.startsWith('Run'));
+  const runningSplits = splitsList.filter(s => s.segment.startsWith('Run'));
 
   const renderTableSection = (sectionSplits: SplitTarget[], title: string) => (
     <div className="mb-4">

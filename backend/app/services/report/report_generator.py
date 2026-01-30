@@ -295,12 +295,12 @@ class ReportGenerator:
             
             # 3. 数据预计算
             data_provider = get_data_provider()
-                report_data = await data_provider.prepare_all_data(
-                    season=report.season,
-                    location=report.location,
-                    athlete_name=report.athlete_name,
-                    heart_rate_data=heart_rate_data,
-                )
+            report_data = await data_provider.prepare_all_data(
+                season=report.season,
+                location=report.location,
+                athlete_name=report.athlete_name,
+                heart_rate_data=heart_rate_data,
+            )
             
             if not report_data.is_valid():
                 report.status = "error"
@@ -339,7 +339,7 @@ class ReportGenerator:
                 section_outputs = {}
                 
                 total_sections = len(section_ids)
-            section_progress_base = 35
+                section_progress_base = 35
                 section_progress_span = 50  # 35% ~ 85%
                 
                 for i, section_id in enumerate(section_ids):
@@ -426,17 +426,17 @@ class ReportGenerator:
                     introduction_text = summary_output.arguments.get("summary_text", "")
                     # 从 highlights 提取 conclusion
                     highlights = summary_output.arguments.get("highlights", [])
-                if highlights:
+                    if highlights:
                         conclusion_text = "；".join(
-                        h.get("content", "") if isinstance(h, dict) else str(h)
-                        for h in highlights
-                    )
-            
+                            h.get("content", "") if isinstance(h, dict) else str(h)
+                            for h in highlights
+                        )
+                
                 report.introduction = introduction_text
                 report.conclusion = conclusion_text
-            report.status = "completed"
-            report.progress = 100
-            report.completed_at = datetime.utcnow()
+                report.status = "completed"
+                report.progress = 100
+                report.completed_at = datetime.utcnow()
                 
                 # 提交快照数据（sync_db 会话）
                 sync_db.commit()

@@ -40,7 +40,6 @@ import type {
   TimeLossStructuredOutput,
   HeartRateStructuredOutput,
   PredictionStructuredOutput,
-  ComparisonStructuredOutput,
   TrainingStructuredOutput,
   ChartConfig,
   HeartRateImage,
@@ -66,11 +65,12 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
     setError(null);
     
     try {
-      const response = await reportApi.getReport(reportId);
-      const data = (response as { code?: number; data?: unknown }).code === 0 && (response as { data?: unknown }).data
-        ? (response as { data: Record<string, unknown> }).data
-        : (response as Record<string, unknown>).report_id
-          ? (response as Record<string, unknown>)
+      const raw = await reportApi.getReport(reportId) as unknown;
+      const response = raw as { code?: number; data?: unknown; report_id?: string; message?: string };
+      const data = response.code === 0 && response.data != null
+        ? (response.data as Record<string, unknown>)
+        : response.report_id != null
+          ? (raw as Record<string, unknown>)
           : null;
       if (data) {
         const d = data as Record<string, unknown>;
@@ -97,25 +97,25 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
         
         setReport(transformedReport);
       } else {
-        setError((response as { message?: string }).message || '加载报告失败');
+        setError(response.message || '加载报告失败');
       }
     } catch (err) {
       console.error('Failed to load report:', err);
       setError('网络错误，请稍后重试');
     } finally {
-      setLoading(false);//测试注释
+      setLoading(false);
     }
   }, [reportId]);
 
-  // --- 加载心率图片 ---
+  // --- 加载心率图片（接口失败时保持空数组，避免 .map 报错）---
   const loadHeartRateImages = useCallback(async () => {
     try {
       const response = await reportApi.getHeartRateImages(reportId);
-      if (response.code === 0 && response.data) {
-        setHeartRateImages(response.data);
-      }
+      const list = Array.isArray(response?.data) ? response.data : [];
+      setHeartRateImages(list);
     } catch (err) {
       console.error('Failed to load heart rate images:', err);
+      setHeartRateImages([]);
     }
   }, [reportId]);
 
@@ -223,7 +223,7 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
               {heartRateImages.map((img) => (
                 <div key={img.id} className="bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/5">
                   <img 
-                    src={img.image_url} 
+                    src={img.image_path} 
                     alt="心率数据" 
                     className="w-full h-32 object-cover"
                   />
@@ -372,7 +372,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, index, chart
         {/* V3 模式：使用 BlockRenderer 渲染 blocks */}
         {hasBlocks && (
           <div className="space-y-4">
-            {section.blocks!.map((block, blockIndex) => (
+            {(section.blocks ?? []).map((block, blockIndex) => (
               <BlockRenderer 
                 key={`block-${blockIndex}`}
                 block={block}
@@ -386,7 +386,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, index, chart
         {!hasBlocks && section.structured_output && (
           <StructuredOutputRenderer 
             sectionType={section.section_type}
-            data={section.structured_output}
+            data={section.structured_output as unknown as Record<string, unknown>}
           />
         )}
 
@@ -415,15 +415,15 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, index, chart
         )}
 
         {/* V2 兼容：章节独立图表 - 使用智能图表路由 */}
-        {!hasBlocks && section.charts && section.charts.length > 0 && (
+        {!hasBlocks && (section.charts ?? []).length > 0 && (
           <div className="space-y-4 mt-4">
-            {section.charts.map((chart) => (
+            {(section.charts ?? []).map((chart) => (
               <div key={chart.chart_id} className="p-4 bg-[#101013] rounded-xl">
                 <SmartChartRenderer
                   chartId={chart.chart_id}
                   chartType={chart.chart_type}
                   config={chart.config as Record<string, unknown>}
-                  title={chart.title}
+                  title={(chart as { title?: string }).title}
                 />
               </div>
             ))}
@@ -660,17 +660,17 @@ interface StructuredOutputRendererProps {
 const StructuredOutputRenderer: React.FC<StructuredOutputRendererProps> = ({ sectionType, data }) => {
   switch (sectionType) {
     case 'summary':
-      return <SummaryOutput data={data as SummaryStructuredOutput} />;
+      return <SummaryOutput data={data as unknown as SummaryStructuredOutput} />;
     case 'time_loss':
-      return <TimeLossOutput data={data as TimeLossStructuredOutput} />;
+      return <TimeLossOutput data={data as unknown as TimeLossStructuredOutput} />;
     case 'heart_rate':
-      return <HeartRateOutput data={data as HeartRateStructuredOutput} />;
+      return <HeartRateOutput data={data as unknown as HeartRateStructuredOutput} />;
     case 'prediction':
-      return <PredictionOutput data={data as PredictionStructuredOutput} />;
+      return <PredictionOutput data={data as unknown as PredictionStructuredOutput} />;
     case 'comparison':
-      return <ComparisonOutput data={data as ComparisonStructuredOutput} />;
+      return <ComparisonOutput data={data as unknown as ComparisonStructuredOutput} />;
     case 'training':
-      return <TrainingOutput data={data as TrainingStructuredOutput} />;
+      return <TrainingOutput data={data as unknown as TrainingStructuredOutput} />;
     default:
       return null;
   }
@@ -685,7 +685,7 @@ const IntroductionRenderer: React.FC<{ introduction: string }> = ({ introduction
     const parsed = JSON.parse(introduction);
     // 验证是否包含必要字段
     if (parsed && typeof parsed.roxscan_score === 'number') {
-      summaryData = parsed as SummaryStructuredOutput;
+      summaryData = parsed as unknown as SummaryStructuredOutput;
     }
   } catch {
     // 解析失败，可能是纯文本格式（旧版本兼容）
@@ -780,9 +780,9 @@ const SummaryOutput: React.FC<{ data: SummaryStructuredOutput }> = ({ data }) =>
       )}
 
       {/* 亮点 - 支持对象数组格式 { type, content } */}
-      {data.highlights && data.highlights.length > 0 && (
+      {(data.highlights ?? []).length > 0 && (
         <div className="space-y-2">
-          {data.highlights.map((highlight, i) => {
+          {(data.highlights ?? []).map((highlight, i) => {
             // 根据类型选择图标和颜色
             const isStrength = highlight.type === 'strength';
             const isWeakness = highlight.type === 'weakness';
@@ -827,7 +827,7 @@ const TimeLossOutput: React.FC<{ data: TimeLossStructuredOutput }> = ({ data }) 
 
       {/* 损耗列表 */}
       <div className="space-y-2">
-        {data.loss_items.map((item, i) => (
+        {(data.loss_items ?? []).map((item, i) => (
           <div key={i} className="flex items-center justify-between bg-[#101013] rounded-lg p-3">
             <div>
               <div className="text-sm text-white">{item.segment}</div>
@@ -866,10 +866,10 @@ const HeartRateOutput: React.FC<{ data: HeartRateStructuredOutput }> = ({ data }
       )}
 
       {/* 心率区间分布 */}
-      {data.zones_distribution && data.zones_distribution.length > 0 && (
+      {(data.zones_distribution ?? []).length > 0 && (
         <div className="space-y-2">
           <div className="text-xs text-white/40 mb-2">心率区间分布</div>
-          {data.zones_distribution.map((zone, i) => (
+          {(data.zones_distribution ?? []).map((zone, i) => (
             <div key={i} className="flex items-center gap-3">
               <div className="w-12 text-xs text-white/60">{zone.zone}</div>
               <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
@@ -924,10 +924,11 @@ const PredictionOutput: React.FC<{ data: PredictionStructuredOutput }> = ({ data
 
 // ========== Training 章节输出 (V2.1 升级 - 使用 TrainingWeekView) ==========
 const TrainingOutput: React.FC<{ data: TrainingStructuredOutput }> = ({ data }) => {
-  if (!data.weekly_plan) return null;
+  const plan = data.weekly_plan ?? [];
+  if (!plan.length) return null;
 
   // 转换数据格式以适配 TrainingWeekView
-  const weeklyPlanForView = data.weekly_plan.map(day => ({
+  const weeklyPlanForView = plan.map(day => ({
     day: day.day,
     dayName: day.dayName || day.day,
     type: day.type as 'Key' | 'Recovery' | 'Rest' | 'Long' | 'Easy',
@@ -949,11 +950,11 @@ const TrainingOutput: React.FC<{ data: TrainingStructuredOutput }> = ({ data }) 
       />
 
       {/* 关键训练课程 (如果有) */}
-      {data.key_workouts && data.key_workouts.length > 0 && (
+      {(data.key_workouts ?? []).length > 0 && (
         <div className="mt-4 p-4 bg-[#1a1a1a] rounded-lg border border-white/5">
           <h4 className="text-xs text-gray-400 uppercase tracking-wider mb-3">关键训练课程</h4>
           <div className="space-y-3">
-            {data.key_workouts.slice(0, 4).map((workout, i) => (
+            {(data.key_workouts ?? []).slice(0, 4).map((workout, i) => (
               <div key={i} className="flex items-start gap-3">
                 <span className="text-sm text-green-400 font-bold">{i + 1}</span>
                 <div>
@@ -970,11 +971,11 @@ const TrainingOutput: React.FC<{ data: TrainingStructuredOutput }> = ({ data }) 
       )}
 
       {/* 弱项分析 (如果有) */}
-      {data.weakness_analysis && data.weakness_analysis.length > 0 && (
+      {(data.weakness_analysis ?? []).length > 0 && (
         <div className="mt-4 p-4 bg-[#1a1a1a] rounded-lg border border-white/5">
           <h4 className="text-xs text-gray-400 uppercase tracking-wider mb-3">弱项分析</h4>
           <div className="grid grid-cols-2 gap-3">
-            {data.weakness_analysis.slice(0, 4).map((item, i) => (
+            {(data.weakness_analysis ?? []).slice(0, 4).map((item, i) => (
               <div key={i} className="bg-[#252525] rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`size-2 rounded-full ${
@@ -1059,11 +1060,11 @@ const ComparisonOutput: React.FC<{ data: ComparisonStructuredOutput }> = ({ data
       {/* 优势与弱势对比 */}
       <div className="grid grid-cols-2 gap-4">
         {/* 优势项目 */}
-        {data.strengths && data.strengths.length > 0 && (
+        {(data.strengths ?? []).length > 0 && (
           <div className="bg-[#1a1a1a] rounded-lg p-4 border border-green-500/20">
             <h4 className="text-xs text-green-400 uppercase tracking-wider mb-3">💪 優勢項目</h4>
             <div className="space-y-2">
-              {data.strengths.slice(0, 3).map((item, i) => (
+              {(data.strengths ?? []).slice(0, 3).map((item, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <span className="text-sm text-white">{item.segment}</span>
                   <span className="text-xs text-green-400 font-mono">前{item.percentile}%</span>
@@ -1074,11 +1075,11 @@ const ComparisonOutput: React.FC<{ data: ComparisonStructuredOutput }> = ({ data
         )}
 
         {/* 弱势项目 */}
-        {data.weaknesses && data.weaknesses.length > 0 && (
+        {(data.weaknesses ?? []).length > 0 && (
           <div className="bg-[#1a1a1a] rounded-lg p-4 border border-red-500/20">
             <h4 className="text-xs text-red-400 uppercase tracking-wider mb-3">📊 提升空間</h4>
             <div className="space-y-2">
-              {data.weaknesses.slice(0, 3).map((item, i) => (
+              {(data.weaknesses ?? []).slice(0, 3).map((item, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <span className="text-sm text-white">{item.segment}</span>
                   <div className="text-right">

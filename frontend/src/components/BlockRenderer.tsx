@@ -92,6 +92,7 @@ const ValueProposition: React.FC<{ content: string }> = ({ content }) => (
  * HighlightsList - 重点发现列表
  */
 const HighlightsList: React.FC<HighlightsListProps> = ({ items }) => {
+  const list = items ?? [];
   const typeIcons: Record<string, string> = {
     strength: '💪',
     weakness: '📊',
@@ -106,7 +107,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({ items }) => {
   
   return (
     <div className="space-y-3">
-      {items.map((item, index) => (
+      {list.map((item, index) => (
         <div
           key={index}
           className={`border-l-4 ${typeColors[item.type] || 'border-l-gray-500'} p-4 rounded-r-lg`}
@@ -122,7 +123,8 @@ const HighlightsList: React.FC<HighlightsListProps> = ({ items }) => {
 /**
  * LossTable - 时间损耗表格
  */
-const LossTable: React.FC<LossTableProps> = ({ total_loss_seconds, theoretical_best, items }) => {
+const LossTable: React.FC<LossTableProps> = ({ total_loss_seconds, theoretical_best, items: rawItems }) => {
+  const items = rawItems ?? [];
   const difficultyColors: Record<string, string> = {
     '极易': 'text-green-400',
     '技术': 'text-yellow-400',
@@ -187,11 +189,11 @@ const LossTable: React.FC<LossTableProps> = ({ total_loss_seconds, theoretical_b
 /**
  * GenericList - 通用列表
  */
-const GenericList: React.FC<{ items: unknown[]; name?: string }> = ({ items, name }) => (
+const GenericList: React.FC<{ items?: unknown[]; name?: string }> = ({ items = [], name }) => (
   <div className="bg-white/5 rounded-xl p-4">
     {name && <div className="text-lg font-medium mb-3">{name}</div>}
     <ul className="space-y-2">
-      {items.map((item, index) => (
+      {(items ?? []).map((item, index) => (
         <li key={index} className="flex items-start">
           <span className="mr-2">•</span>
           <span>{typeof item === 'string' ? item : JSON.stringify(item)}</span>
@@ -302,7 +304,6 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block, dataSnapshots }) =
   const Component = COMPONENT_MAP[block.component];
   
   if (!Component) {
-    console.warn(`[BlockRenderer] Unknown component: ${block.component}`);
     return (
       <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
         <div className="text-yellow-400 text-sm">未知组件: {block.component}</div>

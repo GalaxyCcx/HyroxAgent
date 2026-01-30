@@ -46,10 +46,11 @@ const SplitsBreakdown: React.FC<SplitsBreakdownProps> = ({
   style,
   className,
 }) => {
+  const safeData = data ?? [];
   const option = useMemo<EChartsOption>(() => {
-    const names = data.map(d => d.name);
-    const athleteTimes = data.map(d => d.athleteTime);
-    const avgTimes = data.map(d => d.avgTime);
+    const names = safeData.map(d => d.name);
+    const athleteTimes = safeData.map(d => d.athleteTime);
+    const avgTimes = safeData.map(d => d.avgTime);
 
     return {
       tooltip: {
@@ -178,7 +179,7 @@ const SplitsBreakdown: React.FC<SplitsBreakdownProps> = ({
         },
       ],
     };
-  }, [data, athleteName, groupName, showDiff]);
+  }, [safeData, athleteName, groupName, showDiff]);
 
   // 计算总体统计
   const totalDiff = useMemo(() => {
@@ -187,7 +188,7 @@ const SplitsBreakdown: React.FC<SplitsBreakdownProps> = ({
   }, [data]);
 
   const fasterCount = useMemo(() => {
-    return data.filter(d => d.athleteTime < d.avgTime).length;
+    return (data ?? []).filter(d => d.athleteTime < d.avgTime).length;
   }, [data]);
 
   return (
@@ -205,7 +206,7 @@ const SplitsBreakdown: React.FC<SplitsBreakdownProps> = ({
               总计: {totalDiff <= 0 ? '' : '+'}{formatTime(Math.abs(totalDiff))}
             </span>
             <span className="text-gray-400">
-              {fasterCount}/{data.length} 段领先
+              {fasterCount}/{(data ?? []).length} 段领先
             </span>
           </div>
         </div>

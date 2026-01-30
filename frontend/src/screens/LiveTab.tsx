@@ -485,8 +485,7 @@ const LiveTab: React.FC = () => {
     try {
       // 提取心率图片路径
       const imagePaths = heartRateImages.map(img => img.image_path).filter(Boolean);
-      console.log('[Report] Starting generation with heart rate images:', imagePaths);
-      
+
       // 订阅生成进度，传递心率图片路径
       const eventSource = reportApi.subscribeGenerate(pendingReportId, imagePaths);
       
@@ -1735,14 +1734,6 @@ const LiveTab: React.FC = () => {
 
   // --- VIEW: PRO REPORT (专业分析报告详情) ---
   const renderProReport = () => {
-    try {
-      console.log('[DEBUG renderProReport] called, proReportDetail:', proReportDetail ? 'exists' : 'null');
-      if (proReportDetail) {
-        console.log('[DEBUG renderProReport] sections:', proReportDetail.sections?.length, 'charts:', proReportDetail.charts ? Object.keys(proReportDetail.charts).length : 0);
-      }
-    } catch (e) {
-      console.error('[DEBUG renderProReport] error:', e);
-    }
     if (!proReportDetail) {
       return (
         <div className="flex flex-col min-h-screen bg-[#0a0d12]">
@@ -1851,7 +1842,7 @@ const LiveTab: React.FC = () => {
 
           {/* 章节内容 - 科技风卡片 */}
           {/* 过滤掉 introduction 章节（它有专门的 IntroductionCard），渲染其他所有章节 */}
-          {proReportDetail.sections && proReportDetail.sections
+          {(Array.isArray(proReportDetail.sections) ? proReportDetail.sections : [])
             .filter((section: any) => section.section_id !== "introduction")
             .map((section: any, index: number) => {
             // V3: 检查是否有 blocks 数组
@@ -1910,7 +1901,7 @@ const LiveTab: React.FC = () => {
                         {section.section_id === 'deep_dive' ? (
                           <>
                             <DeepDiveRenderer content={section.content || ''} />
-                            {contentParts.filter(part => part.type === 'chart').map((part, partIndex) => (
+                            {(contentParts ?? []).filter(part => part.type === 'chart').map((part, partIndex) => (
                               <div key={`chart-${partIndex}`} className="my-4 p-4 bg-[#0a0d12] rounded-xl border border-white/5">
                                 <ReportChart
                                   chartId={part.chartId || `chart-${partIndex}`}
@@ -1923,7 +1914,7 @@ const LiveTab: React.FC = () => {
                           </>
                         ) : (
                           <>
-                            {contentParts.map((part, partIndex) => {
+                            {(contentParts ?? []).map((part, partIndex) => {
                               if (part.type === 'chart' && part.config) {
                                 return (
                                   <div key={`chart-${partIndex}`} className="my-4 p-4 bg-[#0a0d12] rounded-xl border border-white/5">
