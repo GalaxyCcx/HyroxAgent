@@ -9,7 +9,7 @@
 - ReportAssembler: 报告组装器
 """
 
-from .config_loader import ConfigLoader, get_config_loader
+from .config_loader import ConfigLoader, get_config_loader, reset_config_loader
 from .input_builder import InputBuilder, get_input_builder
 from .section_generator import SectionGenerator, get_section_generator
 from .function_executor import FunctionExecutor, get_function_executor
@@ -18,6 +18,7 @@ from .report_assembler import ReportAssembler, get_report_assembler
 __all__ = [
     "ConfigLoader",
     "get_config_loader",
+    "reset_config_loader",
     "InputBuilder",
     "get_input_builder",
     "SectionGenerator",

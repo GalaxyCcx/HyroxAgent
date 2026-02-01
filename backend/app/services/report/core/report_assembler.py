@@ -102,6 +102,16 @@ class ReportAssembler:
         # 获取章节定义
         section_definitions = self.config_loader.get_section_definitions()
         
+        # #region agent log
+        import json as _dbg_json
+        import time as _dbg_time
+        _dbg_log_path = r"e:\HyroxAgent 4 1\HyroxAgent\.cursor\debug.log"
+        _dbg_all_defs = [(d.section_id, d.enabled, d.type) for d in section_definitions]
+        _dbg_enabled_defs = [(d.section_id, d.type) for d in section_definitions if d.enabled]
+        with open(_dbg_log_path, "a", encoding="utf-8") as _dbg_f:
+            _dbg_f.write(_dbg_json.dumps({"location":"report_assembler.py:assemble_report","message":"Section definitions from ConfigLoader","data":{"all_definitions":_dbg_all_defs,"enabled_definitions":_dbg_enabled_defs,"section_outputs_keys":list(section_outputs.keys())},"timestamp":_dbg_time.time()*1000,"sessionId":"debug-session","hypothesisId":"B"}) + "\n")
+        # #endregion
+        
         for section_def in section_definitions:
             if not section_def.enabled:
                 continue

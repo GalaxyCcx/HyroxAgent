@@ -2,12 +2,19 @@
 chcp 65001 >nul
 title HyroxAgent 停止器
 
+:: 优先使用 PowerShell 脚本停止
+if exist "%~dp0stop.ps1" (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0stop.ps1"
+    echo.
+    pause
+    exit /b 0
+)
+
 echo ============================================
 echo        HyroxAgent 服务停止脚本
 echo ============================================
 echo.
 
-:: 彻底停止后端服务 (端口 8000，循环直到无进程)
 echo [1/2] 停止后端服务...
 :stop_8000
 set "found8000=0"
@@ -22,7 +29,6 @@ if "%found8000%"=="1" (
 )
 echo       后端服务已停止
 
-:: 彻底停止前端服务 (端口 5173，循环直到无进程)
 echo [2/2] 停止前端服务...
 :stop_5173
 set "found5173=0"
