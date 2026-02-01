@@ -77,10 +77,21 @@ class ConfigLoader:
         self._section_configs: Dict[str, SectionConfig] = {}
         self._loaded = False
     
-    def load_all(self) -> None:
-        """加载所有配置"""
-        if self._loaded:
+    def load_all(self, force_reload: bool = False) -> None:
+        """加载所有配置
+        
+        Args:
+            force_reload: 强制重新加载配置，忽略缓存
+        """
+        if self._loaded and not force_reload:
             return
+        
+        # 如果强制重新加载，清空缓存
+        if force_reload:
+            self._sections_config = None
+            self._model_config = None
+            self._section_configs = {}
+            self._loaded = False
         
         logger.info(f"[ConfigLoader] 加载配置目录: {self.config_dir}")
         
@@ -202,7 +213,18 @@ class ConfigLoader:
     def get_dynamic_section_ids(self) -> List[str]:
         """获取所有动态章节的 ID（按顺序）"""
         definitions = self.get_section_definitions()
-        return [d.section_id for d in definitions if d.type == "dynamic" and d.enabled]
+        all_dynamic = [d for d in definitions if d.type == "dynamic"]
+        enabled_dynamic = [d for d in all_dynamic if d.enabled]
+        
+        # 调试日志
+        logger.info(f"[ConfigLoader] get_dynamic_section_ids 调用:")
+        logger.info(f"  - 所有章节数: {len(definitions)}")
+        logger.info(f"  - 动态章节数: {len(all_dynamic)}")
+        logger.info(f"  - 启用的动态章节: {[d.section_id for d in enabled_dynamic]}")
+        for d in all_dynamic:
+            logger.info(f"    - {d.section_id}: enabled={d.enabled}")
+        
+        return [d.section_id for d in enabled_dynamic]
     
     def get_section_config(self, section_id: str) -> Optional[SectionConfig]:
         """获取章节完整配置"""
@@ -236,4 +258,12 @@ def get_config_loader() -> ConfigLoader:
     global _config_loader
     if _config_loader is None:
         _config_loader = ConfigLoader()
+    return _config_loader
+
+
+def reset_config_loader() -> ConfigLoader:
+    """重置并返回新的 ConfigLoader 实例（用于强制重新加载配置）"""
+    global _config_loader
+    logger.info("[ConfigLoader] 强制重置全局实例")
+    _config_loader = ConfigLoader()
     return _config_loader

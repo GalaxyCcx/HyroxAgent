@@ -55,6 +55,12 @@ export {
 } from './RadarChart';
 export type { RadarDimension, RadarDataSet } from './RadarChart';
 
+// 5维能力雷达图 (V4 新增)
+export { default as RadarChart5D } from './RadarChart5D';
+
+// 环形评分组件 (V4 新增)
+export { default as ScoreRing } from './ScoreRing';
+
 // ==================== v2.1 新增组件 ====================
 
 // 五档预测卡片

@@ -18,8 +18,12 @@ import {
   HorizontalBar,
   PriorityMatrix,
   RadarChart as BaseRadarChart,
+  RadarChart5D,
+  ScoreRing,
   DEFAULT_ZONEX_DIMENSIONS,
 } from './charts';
+import SummaryText from './SummaryText';
+import DimensionList from './DimensionList';
 import type {
   ContentBlock,
   DataSnapshot,
@@ -260,6 +264,12 @@ const RadarChart: React.FC<{ data_id?: string; dimensions?: Record<string, numbe
 // ========== 组件映射表 ==========
 
 const COMPONENT_MAP: Record<string, React.ComponentType<any>> = {
+  // V4 新增核心摘要组件
+  ScoreRing,                    // 环形评分组件
+  SummaryText,                  // 总评文本（绿色左边框）
+  DimensionList,                // 三维能力列表
+  RadarChart5D,                 // 5维能力雷达图
+  
   // 卡片组件
   RoxscanCard,
   GenericCard,
@@ -301,6 +311,9 @@ const COMPONENT_MAP: Record<string, React.ComponentType<any>> = {
 // ========== 主渲染器 ==========
 
 const BlockRenderer: React.FC<BlockRendererProps> = ({ block, dataSnapshots }) => {
+  // #region agent log
+  fetch('http://127.0.0.1:7245/ingest/31eb2793-6057-4140-8c92-6cb1a296c760',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlockRenderer.tsx:render',message:'Block render',data:{blockExists:!!block,componentName:block?.component,propsKeys:block?.props?Object.keys(block.props):null,hasDataId:!!block?.props?.data_id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   const Component = COMPONENT_MAP[block.component];
   
   if (!Component) {
@@ -324,6 +337,11 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block, dataSnapshots }) =
       // 将 snapshot.content 合并到 props 中
       mergedProps = { ...mergedProps, ...snapshot.content };
     }
+  }
+  
+  // 图4：核心摘要中雷达图不显示下方「综合得分/强项弱项/维度标签」块，统一传 compact
+  if (block.component === 'RadarChart5D') {
+    mergedProps = { ...mergedProps, compact: true };
   }
   
   // 使用 ErrorBoundary 风格的 try-catch 渲染

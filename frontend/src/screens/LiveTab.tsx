@@ -52,171 +52,6 @@ const AGE_GROUPS_DOUBLES = [
   '16-29', '30-39', '40-49', '50-59', '60-70+'
 ];
 
-// ========== IntroductionCard - 核心摘要卡片 ==========
-interface SummaryData {
-  roxscan_score: number;
-  level: string;
-  level_name: string;
-  dimensions: {
-    strength: number;
-    aerobic_base: number;
-    transition: number;
-  };
-  summary_text?: string;
-  highlights: Array<{
-    type: 'strength' | 'weakness' | 'insight';
-    content: string;
-  }>;
-}
-
-const IntroductionCard: React.FC<{ introduction: string; charts?: Record<string, any> }> = ({ introduction, charts }) => {
-  // 尝试解析 JSON 格式的核心摘要数据
-  let summaryData: SummaryData | null = null;
-  
-  try {
-    const parsed = JSON.parse(introduction);
-    if (parsed && typeof parsed.roxscan_score === 'number') {
-      summaryData = parsed as SummaryData;
-    }
-  } catch {
-    summaryData = null;
-  }
-
-  // 等级颜色映射
-  const levelColors: Record<string, string> = {
-    'S': '#fbbf24',
-    'A': '#a855f7',
-    'B': '#3b82f6',
-    'C': '#22c55e',
-    'D': '#9ca3af',
-  };
-
-  // 如果成功解析为结构化数据，渲染 ROXSCAN 卡片
-  if (summaryData) {
-    const levelColor = levelColors[summaryData.level] || '#42ff9e';
-    
-    return (
-      <div className="relative overflow-hidden rounded-2xl mb-4 bg-gradient-to-br from-[#12171f] to-[#0d1117] border border-[#42ff9e]/20 shadow-[0_0_30px_rgba(66,255,158,0.05)]">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#42ff9e] via-cyan-500 to-blue-500"></div>
-        <div className="p-5">
-          {/* 标题 */}
-          <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-            <span className="size-6 rounded-lg bg-gradient-to-br from-[#42ff9e]/20 to-cyan-500/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[#42ff9e] text-sm">analytics</span>
-            </span>
-            <span className="bg-gradient-to-r from-[#42ff9e] to-cyan-400 bg-clip-text text-transparent">核心摘要：ZONEØ 战力值</span>
-          </h2>
-
-          {/* ROXSCAN 评分卡片 */}
-          <div className="bg-gradient-to-r from-[#42ff9e]/10 to-transparent rounded-xl p-4 border border-[#42ff9e]/20 mb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[10px] text-white/40 uppercase tracking-wider mb-1">ROXSCAN Score</div>
-                <div className="text-4xl font-bold text-[#42ff9e] font-display">{summaryData.roxscan_score}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold" style={{ color: levelColor }}>{summaryData.level}</div>
-                <div className="text-sm text-white/60">{summaryData.level_name}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* 三维能力值 */}
-          {summaryData.dimensions && (
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {[
-                { key: 'strength', label: '力量', icon: 'fitness_center', color: '#42ff9e' },
-                { key: 'aerobic_base', label: '有氧底座', icon: 'directions_run', color: '#3b82f6' },
-                { key: 'transition', label: '转换效率', icon: 'swap_horiz', color: '#a855f7' },
-              ].map((item) => (
-                <div key={item.key} className="bg-[#101013] rounded-xl p-3 text-center border border-white/5">
-                  <span className="material-symbols-outlined text-lg mb-1" style={{ color: item.color }}>
-                    {item.icon}
-                  </span>
-                  <div className="text-xl font-bold text-white">
-                    {summaryData!.dimensions[item.key as keyof typeof summaryData.dimensions]}
-                  </div>
-                  <div className="text-[10px] text-white/40">{item.label}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 总结文本 */}
-          {summaryData.summary_text && (
-            <div className="bg-[#101013] rounded-xl p-4 text-sm text-white/70 leading-relaxed mb-4 border border-white/5">
-              {summaryData.summary_text}
-            </div>
-          )}
-
-          {/* 亮点 */}
-          {summaryData.highlights && summaryData.highlights.length > 0 && (
-            <div className="space-y-2">
-              {summaryData.highlights.map((highlight, i) => {
-                const isStrength = highlight.type === 'strength';
-                const isWeakness = highlight.type === 'weakness';
-                const dotColor = isStrength ? 'bg-[#42ff9e]' : isWeakness ? 'bg-red-400' : 'bg-blue-400';
-                const icon = isStrength ? '💪' : isWeakness ? '📊' : '💡';
-                
-                return (
-                  <div key={i} className="flex items-start gap-2 text-sm text-white/70">
-                    <span className={`size-1.5 ${dotColor} rounded-full mt-1.5 shrink-0`}></span>
-                    <span>
-                      <span className="mr-1">{icon}</span>
-                      {highlight.content}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* 雷达图 - 从 charts 中查找 radar 类型的图表 */}
-          {charts && (() => {
-            // 查找 radar 类型的图表
-            const radarChart = Object.values(charts).find(
-              (chart: any) => chart.chart_type === 'radar'
-            );
-            if (radarChart && radarChart.config) {
-              return (
-                <div className="mt-4 p-4 bg-[#0a0d12] rounded-xl border border-white/5">
-                  <ReportChart
-                    chartId={radarChart.chart_id || 'summary-radar'}
-                    config={radarChart.config}
-                    purpose="ZONEØ 三维能力雷达图"
-                    chartType="radar"
-                  />
-                </div>
-              );
-            }
-            return null;
-          })()}
-        </div>
-      </div>
-    );
-  }
-
-  // 回退到 Markdown 渲染（旧版本兼容）
-  return (
-    <div className="relative overflow-hidden rounded-2xl mb-4 bg-gradient-to-br from-[#12171f] to-[#0d1117] border border-cyan-500/10 shadow-[0_0_30px_rgba(0,255,255,0.03)]">
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500"></div>
-      <div className="p-5">
-        <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-          <span className="size-6 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center">
-            <span className="material-symbols-outlined text-cyan-400 text-sm">auto_awesome</span>
-          </span>
-          <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">报告摘要</span>
-        </h2>
-        <div className="prose prose-sm prose-invert max-w-none text-white/70 prose-p:leading-relaxed">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {introduction}
-          </ReactMarkdown>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const LiveTab: React.FC = () => {
   const navigate = useNavigate();
   
@@ -1832,18 +1667,8 @@ const LiveTab: React.FC = () => {
             </div>
           </div>
 
-          {/* 引言 - 科技风卡片 */}
-          {proReportDetail.introduction && (
-            <IntroductionCard 
-              introduction={proReportDetail.introduction} 
-              charts={proReportDetail.charts}
-            />
-          )}
-
-          {/* 章节内容 - 科技风卡片 */}
-          {/* 过滤掉 introduction 章节（它有专门的 IntroductionCard），渲染其他所有章节 */}
+          {/* 章节内容 */}
           {(Array.isArray(proReportDetail.sections) ? proReportDetail.sections : [])
-            .filter((section: any) => section.section_id !== "introduction")
             .map((section: any, index: number) => {
             // V3: 检查是否有 blocks 数组
             const hasBlocks = section.blocks && Array.isArray(section.blocks) && section.blocks.length > 0;
@@ -1877,7 +1702,7 @@ const LiveTab: React.FC = () => {
                   {/* 章节标题 */}
                   <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-3">
                     <span className={`size-8 rounded-lg bg-gradient-to-br ${color.from} ${color.to} flex items-center justify-center text-white text-xs font-bold shadow-lg`}>
-                      {index + 2}
+                      {index + 1}
                     </span>
                     <span>{section.title}</span>
                   </h2>

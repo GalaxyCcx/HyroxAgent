@@ -22,7 +22,7 @@ from .data_provider import get_data_provider, MappedHeartRateData
 from .heart_rate_extractor import heart_rate_extractor
 from .heart_rate_mapper import heart_rate_mapper
 from .core import (
-    ConfigLoader, get_config_loader,
+    ConfigLoader, get_config_loader, reset_config_loader,
     InputBuilder, get_input_builder,
     SectionGenerator, get_section_generator,
     FunctionExecutor, get_function_executor,
@@ -142,12 +142,139 @@ class ReportGenerator:
         
         return report_uuid
     
+    def _find_athlete_result(self, db: Session, season: int, location: str, athlete_name: str):
+        """查找运动员成绩：先精确匹配，再尝试规范化姓名匹配"""
+        # 1. 精确匹配
+        result = db.query(Result).filter(
+            Result.season == season,
+            Result.location == location,
+            Result.name == athlete_name,
+        ).first()
+        if result:
+            return result
+        # 2. 规范化姓名：去首尾空格、合并连续空格
+        name_clean = (athlete_name or "").strip()
+        if not name_clean:
+            return None
+        name_normalized = " ".join(name_clean.split())
+        result = db.query(Result).filter(
+            Result.season == season,
+            Result.location == location,
+            Result.name == name_normalized,
+        ).first()
+        if result:
+            return result
+        # 3. 同场次所有选手，按姓名包含/相似匹配（兼容 "Chen, Yuanmin" vs "Yuanmin Chen" 等）
+        candidates = db.query(Result).filter(
+            Result.season == season,
+            Result.location == location,
+            Result.total_time.isnot(None),
+        ).all()
+        a_lower = name_normalized.lower()
+        for r in candidates:
+            if (r.name or "").strip().lower() == a_lower:
+                return r
+            # 姓, 名 与 名 姓 互换
+            if "," in name_normalized and "," in (r.name or ""):
+                parts_a = [p.strip() for p in name_normalized.split(",", 1)]
+                parts_b = [p.strip() for p in (r.name or "").split(",", 1)]
+                if len(parts_a) == 2 and len(parts_b) == 2:
+                    if parts_a[0].lower() == parts_b[0].lower() and parts_a[1].lower() == parts_b[1].lower():
+                        return r
+                    if parts_a[0].lower() == parts_b[1].lower() and parts_a[1].lower() == parts_b[0].lower():
+                        return r
+        return None
+
     def get_report(self, db: Session, report_id: str) -> Optional[Dict[str, Any]]:
-        """获取报告详情"""
+        """获取报告详情（包含运动员比赛数据）；sections 按当前配置过滤，只返回已启用章节"""
         report = db.query(ProReport).filter(ProReport.report_id == report_id).first()
         if not report:
             return None
-        return report.to_dict()
+        
+        # 获取基础报告数据
+        report_data = report.to_dict()
+        
+        # 查询运动员的比赛成绩（支持多种姓名匹配）
+        result = self._find_athlete_result(
+            db, report.season, report.location, report.athlete_name
+        )
+        
+        if result:
+            # 添加比赛详细信息
+            report_data["event_name"] = result.event_name
+            report_data["age_group"] = result.age_group
+            
+            # 将总时间从分钟转换为可读格式
+            if result.total_time:
+                total_minutes = result.total_time
+                hours = int(total_minutes // 60)
+                minutes = int(total_minutes % 60)
+                seconds = int((total_minutes * 60) % 60)
+                if hours > 0:
+                    report_data["total_time"] = f"{hours}:{minutes:02d}:{seconds:02d}"
+                else:
+                    report_data["total_time"] = f"{minutes}:{seconds:02d}"
+                report_data["total_time_minutes"] = total_minutes
+            
+            # 计算总排名（同场比赛、同组别、同性别）
+            overall_rank = db.query(Result).filter(
+                Result.season == report.season,
+                Result.location == report.location,
+                Result.division == result.division,
+                Result.gender == result.gender,
+                Result.total_time < result.total_time
+            ).count() + 1
+            report_data["overall_rank"] = overall_rank
+            
+            # 计算同场比赛总人数
+            total_participants = db.query(Result).filter(
+                Result.season == report.season,
+                Result.location == report.location,
+                Result.division == result.division,
+                Result.gender == result.gender,
+                Result.total_time != None
+            ).count()
+            report_data["total_participants"] = total_participants
+            
+            # 计算年龄组排名
+            if result.age_group:
+                age_group_rank = db.query(Result).filter(
+                    Result.season == report.season,
+                    Result.location == report.location,
+                    Result.division == result.division,
+                    Result.gender == result.gender,
+                    Result.age_group == result.age_group,
+                    Result.total_time < result.total_time
+                ).count() + 1
+                report_data["age_group_rank"] = age_group_rank
+                
+                # 计算年龄组总人数
+                age_group_total = db.query(Result).filter(
+                    Result.season == report.season,
+                    Result.location == report.location,
+                    Result.division == result.division,
+                    Result.gender == result.gender,
+                    Result.age_group == result.age_group,
+                    Result.total_time != None
+                ).count()
+                report_data["age_group_total"] = age_group_total
+        
+        # 按当前配置过滤 sections：只返回已启用的章节，避免老报告展示多章节
+        try:
+            config_loader = get_config_loader()
+            config_loader.load_all(force_reload=False)
+            enabled_ids = set(config_loader.get_dynamic_section_ids())
+            if enabled_ids:
+                sections_raw = report_data.get("sections") or []
+                if isinstance(sections_raw, list):
+                    report_data["sections"] = [
+                        s for s in sections_raw
+                        if isinstance(s, dict) and s.get("section_id") in enabled_ids
+                    ]
+        except Exception as e:
+            logger.warning(f"[ReportGenerator] 按配置过滤 sections 失败: {e}")
+        
+        return report_data
     
     def list_user_reports(
         self, db: Session, user_id: Optional[int] = None, athlete_name: Optional[str] = None
@@ -265,11 +392,19 @@ class ReportGenerator:
             logger.info(f"[ReportGenerator V3] 开始生成报告: {report_id}")
             yield {"event": "progress", "data": {"progress": 5, "step": "初始化报告生成 (V3 配置化架构)..."}}
             
-            # 1. 初始化配置加载器
+            # 1. 初始化配置加载器（强制重置实例以获取最新配置）
             logger.info("[ReportGenerator V3] 初始化配置加载器...")
-            config_loader = get_config_loader()
+            config_loader = reset_config_loader()
             config_loader.load_all()
             logger.info("[ReportGenerator V3] 配置加载完成")
+            
+            # #region agent log
+            import json as _dbg_json
+            _dbg_log_path = r"e:\HyroxAgent 4 1\HyroxAgent\.cursor\debug.log"
+            _dbg_section_ids = config_loader.get_dynamic_section_ids()
+            with open(_dbg_log_path, "a", encoding="utf-8") as _dbg_f:
+                _dbg_f.write(_dbg_json.dumps({"location":"report_generator.py:after_config_load","message":"ConfigLoader loaded section IDs","data":{"section_ids":_dbg_section_ids,"count":len(_dbg_section_ids)},"timestamp":__import__("time").time()*1000,"sessionId":"debug-session","hypothesisId":"A"}) + "\n")
+            # #endregion
             
             yield {"event": "progress", "data": {"progress": 8, "step": "加载配置完成..."}}
             
@@ -406,6 +541,12 @@ class ReportGenerator:
                     title=report_title,
                     section_outputs=section_outputs,
                 )
+                
+                # #region agent log
+                _dbg_assembled_sections = [s.section_id for s in assembled_report.sections]
+                with open(_dbg_log_path, "a", encoding="utf-8") as _dbg_f:
+                    _dbg_f.write(_dbg_json.dumps({"location":"report_generator.py:after_assemble","message":"Report assembled","data":{"assembled_section_ids":_dbg_assembled_sections,"assembled_count":len(_dbg_assembled_sections),"section_outputs_keys":list(section_outputs.keys())},"timestamp":__import__("time").time()*1000,"sessionId":"debug-session","hypothesisId":"B"}) + "\n")
+                # #endregion
                 
                 yield {"event": "progress", "data": {"progress": 90, "step": "保存报告..."}}
                 

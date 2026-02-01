@@ -32,6 +32,10 @@ interface RadarChartProps {
   shape?: 'polygon' | 'circle';
   style?: React.CSSProperties;
   className?: string;
+  /** 是否显示图表下方的综合得分块（运动员/强项弱项），demo 核心摘要中不显示 */
+  showScoreBlock?: boolean;
+  /** 是否显示维度说明标签行，demo 核心摘要中不显示 */
+  showDimensionLabels?: boolean;
 }
 
 // 默认三维配置（ZONEØ 标准）
@@ -60,17 +64,26 @@ const RadarChart: React.FC<RadarChartProps> = ({
   shape = 'polygon',
   style,
   className,
+  showScoreBlock = true,
+  showDimensionLabels = true,
 }) => {
   const option = useMemo<EChartsOption>(() => {
     // 默认颜色
     const defaultColors = [CHART_COLORS.cyan, CHART_COLORS.purple, CHART_COLORS.success];
     const dims = dimensions ?? [];
+    const sets = dataSets ?? [];
+    
+    // 防护检查
+    if (dims.length === 0 || sets.length === 0) {
+      return {};
+    }
+    
     const indicator = dims.map(d => ({
       name: d.name,
       max: d.max,
     }));
 
-    const seriesData = dataSets.map((ds, idx) => ({
+    const seriesData = sets.map((ds, idx) => ({
       value: ds.values,
       name: ds.name,
       symbol: 'circle',
@@ -192,23 +205,25 @@ const RadarChart: React.FC<RadarChartProps> = ({
         style={{ height: '280px', ...style }}
       />
       
-      {/* 综合得分 */}
-      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min((dataSets ?? []).length, 3)}, 1fr)` }}>
-        {scores.map((score, idx) => (
-          <div key={idx} className="bg-[#252525] rounded-lg p-3 text-center">
-            <div className="text-[10px] text-gray-400 mb-1">{score.name}</div>
-            <div className={`text-xl font-bold ${score.avgScore >= 70 ? 'text-green-400' : score.avgScore >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>
-              {score.avgScore}
+      {/* 综合得分（可隐藏，与 demo 核心摘要一致） */}
+      {showScoreBlock && (
+        <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min((dataSets ?? []).length, 3)}, 1fr)` }}>
+          {scores.map((score, idx) => (
+            <div key={idx} className="bg-[#252525] rounded-lg p-3 text-center">
+              <div className="text-[10px] text-gray-400 mb-1">{score.name}</div>
+              <div className={`text-xl font-bold ${score.avgScore >= 70 ? 'text-green-400' : score.avgScore >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {score.avgScore}
+              </div>
+              <div className="text-[9px] text-gray-500 mt-1">
+                强项: {score.maxDim} | 弱项: {score.minDim}
+              </div>
             </div>
-            <div className="text-[9px] text-gray-500 mt-1">
-              强项: {score.maxDim} | 弱项: {score.minDim}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
       
-      {/* 维度说明 */}
-      {(dimensions ?? []).some(d => d.description) && (
+      {/* 维度说明（可隐藏，与 demo 核心摘要一致） */}
+      {showDimensionLabels && (dimensions ?? []).some(d => d.description) && (
         <div className="mt-3 flex flex-wrap gap-2 text-[9px] text-gray-500">
           {(dimensions ?? []).filter(d => d.description).map((dim, idx) => (
             <span key={idx} className="bg-[#252525] px-2 py-1 rounded">

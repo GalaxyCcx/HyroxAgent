@@ -1,19 +1,19 @@
 {
   "section_id": "summary",
-  "description": "核心摘要章节 - One Call 输出完整内容",
+  "description": "核心摘要章节 V4 - ROXSCAN 评分环形图 + 5维雷达图 + 三维能力列表",
   
   "tool": {
     "type": "function",
     "function": {
       "name": "generate_summary_section",
-      "description": "生成核心摘要章节的完整内容，包含 ROXSCAN 评分卡片、三维能力雷达图、总结文本和重点发现",
+      "description": "生成核心摘要章节的完整内容，包含 ROXSCAN 环形评分卡片、总评文本、5维能力雷达图、三维能力详情列表",
       "parameters": {
         "type": "object",
         "properties": {
           
           "roxscan_card": {
             "type": "object",
-            "description": "ROXSCAN 综合评分卡片",
+            "description": "ROXSCAN 综合评分卡片（环形进度图样式）",
             "properties": {
               "score": {
                 "type": "integer",
@@ -28,80 +28,110 @@
               },
               "level_name": {
                 "type": "string",
-                "description": "等级名称，如'頂尖精英'、'進階精英'、'中高級'、'進步中'、'入門級'"
-              }
-            },
-            "required": ["score", "level", "level_name"]
-          },
-          
-          "radar_chart": {
-            "type": "object",
-            "description": "三维能力雷达图",
-            "properties": {
-              "data_id": {
-                "type": "string",
-                "description": "引用的数据ID（由系统填充）"
+                "description": "等级名称，如'精英潜力组'、'进阶精英'、'中高级'、'进步中'、'入门级'"
               },
-              "dimensions": {
-                "type": "object",
-                "description": "三维能力值",
-                "properties": {
-                  "strength": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 100,
-                    "description": "力量维度评分"
-                  },
-                  "aerobic_base": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 100,
-                    "description": "有氧基础评分"
-                  },
-                  "transition": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 100,
-                    "description": "转换效率评分"
-                  }
-                },
-                "required": ["strength", "aerobic_base", "transition"]
+              "level_description": {
+                "type": "string",
+                "description": "等级描述，如'你的综合实力位于全球前 X% 的选手行列'"
               }
             },
-            "required": ["dimensions"]
+            "required": ["score", "level", "level_name", "level_description"]
           },
           
           "summary_text": {
             "type": "string",
             "maxLength": 500,
-            "description": "总结文本段落（繁体中文，不超过300字），用一句话精准概括运动员的整体表现"
+            "description": "总评文本段落，必须以「总评：」开头，分析运动员的核心优势、短板原因和提升方向，需包含具体的成绩目标"
           },
           
-          "highlights": {
+          "radar_chart": {
+            "type": "object",
+            "description": "5维能力雷达图",
+            "properties": {
+              "dimensions": {
+                "type": "object",
+                "description": "5维能力值",
+                "properties": {
+                  "strength": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "力量：基于功能站(Sled Push/Pull, Sandbag等)表现"
+                  },
+                  "aerobic": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "有氧：基于8段跑步整体表现"
+                  },
+                  "speed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "速度：基于单圈最快配速和爆发力站点"
+                  },
+                  "recovery": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "恢复：基于后半程掉速率和心率漂移"
+                  },
+                  "transition": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "转换：基于 Roxzone 时间效率"
+                  }
+                },
+                "required": ["strength", "aerobic", "speed", "recovery", "transition"]
+              }
+            },
+            "required": ["dimensions"]
+          },
+          
+          "dimension_list": {
             "type": "array",
-            "description": "重点发现列表（2-5条），至少包含1个优势和1个改进点",
-            "minItems": 2,
-            "maxItems": 5,
+            "description": "三维能力详情列表（力量/有氧/转换）",
+            "minItems": 3,
+            "maxItems": 3,
             "items": {
               "type": "object",
               "properties": {
-                "type": {
+                "key": {
                   "type": "string",
-                  "enum": ["strength", "weakness", "insight"],
-                  "description": "类型：strength=优势, weakness=弱项, insight=洞察"
+                  "enum": ["strength", "aerobic", "transition"],
+                  "description": "维度标识"
                 },
-                "content": {
+                "icon": {
                   "type": "string",
-                  "maxLength": 200,
-                  "description": "具体内容描述"
+                  "description": "维度图标 emoji"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "维度名称，格式如'绝对力量 (Strength)'"
+                },
+                "score": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "description": "维度评分"
+                },
+                "grade": {
+                  "type": "string",
+                  "enum": ["S", "A", "B", "C", "D"],
+                  "description": "维度等级"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "维度描述，需包含具体数据，如'Sled Pull 成绩击败全球 92% 同组别选手'"
                 }
               },
-              "required": ["type", "content"]
+              "required": ["key", "icon", "name", "score", "grade", "description"]
             }
           }
           
         },
-        "required": ["roxscan_card", "radar_chart", "highlights"]
+        "required": ["roxscan_card", "summary_text", "radar_chart", "dimension_list"]
       }
     }
   },
@@ -116,19 +146,19 @@
   "blocks_mapping": {
     "roxscan_card": {
       "type": "card",
-      "component": "RoxscanCard"
-    },
-    "radar_chart": {
-      "type": "chart",
-      "component": "RadarChart"
+      "component": "ScoreRing"
     },
     "summary_text": {
       "type": "text",
-      "component": "Paragraph"
+      "component": "SummaryText"
     },
-    "highlights": {
+    "radar_chart": {
+      "type": "chart",
+      "component": "RadarChart5D"
+    },
+    "dimension_list": {
       "type": "list",
-      "component": "HighlightsList"
+      "component": "DimensionList"
     }
   }
 }

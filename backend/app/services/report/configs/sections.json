@@ -1,20 +1,14 @@
 {
-  "version": "3.0",
-  "description": "HYROX 专业分析报告章节配置",
+  "version": "4.0",
+  "description": "HYROX 专业分析报告章节配置 - V4 重构版",
   "report_title_template": "{athlete_name} - HYROX {location} S{season} 專業分析報告",
   
   "sections": [
     {
-      "section_id": "introduction",
-      "title": "報告概覽",
-      "type": "static",
-      "order": 0,
-      "enabled": true,
-      "description": "报告引言和核心摘要卡片（数据来自 summary 章节）"
-    },
-    {
       "section_id": "summary",
-      "title": "核心摘要：ZONEØ 戰力值",
+      "section_tag": "核心摘要",
+      "title": "你的 \"ZONEØ\" 战力值",
+      "subtitle": null,
       "type": "dynamic",
       "order": 1,
       "enabled": true,
@@ -23,19 +17,23 @@
     },
     {
       "section_id": "time_loss",
-      "title": "消失的五分鐘",
+      "section_tag": "第1章",
+      "title": "消失的五分钟",
+      "subtitle": "The Lost 5 Minutes",
       "type": "dynamic",
       "order": 2,
-      "enabled": true,
+      "enabled": false,
       "config_path": "sections/time_loss",
       "description": "找出成绩中隐藏的时间损耗，量化改进空间"
     },
     {
       "section_id": "deep_dive",
-      "title": "ZONEØ 引擎深度複盤",
+      "section_tag": "第2章",
+      "title": "ZONEØ 引擎深度复盘",
+      "subtitle": "Deep Dive",
       "type": "dynamic",
       "order": 3,
-      "enabled": true,
+      "enabled": false,
       "config_path": "sections/deep_dive",
       "description": "基于心率数据的配速-心率解耦分析（可降级为纯配速分析）",
       "conditional": {
@@ -45,29 +43,25 @@
     },
     {
       "section_id": "prediction",
-      "title": "下一站成績預測",
+      "section_tag": "第3章",
+      "title": "下一站预测与提升路径",
+      "subtitle": "The Road to Next Race",
       "type": "dynamic",
       "order": 4,
-      "enabled": true,
+      "enabled": false,
       "config_path": "sections/prediction",
       "description": "基于同水平运动员历史数据的五档预测和分段拆解"
     },
     {
       "section_id": "training",
-      "title": "定制化訓練建議",
+      "section_tag": "第4章",
+      "title": "定制化训练建议",
+      "subtitle": "4-6周冲刺课表",
       "type": "dynamic",
       "order": 5,
-      "enabled": true,
+      "enabled": false,
       "config_path": "sections/training",
       "description": "基于弱项分析的个性化训练计划"
-    },
-    {
-      "section_id": "conclusion",
-      "title": "總結與展望",
-      "type": "static",
-      "order": 99,
-      "enabled": true,
-      "description": "报告总结（数据来自各章节 highlights）"
     }
   ]
 }

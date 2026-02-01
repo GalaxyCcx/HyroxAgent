@@ -75,6 +75,10 @@ const PaceTrendChart: React.FC<PaceTrendChartProps> = ({
 
   // 生成 ECharts 配置
   const option = useMemo<EChartsOption>(() => {
+    // 防护检查：如果 data 不存在或为空，返回空配置
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return {};
+    }
     const segments = data.map(d => d.lap);
     const times = data.map(d => d.time_minutes);
     

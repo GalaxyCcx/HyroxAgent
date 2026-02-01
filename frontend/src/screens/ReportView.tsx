@@ -1,16 +1,11 @@
 /**
  * ReportView - 报告渲染页面
- * 版本: v1.0
+ * 版本: v4.0 (重构版)
  * 
  * 功能：
- * - 报告头部（选手名、比赛信息）
- * - 章节渲染（标题 + 结构化内容 + 图表）
- * - 不同章节类型的结构化输出渲染
- *   - summary: ROXSCAN 评分卡片 + 三维能力值
- *   - time_loss: 损耗列表 + 理论最佳
- *   - heart_rate: 脱钩分析
- *   - prediction: 预测区间
- *   - training: 训练计划表
+ * - 报告头部（选手名、比赛信息、三统计卡片）
+ * - 章节渲染（section_tag + title + subtitle + 结构化内容）
+ * - 基于 Demo 的深色科技风格主题
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -18,7 +13,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { reportApi } from '../services/api';
 import ReportChart, { parseChartMarkers } from '../components/ReportChart';
-import ImageUploader from '../components/ImageUploader';
+import REPORT_THEME from '../styles/report-theme';
 import {
   TrainingWeekView,
   PredictionTiers,
@@ -31,6 +26,7 @@ import {
   HorizontalBar,
   CohortComparison,
   PriorityMatrix,
+  RadarChart5D,
 } from '../components/charts';
 import BlockRenderer from '../components/BlockRenderer';
 import type {
@@ -66,15 +62,24 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
     
     try {
       const raw = await reportApi.getReport(reportId) as unknown;
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/31eb2793-6057-4140-8c92-6cb1a296c760',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReportView.tsx:loadReport',message:'API raw response',data:{rawType:typeof raw,rawKeys:raw?Object.keys(raw as object):null,rawSections:raw?(raw as any).sections:undefined,rawSectionsType:raw?typeof (raw as any).sections:undefined},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       const response = raw as { code?: number; data?: unknown; report_id?: string; message?: string };
       const data = response.code === 0 && response.data != null
         ? (response.data as Record<string, unknown>)
         : response.report_id != null
           ? (raw as Record<string, unknown>)
           : null;
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/31eb2793-6057-4140-8c92-6cb1a296c760',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReportView.tsx:loadReport:dataExtracted',message:'Data extracted from response',data:{hasData:!!data,dataKeys:data?Object.keys(data):null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       if (data) {
         const d = data as Record<string, unknown>;
         const sections = Array.isArray(d.sections) ? d.sections : [];
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/31eb2793-6057-4140-8c92-6cb1a296c760',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReportView.tsx:loadReport:sectionsCheck',message:'Sections data check',data:{dSectionsType:typeof d.sections,dSectionsIsArray:Array.isArray(d.sections),dSectionsValue:d.sections,sectionsLength:sections.length,firstSection:sections[0]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         const chartsObj = d.charts != null && typeof d.charts === 'object' ? d.charts : {};
         
         // 转换后端数据结构为前端期望的格式（防御性：避免 null/undefined 导致渲染抛错）
@@ -87,6 +92,11 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
             division: String(d.division ?? ''),
             total_time: String(d.total_time ?? ''),
             event_name: String(d.event_name ?? ''),
+            age_group: String(d.age_group ?? ''),
+            overall_rank: d.overall_rank as number | undefined,
+            total_participants: d.total_participants as number | undefined,
+            age_group_rank: d.age_group_rank as number | undefined,
+            age_group_total: d.age_group_total as number | undefined,
           },
           introduction: typeof d.introduction === 'string' ? d.introduction : '',
           sections: sections as RenderableReportSection[],
@@ -94,6 +104,9 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
           generated_at: (d.completed_at ?? d.created_at) != null ? String(d.completed_at ?? d.created_at) : '',
           charts: chartsObj as Record<string, ChartConfig>,
         };
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/31eb2793-6057-4140-8c92-6cb1a296c760',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReportView.tsx:loadReport:transformedReport',message:'Transformed report',data:{sectionsIsArray:Array.isArray(transformedReport.sections),sectionsLength:transformedReport.sections?.length,sectionsFirst:transformedReport.sections?.[0]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         
         setReport(transformedReport);
       } else {
@@ -132,16 +145,16 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
   // --- Loading 状态 ---
   if (loading) {
     return (
-      <div className="flex flex-col min-h-screen bg-[#101013]">
-        <header className="px-4 py-4 flex items-center justify-between border-b border-white/5 sticky top-0 bg-[#101013]/95 backdrop-blur-md z-30">
+      <div className="flex flex-col min-h-screen bg-[#0D0D0D]">
+        <header className="px-4 py-4 flex items-center justify-between border-b border-[#333333] sticky top-0 bg-[#0D0D0D]/95 backdrop-blur-md z-30">
           <button onClick={onBack} className="text-white">
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <span className="text-white font-bold">分析报告</span>
+          <span className="text-white font-bold">ROXSCAN 深度分析报告</span>
           <div className="w-8"></div>
         </header>
         <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="size-12 border-2 border-[#42ff9e] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div className="size-12 border-2 border-[#00FF88] border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="text-white/60 text-sm">加载报告中...</p>
         </div>
       </div>
@@ -151,12 +164,12 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
   // --- Error 状态 ---
   if (error || !report) {
     return (
-      <div className="flex flex-col min-h-screen bg-[#101013]">
-        <header className="px-4 py-4 flex items-center justify-between border-b border-white/5 sticky top-0 bg-[#101013]/95 backdrop-blur-md z-30">
+      <div className="flex flex-col min-h-screen bg-[#0D0D0D]">
+        <header className="px-4 py-4 flex items-center justify-between border-b border-[#333333] sticky top-0 bg-[#0D0D0D]/95 backdrop-blur-md z-30">
           <button onClick={onBack} className="text-white">
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <span className="text-white font-bold">分析报告</span>
+          <span className="text-white font-bold">ROXSCAN 深度分析报告</span>
           <div className="w-8"></div>
         </header>
         <div className="flex-1 flex flex-col items-center justify-center p-4">
@@ -164,7 +177,7 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
           <p className="text-white/60 text-sm mb-4">{error || '报告加载失败'}</p>
           <button 
             onClick={loadReport}
-            className="px-6 py-2 bg-[#42ff9e] text-black font-bold rounded-lg"
+            className="px-6 py-2 bg-[#00FF88] text-black font-bold rounded-lg"
           >
             重试
           </button>
@@ -174,13 +187,13 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#101013] animate-in fade-in duration-300">
+    <div className="flex flex-col min-h-screen bg-[#0D0D0D] animate-in fade-in duration-300">
       {/* Header */}
-      <header className="px-4 py-4 flex items-center justify-between border-b border-white/5 sticky top-0 bg-[#101013]/95 backdrop-blur-md z-30">
-        <button onClick={onBack} className="text-white hover:text-[#42ff9e] transition-colors">
+      <header className="px-4 py-4 flex items-center justify-between border-b border-[#333333] sticky top-0 bg-[#0D0D0D]/95 backdrop-blur-md z-30">
+        <button onClick={onBack} className="text-white hover:text-[#00FF88] transition-colors">
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
-        <span className="text-white font-bold text-sm">分析报告</span>
+        <span className="text-white font-bold text-sm">ROXSCAN 深度分析报告</span>
         <button className="text-white/60 hover:text-white transition-colors">
           <span className="material-symbols-outlined">share</span>
         </button>
@@ -190,13 +203,9 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
         {/* 报告头部 */}
         <ReportHeader report={report} />
 
-        {/* 核心摘要：ROXSCAN 卡片 */}
-        {report.introduction && (
-          <IntroductionRenderer introduction={report.introduction} />
-        )}
-
         {/* 章节渲染 */}
-        {(report.sections ?? []).map((section, index) => (
+        {(() => { fetch('http://127.0.0.1:7245/ingest/31eb2793-6057-4140-8c92-6cb1a296c760',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReportView.tsx:renderSections',message:'Before sections map',data:{reportExists:!!report,sectionsExists:!!report?.sections,sectionsIsArray:Array.isArray(report?.sections),sectionsLength:report?.sections?.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{}); return null; })()}
+        {(Array.isArray(report.sections) ? report.sections : []).map((section, index) => (
           <SectionRenderer
             key={section.section_id ?? index}
             section={section}
@@ -206,61 +215,8 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
           />
         ))}
 
-        {/* 心率图片上传区域 */}
-        <div className="mt-6">
-          <h3 className="text-white font-bold mb-3 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#42ff9e]">favorite</span>
-            心率数据
-          </h3>
-          <ImageUploader 
-            reportId={reportId}
-            onUploadSuccess={handleImagesUploaded}
-          />
-          
-          {/* 已上传图片展示 */}
-          {heartRateImages.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {heartRateImages.map((img) => (
-                <div key={img.id} className="bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/5">
-                  <img 
-                    src={img.image_path} 
-                    alt="心率数据" 
-                    className="w-full h-32 object-cover"
-                  />
-                  <div className="p-2 flex items-center justify-between">
-                    <span className={`text-[10px] px-2 py-0.5 rounded ${
-                      img.extraction_status === 'completed' 
-                        ? 'bg-[#42ff9e]/20 text-[#42ff9e]'
-                        : img.extraction_status === 'failed'
-                        ? 'bg-red-500/20 text-red-400'
-                        : 'bg-yellow-500/20 text-yellow-400'
-                    }`}>
-                      {img.extraction_status === 'completed' ? '已提取' 
-                        : img.extraction_status === 'failed' ? '提取失败'
-                        : img.extraction_status === 'processing' ? '处理中'
-                        : '等待处理'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 总结部分 */}
-        {report.conclusion && (
-          <div className="bg-gradient-to-br from-[#1a2e22] to-[#1a1a1a] rounded-xl p-4 mt-6 border border-[#42ff9e]/20">
-            <h3 className="text-white font-bold mb-3 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#42ff9e]">tips_and_updates</span>
-              总结与建议
-            </h3>
-            <div className="prose prose-sm prose-invert max-w-none text-white/80">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {report.conclusion}
-              </ReactMarkdown>
-            </div>
-          </div>
-        )}
+        {/* 心率图片上传区域 - 暂时隐藏，后续章节完成后再启用 */}
+        {/* TODO: 在深度复盘章节中集成心率数据上传功能 */}
 
         {/* 底部信息 */}
         <div className="text-center mt-8 text-white/30 text-[10px]">
@@ -272,118 +228,211 @@ const ReportView: React.FC<ReportViewProps> = ({ reportId, onBack }) => {
   );
 };
 
-// ========== 报告头部组件 ==========
+// ========== 报告头部组件 (V4 重构) ==========
 interface ReportHeaderProps {
   report: ProReport;
 }
 
 const ReportHeader: React.FC<ReportHeaderProps> = ({ report }) => {
+  // 从 race_info 中提取赛季年份
+  const seasonYear = report.race_info?.event_name?.match(/\d{4}/)?.[0] || '2025';
+  const seasonNumber = report.race_info?.season ?? 8;
+  // 提取日期
+  const dateMatch = report.race_info?.event_name?.match(/(\d{4})\/(\d{2})\/(\d{2})/);
+  const formattedDate = dateMatch ? `${dateMatch[1]}/${dateMatch[2]}/${dateMatch[3]}` : '';
+  // 组别行：Division (AgeGroup)，如 "Men Open (30-34)"
+  const divisionDisplay = report.race_info?.division
+    ? (report.race_info?.age_group ? `${report.race_info.division} (${report.race_info.age_group})` : report.race_info.division)
+    : (report.race_info?.age_group ? report.race_info.age_group : '-');
+  
   return (
-    <div className="relative overflow-hidden rounded-xl mb-6">
-      {/* 背景渐变 */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0f1923] via-[#0a1628] to-[#101013]"></div>
-      {/* 网格效果 */}
-      <div className="absolute inset-0 opacity-20" style={{
-        backgroundImage: 'linear-gradient(rgba(66,255,158,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(66,255,158,0.1) 1px, transparent 1px)',
-        backgroundSize: '40px 40px'
-      }}></div>
-      {/* 边框发光 */}
-      <div className="absolute inset-0 rounded-xl border border-[#42ff9e]/20"></div>
-      
-      {/* 内容 */}
-      <div className="relative p-5 z-10">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="size-8 rounded-lg bg-gradient-to-br from-[#42ff9e] to-[#2dd87a] flex items-center justify-center shadow-[0_0_15px_rgba(66,255,158,0.4)]">
-            <span className="material-symbols-outlined text-black text-lg">analytics</span>
+    <header 
+      className="text-center pt-6 pb-6 px-4 mb-0 border-b border-[#333333]"
+      style={{ background: 'linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%)' }}
+    >
+      <div className="max-w-[450px] mx-auto">
+        {/* 赛季徽章 - demo: report-badge */}
+        <div className="inline-flex bg-[#1A1A1A] px-4 py-2 rounded-lg mb-4">
+          <div>
+            <div className="text-xs text-[#888888]">{seasonYear}</div>
+            <div className="text-2xl font-bold text-[#00FF88]">S{seasonNumber}</div>
           </div>
-          <span className="text-[10px] text-[#42ff9e] font-bold uppercase tracking-[0.2em]">HYROX Analysis</span>
         </div>
         
-        <h1 className="text-2xl font-bold text-white mb-2">{report.athlete_name}</h1>
+        {/* 报告标题 - demo: report-title + report-subtitle */}
+        <h1 className="text-[20px] font-semibold text-white mb-1">
+          📊 ROXSCAN 深度竞技分析报告
+        </h1>
+        <p className="text-sm text-[#00FF88] mb-4">专业版 V2.0</p>
         
-        <div className="flex flex-wrap gap-2 mb-4">
-          <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] text-white/60">
-            S{report.race_info?.season ?? '-'}
-          </span>
-          <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] text-white/60">
-            {(report.race_info?.location ?? '').toUpperCase() || '-'}
-          </span>
-          <span className="px-3 py-1 bg-[#42ff9e]/10 border border-[#42ff9e]/30 rounded-full text-[10px] text-[#42ff9e]">
-            {report.race_info?.division ?? '-'}
-          </span>
-        </div>
+        {/* 运动员姓名 - demo: athlete-name */}
+        <h2 className="text-[28px] font-bold text-white mb-2">{report.athlete_name}</h2>
         
-        {/* 完赛时间 */}
-        <div className="bg-black/30 rounded-lg p-3 inline-block">
-          <div className="text-[10px] text-white/40 mb-1">完赛时间</div>
-          <div className="text-2xl font-bold text-[#42ff9e] font-display tracking-tight">
-            {report.race_info?.total_time ?? '-'}
+        {/* 比赛信息 - demo: event-info 两行 */}
+        <p className="text-sm text-[#888888]">
+          HYROX {report.race_info?.location} S{seasonNumber}
+          {formattedDate ? ` · ${formattedDate}` : ''}
+        </p>
+        <p className="text-sm text-[#888888]">{divisionDisplay}</p>
+        
+        {/* 三统计卡片 - demo: 三个 value 均为 accent 绿色 */}
+        <div className="flex gap-3 justify-center mt-5" style={{ maxWidth: 360 }}>
+          <div className="flex-1 max-w-[120px] bg-[#1A1A1A] rounded-xl py-4 px-5 text-center">
+            <div className="text-[20px] font-bold text-[#00FF88]">
+              {report.race_info?.total_time || '-'}
+            </div>
+            <div className="text-xs text-[#888888] mt-1">完赛时间</div>
+          </div>
+          <div className="flex-1 max-w-[120px] bg-[#1A1A1A] rounded-xl py-4 px-5 text-center">
+            <div className="text-[20px] font-bold text-[#00FF88]">
+              {report.race_info?.overall_rank != null ? `#${report.race_info.overall_rank}` : '--'}
+            </div>
+            <div className="text-xs text-[#888888] mt-1">总排名</div>
+          </div>
+          <div className="flex-1 max-w-[120px] bg-[#1A1A1A] rounded-xl py-4 px-5 text-center">
+            <div className="text-[20px] font-bold text-[#00FF88]">
+              {report.race_info?.age_group_rank != null ? `#${report.race_info.age_group_rank}` : '--'}
+            </div>
+            <div className="text-xs text-[#888888] mt-1">年龄组排名</div>
           </div>
         </div>
       </div>
-    </div>
+    </header>
   );
 };
 
 // ========== 章节渲染组件 ==========
 interface SectionRendererProps {
   section: RenderableReportSection & { 
-    blocks?: ContentBlock[];  // V3: blocks 数组
+    blocks?: ContentBlock[];  // V3/V4: blocks 数组
     order?: number;
     type?: string;
+    section_tag?: string;     // V4: 章节标签 (如 "核心摘要", "第1章")
+    subtitle?: string | null; // V4: 副标题
   };
   index: number;
   charts?: Record<string, ChartConfig>;
-  dataSnapshots?: Record<string, DataSnapshot>;  // V3: 数据快照
+  dataSnapshots?: Record<string, DataSnapshot>;  // V3/V4: 数据快照
 }
 
 const SectionRenderer: React.FC<SectionRendererProps> = ({ section, index, charts, dataSnapshots }) => {
-  const hasBlocks = section.blocks && section.blocks.length > 0;
-  
-  // 章节颜色主题
-  const sectionColors = [
-    { border: 'border-[#42ff9e]/20', accent: '#42ff9e' },
-    { border: 'border-blue-500/20', accent: '#3b82f6' },
-    { border: 'border-purple-500/20', accent: '#a855f7' },
-    { border: 'border-orange-500/20', accent: '#f59e0b' },
-    { border: 'border-pink-500/20', accent: '#ec4899' },
-  ];
-  const color = sectionColors[index % sectionColors.length];
+  // #region agent log
+  fetch('http://127.0.0.1:7245/ingest/31eb2793-6057-4140-8c92-6cb1a296c760',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReportView.tsx:SectionRenderer',message:'Section render start',data:{index,sectionExists:!!section,sectionId:section?.section_id,blocksExists:!!section?.blocks,blocksIsArray:Array.isArray(section?.blocks),blocksLength:section?.blocks?.length,chartsExists:!!section?.charts,chartsIsArray:Array.isArray(section?.charts)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
+  // 防御性检查：确保 section 存在
+  if (!section) {
+    console.error('[SectionRenderer] section is undefined');
+    return null;
+  }
 
-  // V3 模式：使用 blocks 数组渲染（hasBlocks 已在上面为 log 计算）
+  const rawBlocks = section.blocks && Array.isArray(section.blocks) ? section.blocks : [];
+  // 核心摘要章节不渲染心率/上传类块，避免第一章出现心率模块
+  const isSummary = (section.section_id ?? '').toLowerCase().includes('summary');
+  const heartRateOrUpload = (c: string) => /heart|hr|upload|心率|上传/i.test(String(c));
+  let blocks = isSummary
+    ? rawBlocks.filter((b) => b && !heartRateOrUpload((b as { component?: string }).component ?? ''))
+    : rawBlocks;
+  // 图2：核心摘要 blocks 顺序固定为 图1(ScoreRing) → 总评(SummaryText) → 雷达图 → 其他，保证总评紧接在图1下方
+  if (isSummary && blocks.length > 1) {
+    const order = ['ScoreRing', 'SummaryText', 'RadarChart5D', 'DimensionList'];
+    const getOrder = (c: string) => { const i = order.indexOf(c); return i >= 0 ? i : order.length; };
+    blocks = [...blocks].sort((a, b) => {
+      const ca = (a as { component?: string }).component ?? '';
+      const cb = (b as { component?: string }).component ?? '';
+      return getOrder(ca) - getOrder(cb);
+    });
+  }
+  const hasBlocks = blocks.length > 0;
+
+  // V4 章节颜色主题（统一使用绿色主色调）
+  const sectionsTheme = REPORT_THEME.sections || [];
+  const sectionTheme = sectionsTheme[index % Math.max(sectionsTheme.length, 1)] || { accent: '#00FF88', border: 'rgba(0, 255, 136, 0.2)' };
 
   // 解析内容中的图表标记（V2 兼容）
   const contentParts = !hasBlocks && section.content && charts 
     ? parseChartMarkers(section.content, charts as Record<string, { config: Record<string, unknown>; purpose?: string; chart_type?: string }>)
     : [];
 
+  // 核心摘要章节固定显示「核心摘要」标题（与 demo 一致）
+  const displayTag = section.section_tag || (isSummary ? '核心摘要' : '');
   return (
-    <div className={`bg-[#1a1a1a] rounded-xl mb-4 overflow-hidden border ${color.border}`}>
-      {/* 章节标题 */}
-      <div className="flex items-center gap-3 p-4 border-b border-white/5">
-        <div 
-          className="w-1 h-6 rounded-full"
-          style={{ backgroundColor: color.accent }}
-        ></div>
-        <h2 className="text-white font-bold">{section.title}</h2>
+    <section className="py-6 border-b border-[#333333]">
+      {/* demo: section-header + section-tag(绿色) + section-title */}
+      <div className="mb-5">
+        {displayTag && (
+          <div className="text-xs text-[#00FF88] tracking-wider mb-2">
+            {displayTag}
+          </div>
+        )}
+        <h2 className="text-[22px] font-bold text-white mb-2">{section.title}</h2>
+        {section.subtitle && (
+          <p className="text-sm text-[#888888]">{section.subtitle}</p>
+        )}
       </div>
 
-      <div className="p-4">
-        {/* V3 模式：使用 BlockRenderer 渲染 blocks */}
-        {hasBlocks && (
+      <div>
+        {/* 核心摘要：有 structured_output 时优先用 SummaryOutput（无圆环、无雷达下多余板块），与 demo 一致 */}
+        {isSummary && section.structured_output && (
+          <StructuredOutputRenderer
+            sectionType={section.section_type}
+            data={section.structured_output as unknown as Record<string, unknown>}
+          />
+        )}
+        {/* V3 模式：使用 BlockRenderer 渲染 blocks；核心摘要中的 ScoreRing 改为 demo 风格无圆环卡片 */}
+        {hasBlocks && !(isSummary && section.structured_output) && (
           <div className="space-y-4">
-            {(section.blocks ?? []).map((block, blockIndex) => (
-              <BlockRenderer 
-                key={`block-${blockIndex}`}
-                block={block}
-                dataSnapshots={dataSnapshots}
-              />
-            ))}
+            {blocks.map((block, blockIndex) => {
+              if (!block) return null;
+              const blockComponent = (block as { component?: string }).component;
+              if (isSummary && blockComponent === 'ScoreRing') {
+                const props = block.props as { score?: number; level?: string; level_name?: string; level_description?: string };
+                const score = props?.score ?? 0;
+                const level = props?.level ?? 'D';
+                const levelName = props?.level_name ?? '';
+                const levelDescriptions: Record<string, string> = {
+                  'S': '你的综合实力位于全球前 5% 的选手行列',
+                  'A': '你的综合实力位于全球前 15% 的选手行列',
+                  'B': '你的综合实力位于全球前 30% 的选手行列',
+                  'C': '你的综合实力位于全球前 50% 的选手行列',
+                  'D': '你的综合实力有较大提升空间',
+                };
+                return (
+                  <div key={`block-${blockIndex}`} className="bg-[#1A1A1A] rounded-xl mb-0 overflow-hidden">
+                    <div className="px-6 pt-5 pb-2 text-white">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🎯</span>
+                        <span className="text-base font-semibold">ROXSCAN</span>
+                        <span className="text-sm text-white/90">综合评分</span>
+                      </div>
+                    </div>
+                    <div className="px-6 pt-4 pb-6 flex items-start gap-8">
+                      <div className="flex flex-col items-start shrink-0">
+                        <span className="text-[40px] font-bold text-[#00FF88] leading-none tracking-tight">{score}</span>
+                        <span className="text-sm text-[#888888] mt-1 ml-0.5">/100</span>
+                      </div>
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <div className="text-lg font-semibold text-[#00FF88] mb-2 leading-tight">{levelName || `${level}级`}</div>
+                        <div className="text-[13px] text-[#888888] leading-relaxed">
+                          {props?.level_description ?? levelDescriptions[level] ?? ''}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <BlockRenderer 
+                  key={`block-${blockIndex}`}
+                  block={block}
+                  dataSnapshots={dataSnapshots}
+                />
+              );
+            })}
           </div>
         )}
 
-        {/* V2 兼容：结构化输出渲染 */}
-        {!hasBlocks && section.structured_output && (
+        {/* V2 兼容：结构化输出渲染（核心摘要已在上面单独渲染，此处跳过避免重复） */}
+        {!hasBlocks && section.structured_output && !(isSummary && section.structured_output) && (
           <StructuredOutputRenderer 
             sectionType={section.section_type}
             data={section.structured_output as unknown as Record<string, unknown>}
@@ -391,12 +440,12 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, index, chart
         )}
 
         {/* V2 兼容：Markdown 内容 + 图表 */}
-        {!hasBlocks && contentParts.length > 0 && (
+        {!hasBlocks && Array.isArray(contentParts) && contentParts.length > 0 && (
           <div className="prose prose-sm prose-invert max-w-none text-white/70 mt-4">
             {contentParts.map((part, partIndex) => {
               if (part.type === 'chart' && part.config) {
                 return (
-                  <div key={`chart-${partIndex}`} className="my-4 p-4 bg-[#101013] rounded-xl">
+                  <div key={`chart-${partIndex}`} className="my-4 p-4 bg-[#0D0D0D] rounded-xl border border-[#333333]">
                     <ReportChart
                       chartId={part.chartId || `chart-${index}-${partIndex}`}
                       config={part.config}
@@ -415,10 +464,10 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, index, chart
         )}
 
         {/* V2 兼容：章节独立图表 - 使用智能图表路由 */}
-        {!hasBlocks && (section.charts ?? []).length > 0 && (
+        {!hasBlocks && Array.isArray(section.charts) && section.charts.length > 0 && (
           <div className="space-y-4 mt-4">
-            {(section.charts ?? []).map((chart) => (
-              <div key={chart.chart_id} className="p-4 bg-[#101013] rounded-xl">
+            {section.charts.map((chart) => (
+              <div key={chart.chart_id} className="p-4 bg-[#0D0D0D] rounded-xl border border-[#333333]">
                 <SmartChartRenderer
                   chartId={chart.chart_id}
                   chartType={chart.chart_type}
@@ -430,7 +479,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, index, chart
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 };
 
@@ -676,52 +725,7 @@ const StructuredOutputRenderer: React.FC<StructuredOutputRendererProps> = ({ sec
   }
 };
 
-// ========== Introduction 渲染器（核心摘要） ==========
-const IntroductionRenderer: React.FC<{ introduction: string }> = ({ introduction }) => {
-  // 尝试解析 JSON 格式的核心摘要数据
-  let summaryData: SummaryStructuredOutput | null = null;
-  
-  try {
-    const parsed = JSON.parse(introduction);
-    // 验证是否包含必要字段
-    if (parsed && typeof parsed.roxscan_score === 'number') {
-      summaryData = parsed as unknown as SummaryStructuredOutput;
-    }
-  } catch {
-    // 解析失败，可能是纯文本格式（旧版本兼容）
-    summaryData = null;
-  }
-
-  // 如果成功解析为结构化数据，渲染 ROXSCAN 卡片
-  if (summaryData) {
-    return (
-      <div className="mb-6">
-        {/* 核心摘要标题 */}
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-1 h-6 rounded-full bg-[#42ff9e]"></div>
-          <h2 className="text-white font-bold text-lg">核心摘要：ZONEØ 戰力值</h2>
-        </div>
-        
-        <div className="bg-[#1a1a1a] rounded-xl p-4 border border-[#42ff9e]/20">
-          <SummaryOutput data={summaryData} />
-        </div>
-      </div>
-    );
-  }
-
-  // 回退到 Markdown 渲染（旧版本兼容）
-  return (
-    <div className="bg-[#1a1a1a] rounded-xl p-4 mb-4 border border-white/5">
-      <div className="prose prose-sm prose-invert max-w-none text-white/80">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {introduction}
-        </ReactMarkdown>
-      </div>
-    </div>
-  );
-};
-
-// ========== Summary 章节输出（复用于 Introduction）==========
+// ========== Summary 章节输出 (V4 Demo 风格) ==========
 const SummaryOutput: React.FC<{ data: SummaryStructuredOutput }> = ({ data }) => {
   if (!data.roxscan_score) return null;
 
@@ -733,74 +737,121 @@ const SummaryOutput: React.FC<{ data: SummaryStructuredOutput }> = ({ data }) =>
     'C': '#22c55e', // 绿色
     'D': '#9ca3af', // 灰色
   };
-  const levelColor = levelColors[data.level] || '#42ff9e';
+  const levelColor = levelColors[data.level] || '#00FF88';
+  
+  // 等级描述映射
+  const levelDescriptions: Record<string, string> = {
+    'S': '你的综合实力位于全球前 5% 的选手行列',
+    'A': '你的综合实力位于全球前 15% 的选手行列',
+    'B': '你的综合实力位于全球前 30% 的选手行列',
+    'C': '你的综合实力位于全球前 50% 的选手行列',
+    'D': '你的综合实力有较大提升空间',
+  };
+
+  // 维度配置
+  const dimensionConfig = [
+    { key: 'strength', label: '绝对力量 (Strength)', icon: '💪', desc: 'Sled Pull 成绩击败全球 {percentile}% 同组别选手' },
+    { key: 'aerobic_base', label: '有氧底座 (Aerobic Base)', icon: '❤️‍🔥', desc: '后半程心率漂移显著' },
+    { key: 'transition', label: '转换效率 (Transition)', icon: '⚡', desc: 'Roxzone 耗时击败全球 {percentile}% 选手' },
+  ];
+
+  // 获取等级标签颜色
+  const getLevelBadgeClass = (score: number) => {
+    if (score >= 90) return 'bg-yellow-500/20 text-yellow-400';
+    if (score >= 75) return 'bg-purple-500/20 text-purple-400';
+    if (score >= 60) return 'bg-blue-500/20 text-blue-400';
+    if (score >= 45) return 'bg-green-500/20 text-green-400';
+    return 'bg-gray-500/20 text-gray-400';
+  };
+  
+  const getLevelLabel = (score: number) => {
+    if (score >= 90) return 'S级';
+    if (score >= 75) return 'A级';
+    if (score >= 60) return 'B级';
+    if (score >= 45) return 'C级';
+    return 'D级';
+  };
 
   return (
     <div className="space-y-4">
-      {/* ROXSCAN 评分卡片 */}
-      <div className="bg-gradient-to-r from-[#42ff9e]/10 to-transparent rounded-xl p-4 border border-[#42ff9e]/20">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[10px] text-white/40 uppercase tracking-wider mb-1">ROXSCAN Score</div>
-            <div className="text-4xl font-bold text-[#42ff9e] font-display">{data.roxscan_score}</div>
+      {/* 图1：ROXSCAN 综合评分卡片，内容区左右上下间距统一（上 20px 下 24px 左 24px 右 24px） */}
+      <div className="bg-[#1A1A1A] rounded-xl mb-0 overflow-hidden">
+        <div className="px-6 pt-5 pb-2 text-white">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🎯</span>
+            <span className="text-base font-semibold">ROXSCAN</span>
+            <span className="text-sm text-white/90">综合评分</span>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold" style={{ color: levelColor }}>{data.level}</div>
-            <div className="text-sm text-white/60">{data.level_name}</div>
+        </div>
+        <div className="px-6 pt-4 pb-6 flex items-start gap-8">
+          <div className="flex flex-col items-start shrink-0">
+            <span className="text-[40px] font-bold text-[#00FF88] leading-none tracking-tight">{data.roxscan_score}</span>
+            <span className="text-sm text-[#888888] mt-1 ml-0.5">/100</span>
+          </div>
+          <div className="flex-1 min-w-0 pt-0.5">
+            <div className="text-lg font-semibold text-[#00FF88] mb-2 leading-tight">{data.level_name}</div>
+            <div className="text-[13px] text-[#888888] leading-relaxed">
+              {levelDescriptions[data.level] || ''}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 三维能力值 - 匹配后端 dimensions: strength, aerobic_base, transition */}
-      {data.dimensions && (
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { key: 'strength', label: '力量', icon: 'fitness_center', color: '#42ff9e' },
-            { key: 'aerobic_base', label: '有氧基礎', icon: 'directions_run', color: '#3b82f6' },
-            { key: 'transition', label: '轉換效率', icon: 'swap_horiz', color: '#a855f7' },
-          ].map((item) => (
-            <div key={item.key} className="bg-[#101013] rounded-xl p-3 text-center">
-              <span className="material-symbols-outlined text-lg mb-2" style={{ color: item.color }}>
-                {item.icon}
-              </span>
-              <div className="text-xl font-bold text-white">
-                {data.dimensions[item.key as keyof typeof data.dimensions]}
-              </div>
-              <div className="text-[10px] text-white/40">{item.label}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 总结文本 */}
+      {/* 图2/图3：总评必须紧接在图1正下方，demo 绿底 #223c31 + 左边框 + 内边距 */}
       {data.summary_text && (
-        <div className="bg-[#101013] rounded-xl p-4 text-sm text-white/70 leading-relaxed">
-          {data.summary_text}
+        <div 
+          className="rounded-r-lg mt-4"
+          style={{ 
+            background: '#223c31', 
+            borderLeft: '3px solid #00FF88',
+            padding: '16px 20px',
+          }}
+        >
+          <p className="text-sm text-white/95 leading-relaxed m-0">
+            <strong className="text-white">总评：</strong>
+            {data.summary_text}
+          </p>
         </div>
       )}
 
-      {/* 亮点 - 支持对象数组格式 { type, content } */}
-      {(data.highlights ?? []).length > 0 && (
-        <div className="space-y-2">
-          {(data.highlights ?? []).map((highlight, i) => {
-            // 根据类型选择图标和颜色
-            const isStrength = highlight.type === 'strength';
-            const isWeakness = highlight.type === 'weakness';
-            const dotColor = isStrength ? 'bg-[#42ff9e]' : isWeakness ? 'bg-red-400' : 'bg-blue-400';
-            const icon = isStrength ? '💪' : isWeakness ? '📊' : '💡';
-            
-            return (
-              <div key={i} className="flex items-start gap-2 text-sm text-white/70">
-                <span className={`size-1.5 ${dotColor} rounded-full mt-1.5 shrink-0`}></span>
-                <span>
-                  <span className="mr-1">{icon}</span>
-                  {highlight.content}
+      {/* 图4：能力雷达图，compact 下不显示下方综合得分/强项弱项/维度标签块 */}
+      {data.dimensions && (
+        <RadarChart5D
+          compact
+          dimensions={{
+            strength: data.dimensions.strength || 50,
+            aerobic: data.dimensions.aerobic_base || 50,
+            transition: data.dimensions.transition || 50,
+            speed: (data.dimensions as Record<string, number>).speed || 50,
+            recovery: (data.dimensions as Record<string, number>).recovery || 50,
+          }}
+        />
+      )}
+
+      {/* demo: dimension-list - dimension-item 带 border-bottom、icon 背景色 */}
+      <div className="mt-4">
+        {dimensionConfig.map((dim) => {
+          const score = data.dimensions?.[dim.key as keyof typeof data.dimensions] || 0;
+          const iconBgClass = dim.key === 'strength' ? 'bg-[rgba(255,107,107,0.2)]' : dim.key === 'aerobic_base' ? 'bg-[rgba(100,181,246,0.2)]' : 'bg-[rgba(255,215,0,0.2)]';
+          return (
+            <div key={dim.key} className="flex items-center py-3 border-b border-[#333333] last:border-b-0">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg mr-3 shrink-0 ${iconBgClass}`}>
+                {dim.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-white">{dim.label}</div>
+                <div className="text-xs text-[#888888]">{dim.desc.replace('{percentile}', String(score))}</div>
+              </div>
+              <div className="text-right shrink-0 ml-2">
+                <div className="text-lg font-bold text-white">{score}</div>
+                <span className={`text-xs px-2 py-1 rounded mt-1 inline-block ${getLevelBadgeClass(score)}`}>
+                  {getLevelLabel(score)}
                 </span>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -819,16 +870,16 @@ const TimeLossOutput: React.FC<{ data: TimeLossStructuredOutput }> = ({ data }) 
             +{Math.floor(data.total_loss_seconds / 60)}:{String(data.total_loss_seconds % 60).padStart(2, '0')}
           </div>
         </div>
-        <div className="bg-[#42ff9e]/10 border border-[#42ff9e]/20 rounded-xl p-3 text-center">
+        <div className="bg-[#00FF88]/10 border border-[#00FF88]/20 rounded-xl p-3 text-center">
           <div className="text-[10px] text-white/40 mb-1">理论最佳</div>
-          <div className="text-2xl font-bold text-[#42ff9e]">{data.theoretical_best}</div>
+          <div className="text-2xl font-bold text-[#00FF88]">{data.theoretical_best}</div>
         </div>
       </div>
 
       {/* 损耗列表 */}
       <div className="space-y-2">
-        {(data.loss_items ?? []).map((item, i) => (
-          <div key={i} className="flex items-center justify-between bg-[#101013] rounded-lg p-3">
+        {(Array.isArray(data.loss_items) ? data.loss_items : []).map((item, i) => (
+          <div key={i} className="flex items-center justify-between bg-[#0D0D0D] rounded-lg p-3">
             <div>
               <div className="text-sm text-white">{item.segment}</div>
               <div className="text-[10px] text-white/40">{item.reason}</div>
@@ -866,10 +917,10 @@ const HeartRateOutput: React.FC<{ data: HeartRateStructuredOutput }> = ({ data }
       )}
 
       {/* 心率区间分布 */}
-      {(data.zones_distribution ?? []).length > 0 && (
+      {Array.isArray(data.zones_distribution) && data.zones_distribution.length > 0 && (
         <div className="space-y-2">
           <div className="text-xs text-white/40 mb-2">心率区间分布</div>
-          {(data.zones_distribution ?? []).map((zone, i) => (
+          {data.zones_distribution.map((zone, i) => (
             <div key={i} className="flex items-center gap-3">
               <div className="w-12 text-xs text-white/60">{zone.zone}</div>
               <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
@@ -908,14 +959,14 @@ const PredictionOutput: React.FC<{ data: PredictionStructuredOutput }> = ({ data
           <span className="text-white/20">—</span>
           <div className="text-center">
             <div className="text-[10px] text-white/40">理想发挥</div>
-            <div className="text-lg font-bold text-[#42ff9e]">{data.confidence_interval.low}</div>
+            <div className="text-lg font-bold text-[#00FF88]">{data.confidence_interval.low}</div>
           </div>
         </div>
       )}
 
       {data.improvement_potential && (
         <div className="text-center text-sm text-white/60">
-          提升潜力：<span className="text-[#42ff9e] font-bold">{data.improvement_potential}</span>
+          提升潜力：<span className="text-[#00FF88] font-bold">{data.improvement_potential}</span>
         </div>
       )}
     </div>
@@ -950,11 +1001,11 @@ const TrainingOutput: React.FC<{ data: TrainingStructuredOutput }> = ({ data }) 
       />
 
       {/* 关键训练课程 (如果有) */}
-      {(data.key_workouts ?? []).length > 0 && (
+      {Array.isArray(data.key_workouts) && data.key_workouts.length > 0 && (
         <div className="mt-4 p-4 bg-[#1a1a1a] rounded-lg border border-white/5">
           <h4 className="text-xs text-gray-400 uppercase tracking-wider mb-3">关键训练课程</h4>
           <div className="space-y-3">
-            {(data.key_workouts ?? []).slice(0, 4).map((workout, i) => (
+            {data.key_workouts.slice(0, 4).map((workout, i) => (
               <div key={i} className="flex items-start gap-3">
                 <span className="text-sm text-green-400 font-bold">{i + 1}</span>
                 <div>
@@ -971,11 +1022,11 @@ const TrainingOutput: React.FC<{ data: TrainingStructuredOutput }> = ({ data }) 
       )}
 
       {/* 弱项分析 (如果有) */}
-      {(data.weakness_analysis ?? []).length > 0 && (
+      {Array.isArray(data.weakness_analysis) && data.weakness_analysis.length > 0 && (
         <div className="mt-4 p-4 bg-[#1a1a1a] rounded-lg border border-white/5">
           <h4 className="text-xs text-gray-400 uppercase tracking-wider mb-3">弱项分析</h4>
           <div className="grid grid-cols-2 gap-3">
-            {(data.weakness_analysis ?? []).slice(0, 4).map((item, i) => (
+            {data.weakness_analysis.slice(0, 4).map((item, i) => (
               <div key={i} className="bg-[#252525] rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`size-2 rounded-full ${
@@ -1060,11 +1111,11 @@ const ComparisonOutput: React.FC<{ data: ComparisonStructuredOutput }> = ({ data
       {/* 优势与弱势对比 */}
       <div className="grid grid-cols-2 gap-4">
         {/* 优势项目 */}
-        {(data.strengths ?? []).length > 0 && (
+        {Array.isArray(data.strengths) && data.strengths.length > 0 && (
           <div className="bg-[#1a1a1a] rounded-lg p-4 border border-green-500/20">
             <h4 className="text-xs text-green-400 uppercase tracking-wider mb-3">💪 優勢項目</h4>
             <div className="space-y-2">
-              {(data.strengths ?? []).slice(0, 3).map((item, i) => (
+              {data.strengths.slice(0, 3).map((item, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <span className="text-sm text-white">{item.segment}</span>
                   <span className="text-xs text-green-400 font-mono">前{item.percentile}%</span>
@@ -1075,11 +1126,11 @@ const ComparisonOutput: React.FC<{ data: ComparisonStructuredOutput }> = ({ data
         )}
 
         {/* 弱势项目 */}
-        {(data.weaknesses ?? []).length > 0 && (
+        {Array.isArray(data.weaknesses) && data.weaknesses.length > 0 && (
           <div className="bg-[#1a1a1a] rounded-lg p-4 border border-red-500/20">
             <h4 className="text-xs text-red-400 uppercase tracking-wider mb-3">📊 提升空間</h4>
             <div className="space-y-2">
-              {(data.weaknesses ?? []).slice(0, 3).map((item, i) => (
+              {data.weaknesses.slice(0, 3).map((item, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <span className="text-sm text-white">{item.segment}</span>
                   <div className="text-right">

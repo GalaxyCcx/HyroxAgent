@@ -446,6 +446,11 @@ export interface ProReport {
     division: string;
     total_time: string;
     event_name?: string;
+    age_group?: string;
+    overall_rank?: number;
+    total_participants?: number;
+    age_group_rank?: number;
+    age_group_total?: number;
   };
   introduction?: string;
   sections: RenderableReportSection[];
