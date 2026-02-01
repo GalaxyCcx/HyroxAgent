@@ -1,0 +1,2375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ROXSCAN 深度竞技分析报告</title>
+    <!-- ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0D0D0D;
+            --bg-card: #1A1A1A;
+            --bg-card-hover: #242424;
+            --accent: #00FF88;
+            --accent-dim: rgba(0, 255, 136, 0.2);
+            --text-primary: #FFFFFF;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            --border: #333333;
+            --warning: #FF6B6B;
+            --success: #00FF88;
+            --gold: #FFD700;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding-bottom: 80px;
+        }
+
+        .container {
+            max-width: 450px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        /* Header */
+        .report-header {
+            background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+            padding: 24px 16px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .report-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card);
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .report-badge .year {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .report-badge .season {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .report-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .report-subtitle {
+            font-size: 14px;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+
+        .athlete-name {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .event-info {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Stats Cards */
+        .stats-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 16px 20px;
+            text-align: center;
+            flex: 1;
+            max-width: 120px;
+        }
+
+        .stat-card .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Section */
+        .section {
+            padding: 24px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-header {
+            margin-bottom: 20px;
+        }
+
+        .section-tag {
+            font-size: 12px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .section-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title .icon {
+            font-size: 18px;
+        }
+
+        /* Score Ring */
+        .score-container {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .score-ring {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .score-ring canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .score-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .score-value .number {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .score-value .total {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .score-info .level {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .score-info .desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Summary Text */
+        .summary-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin: 16px 0;
+            padding: 16px;
+            background: rgba(0, 255, 136, 0.05);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Dimension List */
+        .dimension-list {
+            margin-top: 16px;
+        }
+
+        .dimension-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .dimension-item:last-child {
+            border-bottom: none;
+        }
+
+        .dimension-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 18px;
+        }
+
+        .dimension-icon.strength { background: rgba(255, 107, 107, 0.2); }
+        .dimension-icon.aerobic { background: rgba(100, 181, 246, 0.2); }
+        .dimension-icon.transition { background: rgba(255, 215, 0, 0.2); }
+
+        .dimension-content {
+            flex: 1;
+        }
+
+        .dimension-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .dimension-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .dimension-score {
+            text-align: right;
+        }
+
+        .dimension-score .value {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .dimension-score .grade {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        .grade-s { background: rgba(255, 107, 107, 0.2); color: #FF6B6B; }
+        .grade-b { background: rgba(100, 181, 246, 0.2); color: #64B5F6; }
+        .grade-c { background: rgba(255, 215, 0, 0.2); color: #FFD700; }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 16px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px 8px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 8px;
+            text-align: left;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table th {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .data-table .highlight {
+            color: var(--warning);
+        }
+
+        .data-table .success {
+            color: var(--success);
+        }
+
+        .diff-negative {
+            color: var(--warning);
+        }
+
+        .diff-positive {
+            color: var(--success);
+        }
+
+        /* Loss Table */
+        .loss-table {
+            width: 100%;
+        }
+
+        .loss-row {
+            display: flex;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .loss-row:last-child {
+            border-bottom: none;
+        }
+
+        .loss-source {
+            flex: 1;
+        }
+
+        .loss-source .name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .loss-source .desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .loss-time {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--warning);
+            margin: 0 16px;
+        }
+
+        .loss-difficulty {
+            font-size: 14px;
+            color: var(--gold);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            width: 100%;
+            height: 250px;
+            margin: 16px 0;
+        }
+
+        .chart-container.tall {
+            height: 300px;
+        }
+
+        .chart-container.short {
+            height: 200px;
+        }
+
+        /* Value Highlight */
+        .value-highlight {
+            background: var(--accent-dim);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 16px 0;
+        }
+
+        .value-highlight .label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .value-highlight .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .value-highlight .unit {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Comparison Row */
+        .comparison-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comparison-row:last-child {
+            border-bottom: none;
+        }
+
+        .comparison-row .label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .comparison-row .value {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Quote Box */
+        .quote-box {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 16px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .quote-box .text {
+            font-size: 15px;
+            font-style: italic;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Analysis Point */
+        .analysis-point {
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .analysis-point:last-child {
+            border-bottom: none;
+        }
+
+        .analysis-point .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .analysis-point .title {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .analysis-point .time {
+            font-size: 14px;
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .analysis-point .content {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Stage Box */
+        .stage-box {
+            background: var(--bg-card-hover);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+        }
+
+        .stage-box .title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stage-box .data {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .stage-box .conclusion {
+            font-size: 13px;
+            color: var(--text-primary);
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Warning Box */
+        .warning-box {
+            background: rgba(255, 107, 107, 0.1);
+            border-left: 4px solid var(--warning);
+            padding: 16px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .warning-box .title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--warning);
+            margin-bottom: 8px;
+        }
+
+        .warning-box .content {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Prediction Card */
+        .prediction-card {
+            background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
+            border: 1px solid var(--accent);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .prediction-card .event {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .prediction-card .range {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .prediction-card .confidence {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Probability Table */
+        .prob-table {
+            width: 100%;
+            margin: 16px 0;
+        }
+
+        .prob-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .prob-row .icon {
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        .prob-row .label {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .prob-row .time {
+            font-size: 14px;
+            font-weight: 600;
+            margin-right: 16px;
+        }
+
+        .prob-row .percent {
+            font-size: 14px;
+            color: var(--accent);
+            font-weight: 600;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* Path Card */
+        .path-card {
+            background: var(--bg-card-hover);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 12px 0;
+        }
+
+        .path-card .number {
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .path-card .title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .path-card .detail {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .path-card .stat {
+            font-size: 13px;
+            color: var(--accent);
+            margin-top: 8px;
+        }
+
+        /* Training Week */
+        .training-week {
+            margin: 16px 0;
+        }
+
+        .week-header {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 12px 16px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .week-content {
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid var(--border);
+            border-top: none;
+        }
+
+        .week-focus {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .workout-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .workout-item:last-child {
+            border-bottom: none;
+        }
+
+        .workout-item .name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .workout-item .desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Footer */
+        .report-footer {
+            text-align: center;
+            padding: 32px 16px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        /* CTA Button */
+        .cta-button {
+            display: block;
+            background: var(--accent);
+            color: var(--bg-primary);
+            text-align: center;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            margin: 24px 0;
+            transition: all 0.2s;
+        }
+
+        .cta-button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        /* Sub Section */
+        .sub-section {
+            margin: 24px 0;
+        }
+
+        .sub-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Legend */
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 8px;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-line {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Report Header -->
+    <header class="report-header">
+        <div class="report-badge">
+            <div>
+                <div class="year">2025</div>
+                <div class="season">S8</div>
+            </div>
+        </div>
+        <h1 class="report-title">📊 ROXSCAN 深度竞技分析报告</h1>
+        <p class="report-subtitle">专业版 V2.0</p>
+        <h2 class="athlete-name">Chen, Yuanmin</h2>
+        <p class="event-info">HYROX Shanghai S8 · 2026/01/27</p>
+        <p class="event-info">Men Open (30-34)</p>
+        
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="value">01:26:06</div>
+                <div class="label">完赛时间</div>
+            </div>
+            <div class="stat-card">
+                <div class="value">#45</div>
+                <div class="label">总排名</div>
+            </div>
+            <div class="stat-card">
+                <div class="value">#12</div>
+                <div class="label">年龄组</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 核心摘要 -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-tag">核心摘要</div>
+                <h2 class="section-title">你的 "ZONEØ" 战力值</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <span class="icon">🎯</span>
+                    ROXSCAN 综合评分
+                </div>
+                <div class="score-container">
+                    <div class="score-ring">
+                        <div id="scoreRing" style="width: 120px; height: 120px;"></div>
+                        <div class="score-value">
+                            <div class="number">82</div>
+                            <div class="total">/100</div>
+                        </div>
+                    </div>
+                    <div class="score-info">
+                        <div class="level">精英潜力组</div>
+                        <div class="desc">你的综合实力位于全球前 18% 的选手行列</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-text">
+                <strong>总评：</strong>你的力量储备（Strength）已经具备了完赛 1:15 的硬件条件，这在 Sled Pull 项目中得到了完美验证。目前的成绩短板并非来自「练得不够」，而是来自能量系统的管理失效（心肺脱钩）以及非运动时间的浪费（转换区效率）。
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <span class="icon">📊</span>
+                    能力雷达图
+                </div>
+                <div id="radarChart" class="chart-container"></div>
+            </div>
+
+            <div class="dimension-list">
+                <div class="dimension-item">
+                    <div class="dimension-icon strength">💪</div>
+                    <div class="dimension-content">
+                        <div class="dimension-name">绝对力量 (Strength)</div>
+                        <div class="dimension-desc">Sled Pull 成绩击败全球 92% 同组别选手</div>
+                    </div>
+                    <div class="dimension-score">
+                        <div class="value">90</div>
+                        <div class="grade grade-s">S级</div>
+                    </div>
+                </div>
+                <div class="dimension-item">
+                    <div class="dimension-icon aerobic">🫀</div>
+                    <div class="dimension-content">
+                        <div class="dimension-name">有氧底座 (Aerobic Base)</div>
+                        <div class="dimension-desc">后半程心率漂移显著</div>
+                    </div>
+                    <div class="dimension-score">
+                        <div class="value">70</div>
+                        <div class="grade grade-b">B级</div>
+                    </div>
+                </div>
+                <div class="dimension-item">
+                    <div class="dimension-icon transition">⚡</div>
+                    <div class="dimension-content">
+                        <div class="dimension-name">转换效率 (Transition)</div>
+                        <div class="dimension-desc">Roxzone 耗时击败全球 45% 选手（需大幅提升）</div>
+                    </div>
+                    <div class="dimension-score">
+                        <div class="value">60</div>
+                        <div class="grade grade-c">C级</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第1章 消失的五分钟 -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-tag">第1章</div>
+                <h2 class="section-title">消失的五分钟</h2>
+                <p class="section-subtitle">The Lost 5 Minutes</p>
+            </div>
+
+            <div class="quote-box">
+                <p class="text">"同样的体能付出，通过战术执行修正，你本场比赛的理论上限是 1:21:06"</p>
+            </div>
+
+            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+                我们将你在比赛中所有低于你自身能力基准的时间损耗进行了拆解。这些时间不需要你提升最大摄氧量，只需要你改变执行策略即可挽回。
+            </p>
+
+            <!-- 1.1 时间损耗总览 -->
+            <div class="sub-section">
+                <h3 class="sub-section-title">📋 1.1 时间损耗总览</h3>
+                
+                <div class="card">
+                    <div class="loss-table">
+                        <div class="loss-row">
+                            <div class="loss-source">
+                                <div class="name">ROXZONE (转换区)</div>
+                                <div class="desc">无效补给与步行</div>
+                            </div>
+                            <div class="loss-time">-2:30</div>
+                            <div class="loss-difficulty">⭐</div>
+                        </div>
+                        <div class="loss-row">
+                            <div class="loss-source">
+                                <div class="name">Run 8 (配速崩盘)</div>
+                                <div class="desc">配速策略失误</div>
+                            </div>
+                            <div class="loss-time">-1:10</div>
+                            <div class="loss-difficulty">⭐⭐⭐</div>
+                        </div>
+                        <div class="loss-row">
+                            <div class="loss-source">
+                                <div class="name">SkiErg (滑雪机)</div>
+                                <div class="desc">力量转化率低</div>
+                            </div>
+                            <div class="loss-time">-0:45</div>
+                            <div class="loss-difficulty">⭐⭐</div>
+                        </div>
+                        <div class="loss-row">
+                            <div class="loss-source">
+                                <div class="name">Burpee Broad Jump</div>
+                                <div class="desc">节奏控制问题</div>
+                            </div>
+                            <div class="loss-time">-0:35</div>
+                            <div class="loss-difficulty">⭐⭐</div>
+                        </div>
+                    </div>
+                    
+                    <div class="value-highlight" style="margin-top: 16px;">
+                        <div class="label">总计时间损耗</div>
+                        <div class="value">-5:00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1.2 数据证明：跑步分段 -->
+            <div class="sub-section">
+                <h3 class="sub-section-title">🏃 1.2 数据证明：跑步分段</h3>
+                
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('running', this)">Running</div>
+                    <div class="tab" onclick="switchTab('workout', this)">Workout</div>
+                    <div class="tab" onclick="switchTab('roxzone', this)">Roxzone</div>
+                </div>
+
+                <!-- Running Tab -->
+                <div id="running-content" class="tab-content active">
+                    <div class="card">
+                        <div class="card-title">跑步分段对比 (vs Top 10%)</div>
+                        <div id="runningChart" class="chart-container tall"></div>
+                        
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>段落</th>
+                                    <th>你</th>
+                                    <th>Top 10%</th>
+                                    <th>差距</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Run 1</td>
+                                    <td>4:55</td>
+                                    <td>4:50</td>
+                                    <td class="diff-negative">-0:05</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 2</td>
+                                    <td>4:52</td>
+                                    <td>4:48</td>
+                                    <td class="diff-negative">-0:04</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 3</td>
+                                    <td>4:58</td>
+                                    <td>4:52</td>
+                                    <td class="diff-negative">-0:06</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 4</td>
+                                    <td>5:00</td>
+                                    <td>4:50</td>
+                                    <td class="diff-negative">-0:10</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 5</td>
+                                    <td>5:02</td>
+                                    <td>4:52</td>
+                                    <td class="diff-negative">-0:10</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 6</td>
+                                    <td>5:05</td>
+                                    <td>4:55</td>
+                                    <td class="diff-negative">-0:10</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 7</td>
+                                    <td>5:15</td>
+                                    <td>5:00</td>
+                                    <td class="diff-negative">-0:15</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 8</td>
+                                    <td class="highlight">6:07</td>
+                                    <td>4:57</td>
+                                    <td class="diff-negative highlight">-1:10 ⚠️</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="warning-box">
+                            <div class="title">⚠️ Run 8 是最大单一时间损耗来源</div>
+                            <div class="content">前7段均速维持在 5:00/km 左右，第8段骤降至 6:07/km，这是典型的「糖原耗尽」或「中枢神经疲劳」信号。</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workout Tab -->
+                <div id="workout-content" class="tab-content">
+                    <div class="card">
+                        <div class="card-title">功能站分段对比 (vs Top 10%)</div>
+                        <div id="workoutChart" class="chart-container tall"></div>
+                        
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>站点</th>
+                                    <th>你</th>
+                                    <th>Top 10%</th>
+                                    <th>差距</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>SkiErg</td>
+                                    <td class="highlight">3:45</td>
+                                    <td>3:00</td>
+                                    <td class="diff-negative">-0:45 ⚠️</td>
+                                </tr>
+                                <tr>
+                                    <td>Sled Push</td>
+                                    <td>2:30</td>
+                                    <td>2:20</td>
+                                    <td class="diff-negative">-0:10</td>
+                                </tr>
+                                <tr>
+                                    <td>Sled Pull</td>
+                                    <td class="success">1:45</td>
+                                    <td>2:10</td>
+                                    <td class="diff-positive">+0:25 🏆</td>
+                                </tr>
+                                <tr>
+                                    <td>Burpee</td>
+                                    <td class="highlight">2:50</td>
+                                    <td>2:15</td>
+                                    <td class="diff-negative">-0:35 ⚠️</td>
+                                </tr>
+                                <tr>
+                                    <td>Row Erg</td>
+                                    <td>3:20</td>
+                                    <td>3:10</td>
+                                    <td class="diff-negative">-0:10</td>
+                                </tr>
+                                <tr>
+                                    <td>Farmers</td>
+                                    <td>2:15</td>
+                                    <td>2:10</td>
+                                    <td class="diff-negative">-0:05</td>
+                                </tr>
+                                <tr>
+                                    <td>Lunges</td>
+                                    <td>3:00</td>
+                                    <td>2:55</td>
+                                    <td class="diff-negative">-0:05</td>
+                                </tr>
+                                <tr>
+                                    <td>Wall Balls</td>
+                                    <td>2:45</td>
+                                    <td>2:40</td>
+                                    <td class="diff-negative">-0:05</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="quote-box">
+                            <p class="text">💡 Sled Pull 表现卓越 (+25s)，证明你的绝对力量储备充足。重点改善 SkiErg 技术和 Burpee 节奏。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Roxzone Tab -->
+                <div id="roxzone-content" class="tab-content">
+                    <div class="card">
+                        <div class="card-title">转换区总耗时对比</div>
+                        <div id="roxzoneChart" class="chart-container short"></div>
+                        
+                        <div class="comparison-row">
+                            <span class="label">你的 Roxzone 总耗时</span>
+                            <span class="value" style="color: var(--warning);">8:15</span>
+                        </div>
+                        <div class="comparison-row">
+                            <span class="label">Top 10% 平均</span>
+                            <span class="value" style="color: var(--accent);">5:47</span>
+                        </div>
+                        <div class="comparison-row">
+                            <span class="label">全场平均</span>
+                            <span class="value">7:16</span>
+                        </div>
+                        <div class="comparison-row">
+                            <span class="label">vs Top 10% 差距</span>
+                            <span class="value" style="color: var(--warning);">-2:28</span>
+                        </div>
+                        
+                        <div class="warning-box">
+                            <div class="title">⚠️ 转换区是最容易挽回的时间损耗</div>
+                            <div class="content">这 2 分 30 秒，你没有在做任何高强度运动，仅仅是因为喝水、擦汗、看手表和慢走而流失。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1.3 深度归因分析 -->
+            <div class="sub-section">
+                <h3 class="sub-section-title">🔍 1.3 深度归因分析</h3>
+                
+                <div class="card">
+                    <div class="analysis-point">
+                        <div class="header">
+                            <span class="title">▸ ROXZONE (转换区)</span>
+                            <span class="time">-2:30 ⭐</span>
+                        </div>
+                        <div class="content">
+                            <strong>无效补给与步行：</strong>数据显示你在每次功能站结束后，平均停留/慢走时间达 18秒。相比 1:20 完赛选手（平均 5秒），你在非竞赛区域积累了大量隐性亏损。
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-point">
+                        <div class="header">
+                            <span class="title">▸ Run 8 (配速崩盘)</span>
+                            <span class="time">-1:10 ⭐⭐⭐</span>
+                        </div>
+                        <div class="content">
+                            <strong>配速策略失误：</strong>前7段跑步均速 5:00/km，第8段骤降至 6:07/km。这是典型的「糖原耗尽」或「中枢神经疲劳」信号，而非简单的腿部无力。
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-point">
+                        <div class="header">
+                            <span class="title">▸ SkiErg (滑雪机)</span>
+                            <span class="time">-0:45 ⭐⭐</span>
+                        </div>
+                        <div class="content">
+                            <strong>力量转化率低：</strong>你的上肢拉力（Sled Pull）很强，但 SkiErg 成绩平平。这表明你还在用「手臂」拉，而没有利用「核心下压」的重力势能。技术动作存在严重力学损耗。
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-point">
+                        <div class="header">
+                            <span class="title">▸ Burpee Broad Jump</span>
+                            <span class="time">-0:35 ⭐⭐</span>
+                        </div>
+                        <div class="content">
+                            <strong>节奏控制：</strong>你的单次动作标准，但动作间的「重置时间」过长。你采用的是「做1次休1次」的节奏，建议改为「做5次休1次」。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第2章 引擎深度复盘 -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-tag">第2章</div>
+                <h2 class="section-title">ZONEØ 引擎深度复盘</h2>
+                <p class="section-subtitle">Deep Dive</p>
+            </div>
+
+            <!-- 2.1 心率与配速解耦分析 -->
+            <div class="sub-section">
+                <h3 class="sub-section-title">💓 2.1 心率与配速解耦分析</h3>
+                
+                <div class="quote-box">
+                    <p class="text">我们要看的不是心率多高，而是心率和配速什么时候「分手」。</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">心率-配速解耦图</div>
+                    <div id="decouplingChart" class="chart-container tall"></div>
+                    <div class="chart-legend">
+                        <div class="legend-item">
+                            <div class="legend-line" style="background: #FF6B6B;"></div>
+                            <span>心率 (bpm)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-line" style="background: #00FF88;"></div>
+                            <span>配速 (s/km)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stage-box">
+                    <div class="title">📍 阶段一：稳态期 (Run 1 - Run 5)</div>
+                    <div class="data">平均配速：4:55/km｜平均心率：162 bpm (Zone 3.8)</div>
+                    <div class="data">两条曲线高度重合，平行波动。</div>
+                    <div class="conclusion">
+                        ✅ 说明在前半程，你的有氧系统工作效率极高，不仅支撑了跑步，还很好地代谢了功能站产生的乳酸。
+                    </div>
+                </div>
+
+                <div class="stage-box">
+                    <div class="title">📍 阶段二：脱钩期 - 发生在 Row Erg 之后</div>
+                    <div class="data">Run 6：配速 5:05/km，心率攀升至 174 bpm</div>
+                    <div class="data">Run 8（崩盘区）：配速 6:07/km，心率 178 bpm (Zone 5)</div>
+                    <div class="conclusion">
+                        ⚠️ 心率漂移率 (Pw:HR) 达到了 12.5%（正常应小于 5%）。这意味着你的有氧底座无法支撑 70分钟以上的高强度混合输出。
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <div class="title">⚠️ ZONEØ 结论</div>
+                    <div class="content">
+                        这不仅仅是肌肉疲劳。在 Row Erg 之后，你的身体被迫通过大量无氧糖酵解供能，导致 Run 8 时乳酸堆积超过了阈值，即使你大脑想跑，肌肉环境也已经「中毒」停摆。
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2.2 转换区显微镜 -->
+            <div class="sub-section">
+                <h3 class="sub-section-title">⚡ 2.2 转换区显微镜</h3>
+                
+                <div class="quote-box">
+                    <p class="text">"这是一个被严重忽视的第九个功能站"</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Roxzone 总耗时对比</div>
+                    <div id="roxzoneCompareChart" class="chart-container short"></div>
+                    
+                    <div class="comparison-row">
+                        <span class="label">你的 Roxzone 总耗时</span>
+                        <span class="value" style="color: var(--warning);">8:15</span>
+                    </div>
+                    <div class="comparison-row">
+                        <span class="label">Top 10% 平均</span>
+                        <span class="value" style="color: var(--accent);">5:47</span>
+                    </div>
+                    <div class="comparison-row">
+                        <span class="label">全场平均</span>
+                        <span class="value">7:16</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📋 行为分析</div>
+                    <div class="analysis-point">
+                        <div class="content">
+                            <strong>进站减速：</strong>数据显示，你在距离功能站还有 50米时，配速从 5:00 降至 6:30。你正在潜意识里「预休息」。
+                        </div>
+                    </div>
+                    <div class="analysis-point">
+                        <div class="content">
+                            <strong>出站启动：</strong>完成功能站后，你平均花费 12秒 此时配速低于 8:00/km。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quote-box">
+                    <p class="text">💡 建议：将 Roxzone 视为比赛的一部分。出站后立即慢跑 (Jog)，禁止步行。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第3章 预测与提升路径 -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-tag">第3章</div>
+                <h2 class="section-title">下一站预测与提升路径</h2>
+                <p class="section-subtitle">The Road to Taipei</p>
+            </div>
+
+            <!-- 3.1 群组匹配 -->
+            <div class="sub-section">
+                <h3 class="sub-section-title">🔍 3.1 群组匹配</h3>
+                
+                <div class="card">
+                    <div class="card-title">匹配条件</div>
+                    <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.8; margin-bottom: 16px;">
+                        我们在全球数据库中，查找了所有历史HYROX比赛中，完赛成绩与你相近（1:25:00 - 1:27:00）的选手，并追踪他们在<strong style="color: var(--accent);">下一场同类型比赛</strong>的表现变化。
+                    </p>
+                    
+                    <div class="comparison-row">
+                        <span class="label">匹配成绩区间</span>
+                        <span class="value" style="color: var(--accent);">1:25:00 - 1:27:00</span>
+                    </div>
+                    <div class="comparison-row">
+                        <span class="label">匹配选手数量</span>
+                        <span class="value" style="color: var(--accent);">1,248 人</span>
+                    </div>
+                    <div class="comparison-row">
+                        <span class="label">你的本场成绩</span>
+                        <span class="value">01:26:06</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3.2 下一场预测分布 -->
+            <div class="sub-section">
+                <h3 class="sub-section-title">📊 3.2 Goal Time Predictions</h3>
+                
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <div>
+                            <div class="card-title" style="margin-bottom: 4px;">Goal Time Predictions</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">Based on 1,248 athletes in your cohort</div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <div style="background: var(--bg-card-hover); padding: 6px 12px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 10px; color: var(--text-secondary);">Division</div>
+                                <div style="font-size: 12px; font-weight: 600;">MEN OPEN</div>
+                            </div>
+                            <div style="background: var(--bg-card-hover); padding: 6px 12px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 10px; color: var(--text-secondary);">Cohort Size</div>
+                                <div style="font-size: 12px; font-weight: 600;">1,248</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Overall Time</div>
+                    
+                    <!-- 5档横向卡片 -->
+                    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;">
+                        <!-- Excellent -->
+                        <div style="flex: 1; min-width: 100px; background: linear-gradient(135deg, #FF8C00, #FF6600); border-radius: 10px; padding: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 11px; font-weight: 600; color: #000;">Excellent</span>
+                                <span style="font-size: 10px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; color: #000;">5%</span>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #000;">1:18:15</div>
+                            <div style="font-size: 11px; color: rgba(0,0,0,0.7); margin-top: 4px;">vs Last Race</div>
+                            <div style="font-size: 12px; font-weight: 600; color: #006400;">↓ 7:51</div>
+                        </div>
+                        
+                        <!-- Great -->
+                        <div style="flex: 1; min-width: 100px; background: linear-gradient(135deg, #FFA500, #FF8C00); border-radius: 10px; padding: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 11px; font-weight: 600; color: #000;">Great</span>
+                                <span style="font-size: 10px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; color: #000;">25%</span>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #000;">1:20:30</div>
+                            <div style="font-size: 11px; color: rgba(0,0,0,0.7); margin-top: 4px;">vs Last Race</div>
+                            <div style="font-size: 12px; font-weight: 600; color: #006400;">↓ 5:36</div>
+                        </div>
+                        
+                        <!-- Expected -->
+                        <div style="flex: 1; min-width: 100px; background: linear-gradient(135deg, #FFB84D, #FFA500); border-radius: 10px; padding: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 11px; font-weight: 600; color: #000;">Expected</span>
+                                <span style="font-size: 10px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; color: #000;">50%</span>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #000;">1:26:00</div>
+                            <div style="font-size: 11px; color: rgba(0,0,0,0.7); margin-top: 4px;">vs Last Race</div>
+                            <div style="font-size: 12px; font-weight: 600; color: #006400;">↑ 0:06</div>
+                        </div>
+                        
+                        <!-- Subpar -->
+                        <div style="flex: 1; min-width: 100px; background: linear-gradient(135deg, #FFCC80, #FFB84D); border-radius: 10px; padding: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 11px; font-weight: 600; color: #000;">Subpar</span>
+                                <span style="font-size: 10px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; color: #000;">75%</span>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #000;">1:28:00</div>
+                            <div style="font-size: 11px; color: rgba(0,0,0,0.7); margin-top: 4px;">vs Last Race</div>
+                            <div style="font-size: 12px; font-weight: 600; color: #8B0000;">↑ 1:54</div>
+                        </div>
+                        
+                        <!-- Poor -->
+                        <div style="flex: 1; min-width: 100px; background: linear-gradient(135deg, #FFE0B2, #FFCC80); border-radius: 10px; padding: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 11px; font-weight: 600; color: #000;">Poor</span>
+                                <span style="font-size: 10px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; color: #000;">95%</span>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #000;">1:32:00</div>
+                            <div style="font-size: 11px; color: rgba(0,0,0,0.7); margin-top: 4px;">vs Last Race</div>
+                            <div style="font-size: 12px; font-weight: 600; color: #8B0000;">↑ 5:54</div>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 12px; line-height: 1.6;">
+                        See your predicted performance range for your next race. These predictions are based on your current time and variance patterns from athletes in your cohort (Men's Open, 85-90 min).
+                    </p>
+                </div>
+
+                <!-- Performance Distribution 钟形分布图 -->
+                <div class="card">
+                    <div class="card-title">Performance Distribution</div>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">
+                        Based on 1,248 adjacent race pairs from athletes in your time bin (85-90 min).
+                    </p>
+                    <div id="distributionChart" class="chart-container tall"></div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">Expected Time</div>
+                            <div style="font-size: 16px; font-weight: 700;">1:26:00</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">Typical Variance</div>
+                            <div style="font-size: 16px; font-weight: 700;">±4:30</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">Range</div>
+                            <div style="font-size: 16px; font-weight: 700;">1:18 – 1:32</div>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 12px;">
+                        <strong>Methodology:</strong> Predictions based on how 1,248 athletes with similar finishing times (85-90 min) performed in their subsequent race.
+                    </p>
+                </div>
+            </div>
+
+            <!-- 3.3 各项目预测明细 -->
+            <div class="sub-section">
+                <h3 class="sub-section-title">📋 3.3 各项目预测明细</h3>
+                
+                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
+                    基于匹配群组的数据分析，以下是你各项目在不同档位下的预期时间：
+                </p>
+
+                <div class="tabs">
+                    <div class="tab active" onclick="switchPredictTab('predict-running', this)">Running</div>
+                    <div class="tab" onclick="switchPredictTab('predict-workout', this)">Workout</div>
+                    <div class="tab" onclick="switchPredictTab('predict-roxzone', this)">Roxzone</div>
+                </div>
+
+                <!-- Predict Running Tab -->
+                <div id="predict-running-content" class="tab-content active">
+                    <div class="card" style="overflow-x: auto;">
+                        <div class="card-title">Running 各档位预测</div>
+                        <table class="data-table" style="min-width: 500px; font-size: 12px;">
+                            <thead>
+                                <tr>
+                                    <th>段落</th>
+                                    <th>当前</th>
+                                    <th style="color: #FFD700;">Excellent</th>
+                                    <th style="color: #00FF88;">Great</th>
+                                    <th style="color: #4a9eff;">Good</th>
+                                    <th>Expected</th>
+                                    <th style="color: #FF6B6B;">Poor</th>
+                                    <th>Avg Δ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Run 1</td>
+                                    <td>4:55</td>
+                                    <td style="color: #FFD700;">4:40</td>
+                                    <td style="color: #00FF88;">4:45</td>
+                                    <td style="color: #4a9eff;">4:50</td>
+                                    <td>4:55</td>
+                                    <td style="color: #FF6B6B;">5:05</td>
+                                    <td class="diff-negative">-5s</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 2</td>
+                                    <td>4:52</td>
+                                    <td style="color: #FFD700;">4:38</td>
+                                    <td style="color: #00FF88;">4:42</td>
+                                    <td style="color: #4a9eff;">4:47</td>
+                                    <td>4:52</td>
+                                    <td style="color: #FF6B6B;">5:02</td>
+                                    <td class="diff-negative">-5s</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 3</td>
+                                    <td>4:58</td>
+                                    <td style="color: #FFD700;">4:42</td>
+                                    <td style="color: #00FF88;">4:48</td>
+                                    <td style="color: #4a9eff;">4:52</td>
+                                    <td>4:58</td>
+                                    <td style="color: #FF6B6B;">5:10</td>
+                                    <td class="diff-negative">-6s</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 4</td>
+                                    <td>5:00</td>
+                                    <td style="color: #FFD700;">4:42</td>
+                                    <td style="color: #00FF88;">4:48</td>
+                                    <td style="color: #4a9eff;">4:54</td>
+                                    <td>5:00</td>
+                                    <td style="color: #FF6B6B;">5:12</td>
+                                    <td class="diff-negative">-6s</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 5</td>
+                                    <td>5:02</td>
+                                    <td style="color: #FFD700;">4:44</td>
+                                    <td style="color: #00FF88;">4:50</td>
+                                    <td style="color: #4a9eff;">4:56</td>
+                                    <td>5:02</td>
+                                    <td style="color: #FF6B6B;">5:15</td>
+                                    <td class="diff-negative">-6s</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 6</td>
+                                    <td>5:05</td>
+                                    <td style="color: #FFD700;">4:46</td>
+                                    <td style="color: #00FF88;">4:52</td>
+                                    <td style="color: #4a9eff;">4:58</td>
+                                    <td>5:05</td>
+                                    <td style="color: #FF6B6B;">5:20</td>
+                                    <td class="diff-negative">-7s</td>
+                                </tr>
+                                <tr>
+                                    <td>Run 7</td>
+                                    <td>5:15</td>
+                                    <td style="color: #FFD700;">4:50</td>
+                                    <td style="color: #00FF88;">4:58</td>
+                                    <td style="color: #4a9eff;">5:06</td>
+                                    <td>5:15</td>
+                                    <td style="color: #FF6B6B;">5:30</td>
+                                    <td class="diff-negative">-9s</td>
+                                </tr>
+                                <tr style="background: rgba(255, 107, 107, 0.1);">
+                                    <td><strong>Run 8</strong></td>
+                                    <td><strong>6:07</strong></td>
+                                    <td style="color: #FFD700;"><strong>5:05</strong></td>
+                                    <td style="color: #00FF88;"><strong>5:20</strong></td>
+                                    <td style="color: #4a9eff;"><strong>5:40</strong></td>
+                                    <td><strong>6:07</strong></td>
+                                    <td style="color: #FF6B6B;"><strong>6:35</strong></td>
+                                    <td class="diff-negative"><strong>-27s</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="warning-box" style="margin-top: 16px;">
+                            <div class="title">⚠️ Run 8 是最大提升空间</div>
+                            <div class="content">Excellent 档位选手的 Run 8 平均比当前快 62 秒，是所有跑步段中提升潜力最大的。</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Predict Workout Tab -->
+                <div id="predict-workout-content" class="tab-content">
+                    <div class="card" style="overflow-x: auto;">
+                        <div class="card-title">Workout 各档位预测</div>
+                        <table class="data-table" style="min-width: 500px; font-size: 12px;">
+                            <thead>
+                                <tr>
+                                    <th>站点</th>
+                                    <th>当前</th>
+                                    <th style="color: #FFD700;">Excellent</th>
+                                    <th style="color: #00FF88;">Great</th>
+                                    <th style="color: #4a9eff;">Good</th>
+                                    <th>Expected</th>
+                                    <th style="color: #FF6B6B;">Poor</th>
+                                    <th>Avg Δ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="background: rgba(255, 107, 107, 0.1);">
+                                    <td><strong>SkiErg</strong></td>
+                                    <td><strong>3:45</strong></td>
+                                    <td style="color: #FFD700;"><strong>3:00</strong></td>
+                                    <td style="color: #00FF88;"><strong>3:12</strong></td>
+                                    <td style="color: #4a9eff;"><strong>3:28</strong></td>
+                                    <td><strong>3:45</strong></td>
+                                    <td style="color: #FF6B6B;"><strong>4:00</strong></td>
+                                    <td class="diff-negative"><strong>-17s</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Sled Push</td>
+                                    <td>2:30</td>
+                                    <td style="color: #FFD700;">2:10</td>
+                                    <td style="color: #00FF88;">2:18</td>
+                                    <td style="color: #4a9eff;">2:24</td>
+                                    <td>2:30</td>
+                                    <td style="color: #FF6B6B;">2:45</td>
+                                    <td class="diff-negative">-6s</td>
+                                </tr>
+                                <tr style="background: rgba(0, 255, 136, 0.1);">
+                                    <td>Sled Pull 🏆</td>
+                                    <td style="color: var(--accent);">1:45</td>
+                                    <td style="color: #FFD700;">1:35</td>
+                                    <td style="color: #00FF88;">1:40</td>
+                                    <td style="color: #4a9eff;">1:45</td>
+                                    <td>1:50</td>
+                                    <td style="color: #FF6B6B;">2:05</td>
+                                    <td class="diff-positive">+5s</td>
+                                </tr>
+                                <tr style="background: rgba(255, 107, 107, 0.1);">
+                                    <td><strong>Burpee</strong></td>
+                                    <td><strong>2:50</strong></td>
+                                    <td style="color: #FFD700;"><strong>2:15</strong></td>
+                                    <td style="color: #00FF88;"><strong>2:25</strong></td>
+                                    <td style="color: #4a9eff;"><strong>2:38</strong></td>
+                                    <td><strong>2:50</strong></td>
+                                    <td style="color: #FF6B6B;"><strong>3:10</strong></td>
+                                    <td class="diff-negative"><strong>-12s</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Row Erg</td>
+                                    <td>3:20</td>
+                                    <td style="color: #FFD700;">2:55</td>
+                                    <td style="color: #00FF88;">3:05</td>
+                                    <td style="color: #4a9eff;">3:12</td>
+                                    <td>3:20</td>
+                                    <td style="color: #FF6B6B;">3:35</td>
+                                    <td class="diff-negative">-8s</td>
+                                </tr>
+                                <tr>
+                                    <td>Farmers</td>
+                                    <td>2:15</td>
+                                    <td style="color: #FFD700;">1:55</td>
+                                    <td style="color: #00FF88;">2:02</td>
+                                    <td style="color: #4a9eff;">2:08</td>
+                                    <td>2:15</td>
+                                    <td style="color: #FF6B6B;">2:30</td>
+                                    <td class="diff-negative">-7s</td>
+                                </tr>
+                                <tr>
+                                    <td>Lunges</td>
+                                    <td>3:00</td>
+                                    <td style="color: #FFD700;">2:35</td>
+                                    <td style="color: #00FF88;">2:45</td>
+                                    <td style="color: #4a9eff;">2:52</td>
+                                    <td>3:00</td>
+                                    <td style="color: #FF6B6B;">3:20</td>
+                                    <td class="diff-negative">-8s</td>
+                                </tr>
+                                <tr>
+                                    <td>Wall Balls</td>
+                                    <td>2:45</td>
+                                    <td style="color: #FFD700;">2:20</td>
+                                    <td style="color: #00FF88;">2:30</td>
+                                    <td style="color: #4a9eff;">2:38</td>
+                                    <td>2:45</td>
+                                    <td style="color: #FF6B6B;">3:05</td>
+                                    <td class="diff-negative">-7s</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="quote-box" style="margin-top: 16px;">
+                            <p class="text">💡 Sled Pull 已达 Good 水平，可适当放松此站点；重点提升 SkiErg 和 Burpee。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Predict Roxzone Tab -->
+                <div id="predict-roxzone-content" class="tab-content">
+                    <div class="card" style="overflow-x: auto;">
+                        <div class="card-title">Roxzone 各档位预测</div>
+                        
+                        <table class="data-table" style="min-width: 500px; font-size: 12px;">
+                            <thead>
+                                <tr>
+                                    <th>项目</th>
+                                    <th>当前</th>
+                                    <th style="color: #FFD700;">Excellent</th>
+                                    <th style="color: #00FF88;">Great</th>
+                                    <th style="color: #4a9eff;">Good</th>
+                                    <th>Expected</th>
+                                    <th style="color: #FF6B6B;">Poor</th>
+                                    <th>Avg Δ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Roxzone 总计</strong></td>
+                                    <td style="color: var(--warning);"><strong>8:15</strong></td>
+                                    <td style="color: #FFD700;"><strong>5:00</strong></td>
+                                    <td style="color: #00FF88;"><strong>5:40</strong></td>
+                                    <td style="color: #4a9eff;"><strong>6:30</strong></td>
+                                    <td><strong>8:00</strong></td>
+                                    <td style="color: #FF6B6B;"><strong>9:30</strong></td>
+                                    <td class="diff-negative"><strong>-15s</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="warning-box" style="margin-top: 16px;">
+                            <div class="title">⚠️ 转换区是最容易提升的项目</div>
+                            <div class="content">Roxzone 不需要体能提升，仅需要改变比赛习惯：禁止步行，出站即跑。Excellent 档位选手平均节省 3:15。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3.4 达成路径 -->
+            <div class="sub-section">
+                <h3 class="sub-section-title">🚀 3.4 达成路径建议</h3>
+                
+                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
+                    基于数据分析，以下是从 Expected 进阶到 Great 的关键改善点：
+                </p>
+
+                <div class="path-card">
+                    <div class="number">1</div>
+                    <div class="title">Roxzone 零步行策略</div>
+                    <div class="detail">Great 档位选手转换区仅用 5:40</div>
+                    <div class="detail">出站后立即慢跑，禁止步行</div>
+                    <div class="stat">📊 预期收益: -2:35</div>
+                </div>
+
+                <div class="path-card">
+                    <div class="number">2</div>
+                    <div class="title">Run 8 配速守住</div>
+                    <div class="detail">Great 档位 Run 8 平均 5:20</div>
+                    <div class="detail">你当前 6:07，差距 47 秒</div>
+                    <div class="stat">📊 预期收益: -0:47</div>
+                </div>
+
+                <div class="path-card">
+                    <div class="number">3</div>
+                    <div class="title">SkiErg 技术优化</div>
+                    <div class="detail">Great 档位 SkiErg 平均 3:12</div>
+                    <div class="detail">利用核心下压，非手臂后拉</div>
+                    <div class="stat">📊 预期收益: -0:33</div>
+                </div>
+
+                <div class="path-card">
+                    <div class="number">4</div>
+                    <div class="title">Burpee 节奏改善</div>
+                    <div class="detail">Great 档位 Burpee 平均 2:25</div>
+                    <div class="detail">「做5次休1次」替代「做1次休1次」</div>
+                    <div class="stat">📊 预期收益: -0:25</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第4章 训练建议 -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-tag">第4章</div>
+                <h2 class="section-title">定制化训练建议</h2>
+                <p class="section-subtitle">4-6周冲刺课表</p>
+            </div>
+
+            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+                目标：针对「心肺脱钩」与「Run 8 崩盘」，进行预疲劳耐受训练。
+            </p>
+
+            <div class="training-week">
+                <div class="week-header">📅 Week 1-2: 核心与技术重塑期</div>
+                <div class="week-content">
+                    <div class="week-focus">重点：解决 SkiErg 技术问题，建立有氧底座</div>
+                    
+                    <div class="workout-item">
+                        <div class="name">🎯 SkiErg 节奏跑</div>
+                        <div class="desc">10组 x 2分钟 (阻力因子 6-7)，重点在于每分钟桨频 (SPM) 维持在 40+，利用核心下压而非手臂后拉。</div>
+                    </div>
+                    
+                    <div class="workout-item">
+                        <div class="name">🏃 有氧长距离</div>
+                        <div class="desc">70分钟 Zone 2 跑步，但在每10分钟停下来做 20个深蹲。(模拟受损后的肌肉状态)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="training-week">
+                <div class="week-header">📅 Week 3-4: 比赛专项耐力期</div>
+                <div class="week-content">
+                    <div class="week-focus">重点：提高乳酸阈值，模拟比赛后半程的痛苦</div>
+                    
+                    <div class="workout-item">
+                        <div class="name">🔥 后半程模拟考</div>
+                        <div class="desc">连续执行：1000m Row + 1000m Run + 200m Farmers Carry + 1000m Run + 100m Sandbag Lunges + 1000m Run</div>
+                    </div>
+                    
+                    <div class="workout-item">
+                        <div class="name">⚡ 要求</div>
+                        <div class="desc">所有的跑步必须维持在 5:00/km 以内。如果掉速，必须在下一组功能站加快节奏。这是为了强迫身体适应在肌肉酸痛时维持配速。</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="training-week">
+                <div class="week-header">📅 Week 5-6: 减量与转换实战</div>
+                <div class="week-content">
+                    <div class="week-focus">重点：恢复身体，固化转换区策略</div>
+                    
+                    <div class="workout-item">
+                        <div class="name">⚡ 关键课表</div>
+                        <div class="desc">所有的间歇跑休息时间，严禁站立或行走，必须保持 6:30/km 的慢跑动态恢复。养成「只要在场上就在跑」的肌肉记忆。</div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="#" class="cta-button">🚀 获取完整训练计划</a>
+        </section>
+
+        <!-- Footer -->
+        <footer class="report-footer">
+            <p>此报告由 ROXSCAN - ZONEØ Engine 生成</p>
+            <p>数据基于 HYROX Shanghai S8 官方计时</p>
+            <p>与您的个人穿戴设备数据整合</p>
+            <p style="margin-top: 16px; color: var(--accent);">© 2026 ROXSCAN. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Tab switching functions
+        function switchTab(tabName, element) {
+            // Remove active from all tabs
+            document.querySelectorAll('.tabs .tab').forEach(tab => tab.classList.remove('active'));
+            element.classList.add('active');
+            
+            // Hide all tab contents
+            document.getElementById('running-content').classList.remove('active');
+            document.getElementById('workout-content').classList.remove('active');
+            document.getElementById('roxzone-content').classList.remove('active');
+            
+            // Show selected tab content
+            document.getElementById(tabName + '-content').classList.add('active');
+            
+            // Reinitialize charts for the visible tab
+            if (tabName === 'running') {
+                initRunningChart();
+            } else if (tabName === 'workout') {
+                initWorkoutChart();
+            } else if (tabName === 'roxzone') {
+                initRoxzoneChart();
+            }
+        }
+
+        function switchPredictTab(tabName, element) {
+            // Remove active from all tabs in parent
+            element.parentElement.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            element.classList.add('active');
+            
+            // Hide all predict tab contents
+            document.getElementById('predict-running-content').classList.remove('active');
+            document.getElementById('predict-workout-content').classList.remove('active');
+            document.getElementById('predict-roxzone-content').classList.remove('active');
+            
+            // Show selected tab content
+            document.getElementById(tabName + '-content').classList.add('active');
+            
+            if (tabName === 'predict-roxzone') {
+                initRoxzonePredictChart();
+            }
+        }
+
+        // Initialize all charts
+        function initCharts() {
+            initRadarChart();
+            initRunningChart();
+            initDecouplingChart();
+            initRoxzoneCompareChart();
+            initDistributionChart();
+        }
+
+        // Radar Chart
+        function initRadarChart() {
+            const chart = echarts.init(document.getElementById('radarChart'));
+            const option = {
+                backgroundColor: 'transparent',
+                radar: {
+                    indicator: [
+                        { name: '力量', max: 100 },
+                        { name: '有氧', max: 100 },
+                        { name: '速度', max: 100 },
+                        { name: '恢复', max: 100 },
+                        { name: '转换', max: 100 }
+                    ],
+                    shape: 'polygon',
+                    splitNumber: 4,
+                    axisName: {
+                        color: '#888'
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: '#333'
+                        }
+                    },
+                    splitArea: {
+                        show: true,
+                        areaStyle: {
+                            color: ['rgba(0,255,136,0.02)', 'rgba(0,255,136,0.05)']
+                        }
+                    },
+                    axisLine: {
+                        lineStyle: {
+                            color: '#333'
+                        }
+                    }
+                },
+                series: [{
+                    type: 'radar',
+                    data: [{
+                        value: [90, 70, 75, 65, 60],
+                        name: '能力值',
+                        areaStyle: {
+                            color: 'rgba(0, 255, 136, 0.3)'
+                        },
+                        lineStyle: {
+                            color: '#00FF88',
+                            width: 2
+                        },
+                        itemStyle: {
+                            color: '#00FF88'
+                        }
+                    }]
+                }]
+            };
+            chart.setOption(option);
+        }
+
+        // Running Chart
+        function initRunningChart() {
+            const container = document.getElementById('runningChart');
+            if (!container) return;
+            
+            const chart = echarts.init(container);
+            const option = {
+                backgroundColor: 'transparent',
+                grid: {
+                    top: 30,
+                    right: 20,
+                    bottom: 40,
+                    left: 50
+                },
+                xAxis: {
+                    type: 'category',
+                    data: ['Run1', 'Run2', 'Run3', 'Run4', 'Run5', 'Run6', 'Run7', 'Run8'],
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { color: '#888', fontSize: 11 }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 280,
+                    max: 380,
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { 
+                        color: '#888',
+                        formatter: function(value) {
+                            const min = Math.floor(value / 60);
+                            const sec = value % 60;
+                            return min + ':' + (sec < 10 ? '0' : '') + sec;
+                        }
+                    },
+                    splitLine: { lineStyle: { color: '#222' } }
+                },
+                series: [
+                    {
+                        name: '你',
+                        type: 'bar',
+                        data: [295, 292, 298, 300, 302, 305, 315, 367],
+                        itemStyle: {
+                            color: function(params) {
+                                return params.dataIndex === 7 ? '#FF6B6B' : '#00FF88';
+                            }
+                        },
+                        barWidth: '30%'
+                    },
+                    {
+                        name: 'Top 10%',
+                        type: 'line',
+                        data: [290, 288, 292, 290, 292, 295, 300, 297],
+                        lineStyle: { color: '#888', type: 'dashed' },
+                        itemStyle: { color: '#888' },
+                        symbol: 'circle',
+                        symbolSize: 6
+                    }
+                ],
+                legend: {
+                    data: ['你', 'Top 10%'],
+                    textStyle: { color: '#888' },
+                    bottom: 0
+                }
+            };
+            chart.setOption(option);
+        }
+
+        // Workout Chart
+        function initWorkoutChart() {
+            const container = document.getElementById('workoutChart');
+            if (!container) return;
+            
+            const chart = echarts.init(container);
+            const option = {
+                backgroundColor: 'transparent',
+                grid: {
+                    top: 30,
+                    right: 20,
+                    bottom: 80,
+                    left: 50
+                },
+                xAxis: {
+                    type: 'category',
+                    data: ['SkiErg', 'Push', 'Pull', 'Burpee', 'Row', 'Farmers', 'Lunges', 'WallBall'],
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { color: '#888', fontSize: 10, rotate: 45 }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0,
+                    max: 250,
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { 
+                        color: '#888',
+                        formatter: function(value) {
+                            const min = Math.floor(value / 60);
+                            const sec = value % 60;
+                            return min + ':' + (sec < 10 ? '0' : '') + sec;
+                        }
+                    },
+                    splitLine: { lineStyle: { color: '#222' } }
+                },
+                series: [
+                    {
+                        name: '你',
+                        type: 'bar',
+                        data: [225, 150, 105, 170, 200, 135, 180, 165],
+                        itemStyle: {
+                            color: function(params) {
+                                if (params.dataIndex === 2) return '#00FF88'; // Sled Pull best
+                                if (params.dataIndex === 0 || params.dataIndex === 3) return '#FF6B6B'; // Weak
+                                return '#4a9eff';
+                            }
+                        },
+                        barWidth: '30%'
+                    },
+                    {
+                        name: 'Top 10%',
+                        type: 'line',
+                        data: [180, 140, 130, 135, 190, 130, 175, 160],
+                        lineStyle: { color: '#888', type: 'dashed' },
+                        itemStyle: { color: '#888' },
+                        symbol: 'circle',
+                        symbolSize: 6
+                    }
+                ],
+                legend: {
+                    data: ['你', 'Top 10%'],
+                    textStyle: { color: '#888' },
+                    bottom: 0
+                }
+            };
+            chart.setOption(option);
+        }
+
+        // Roxzone Chart
+        function initRoxzoneChart() {
+            const container = document.getElementById('roxzoneChart');
+            if (!container) return;
+            
+            const chart = echarts.init(container);
+            const option = {
+                backgroundColor: 'transparent',
+                grid: {
+                    top: 20,
+                    right: 80,
+                    bottom: 20,
+                    left: 80
+                },
+                xAxis: {
+                    type: 'value',
+                    max: 550,
+                    axisLine: { show: false },
+                    axisLabel: { show: false },
+                    splitLine: { show: false }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: ['平均', 'Top 10%', '你'],
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { color: '#888' }
+                },
+                series: [{
+                    type: 'bar',
+                    data: [
+                        { value: 436, itemStyle: { color: '#555' } },
+                        { value: 347, itemStyle: { color: '#00FF88' } },
+                        { value: 495, itemStyle: { color: '#FF6B6B' } }
+                    ],
+                    barWidth: '50%',
+                    label: {
+                        show: true,
+                        position: 'right',
+                        formatter: function(params) {
+                            const min = Math.floor(params.value / 60);
+                            const sec = params.value % 60;
+                            return min + ':' + (sec < 10 ? '0' : '') + sec;
+                        },
+                        color: '#fff'
+                    }
+                }]
+            };
+            chart.setOption(option);
+        }
+
+        // Decoupling Chart
+        function initDecouplingChart() {
+            const chart = echarts.init(document.getElementById('decouplingChart'));
+            const option = {
+                backgroundColor: 'transparent',
+                grid: {
+                    top: 40,
+                    right: 60,
+                    bottom: 40,
+                    left: 60
+                },
+                xAxis: {
+                    type: 'category',
+                    data: ['Run1', 'Run2', 'Run3', 'Run4', 'Run5', 'Run6', 'Run7', 'Run8'],
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { color: '#888' }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: '配速(s)',
+                        min: 280,
+                        max: 380,
+                        position: 'left',
+                        axisLine: { lineStyle: { color: '#00FF88' } },
+                        axisLabel: { 
+                            color: '#00FF88',
+                            formatter: function(value) {
+                                const min = Math.floor(value / 60);
+                                const sec = value % 60;
+                                return min + ':' + (sec < 10 ? '0' : '') + sec;
+                            }
+                        },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    },
+                    {
+                        type: 'value',
+                        name: '心率',
+                        min: 150,
+                        max: 185,
+                        position: 'right',
+                        axisLine: { lineStyle: { color: '#FF6B6B' } },
+                        axisLabel: { color: '#FF6B6B' },
+                        splitLine: { show: false }
+                    }
+                ],
+                series: [
+                    {
+                        name: '配速',
+                        type: 'line',
+                        data: [295, 292, 298, 300, 302, 305, 315, 367],
+                        lineStyle: { color: '#00FF88', width: 3 },
+                        itemStyle: { color: '#00FF88' },
+                        symbol: 'circle',
+                        symbolSize: 8,
+                        smooth: true
+                    },
+                    {
+                        name: '心率',
+                        type: 'line',
+                        yAxisIndex: 1,
+                        data: [160, 162, 163, 164, 165, 174, 176, 178],
+                        lineStyle: { color: '#FF6B6B', width: 3 },
+                        itemStyle: { color: '#FF6B6B' },
+                        symbol: 'circle',
+                        symbolSize: 8,
+                        smooth: true
+                    }
+                ],
+                markArea: {
+                    silent: true,
+                    data: [[
+                        { xAxis: 'Run6', itemStyle: { color: 'rgba(255, 107, 107, 0.1)' } },
+                        { xAxis: 'Run8' }
+                    ]]
+                }
+            };
+            chart.setOption(option);
+        }
+
+        // Roxzone Compare Chart
+        function initRoxzoneCompareChart() {
+            const chart = echarts.init(document.getElementById('roxzoneCompareChart'));
+            const option = {
+                backgroundColor: 'transparent',
+                grid: {
+                    top: 20,
+                    right: 80,
+                    bottom: 20,
+                    left: 80
+                },
+                xAxis: {
+                    type: 'value',
+                    max: 550,
+                    axisLine: { show: false },
+                    axisLabel: { show: false },
+                    splitLine: { show: false }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: ['平均', 'Top 10%', '你'],
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { color: '#888' }
+                },
+                series: [{
+                    type: 'bar',
+                    data: [
+                        { value: 436, itemStyle: { color: '#555' } },
+                        { value: 347, itemStyle: { color: '#00FF88' } },
+                        { value: 495, itemStyle: { color: '#FF6B6B' } }
+                    ],
+                    barWidth: '50%',
+                    label: {
+                        show: true,
+                        position: 'right',
+                        formatter: function(params) {
+                            const min = Math.floor(params.value / 60);
+                            const sec = params.value % 60;
+                            return min + ':' + (sec < 10 ? '0' : '') + sec;
+                        },
+                        color: '#fff'
+                    }
+                }]
+            };
+            chart.setOption(option);
+        }
+
+        // Distribution Chart - 钟形分布图
+        function initDistributionChart() {
+            const container = document.getElementById('distributionChart');
+            if (!container) return;
+            
+            const chart = echarts.init(container);
+            
+            // 生成钟形分布数据
+            const data = [];
+            const categories = [];
+            for (let i = 78; i <= 92; i++) {
+                categories.push(i);
+                // 模拟正态分布，中心在86分钟
+                const x = (i - 86) / 3;
+                const y = Math.exp(-x * x / 2) * 5.5;
+                data.push(y.toFixed(1));
+            }
+            
+            const option = {
+                backgroundColor: 'transparent',
+                grid: {
+                    top: 20,
+                    right: 20,
+                    bottom: 40,
+                    left: 40
+                },
+                xAxis: {
+                    type: 'category',
+                    data: categories,
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { 
+                        color: '#888',
+                        fontSize: 11,
+                        interval: 2
+                    },
+                    axisTick: { show: false }
+                },
+                yAxis: {
+                    type: 'value',
+                    max: 6,
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { 
+                        color: '#888',
+                        formatter: '{value}%'
+                    },
+                    splitLine: { lineStyle: { color: '#222' } }
+                },
+                series: [{
+                    type: 'bar',
+                    data: data.map((val, idx) => {
+                        // 根据位置渐变颜色，从深橙到浅橙
+                        const ratio = idx / (data.length - 1);
+                        let color;
+                        if (idx < 4) {
+                            color = '#FF6600'; // 左边深橙(Excellent区)
+                        } else if (idx < 7) {
+                            color = '#FF8C00'; // 中左橙(Great区)
+                        } else if (idx < 10) {
+                            color = '#FFA500'; // 中间橙(Expected区)
+                        } else if (idx < 13) {
+                            color = '#FFBB55'; // 中右浅橙(Subpar区)
+                        } else {
+                            color = '#FFCC80'; // 右边最浅(Poor区)
+                        }
+                        return {
+                            value: val,
+                            itemStyle: { color: color }
+                        };
+                    }),
+                    barWidth: '90%',
+                    barCategoryGap: '0%'
+                }],
+                graphic: [{
+                    type: 'text',
+                    left: 'center',
+                    bottom: 5,
+                    style: {
+                        text: '完赛时间 (分钟)',
+                        fill: '#666',
+                        fontSize: 11
+                    }
+                }]
+            };
+            chart.setOption(option);
+        }
+
+        // Initialize charts on load
+        window.addEventListener('load', initCharts);
+        
+        // Resize charts on window resize
+        window.addEventListener('resize', function() {
+            const charts = ['radarChart', 'runningChart', 'workoutChart', 'roxzoneChart', 
+                          'decouplingChart', 'roxzoneCompareChart', 'distributionChart'];
+            charts.forEach(function(id) {
+                const container = document.getElementById(id);
+                if (container) {
+                    const chart = echarts.getInstanceByDom(container);
+                    if (chart) chart.resize();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
