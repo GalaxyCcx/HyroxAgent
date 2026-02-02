@@ -24,6 +24,12 @@ import {
 } from './charts';
 import SummaryText from './SummaryText';
 import DimensionList from './DimensionList';
+import QuoteBox from './QuoteBox';
+import LossOverviewTable from './LossOverviewTable';
+import SegmentTabs from './SegmentTabs';
+import ComparisonTable from './ComparisonTable';
+import WarningBox from './WarningBox';
+import DeepAnalysisList from './DeepAnalysisList';
 import type {
   ContentBlock,
   DataSnapshot,
@@ -270,6 +276,15 @@ const COMPONENT_MAP: Record<string, React.ComponentType<any>> = {
   DimensionList,                // 三维能力列表
   RadarChart5D,                 // 5维能力雷达图
   
+  // 第1章 消失的五分钟
+  QuoteBox,                     // 绿色左边框引用（价值主张）
+  LossOverviewTable,            // 损耗总览表
+  LossTable,                    // 旧损耗表（兼容）
+  SegmentTabs,                  // Running/Workout/Roxzone Tab
+  ComparisonTable,              // 分段对比表
+  WarningBox,                   // 红色警告框
+  DeepAnalysisList,             // 深度归因列表
+  
   // 卡片组件
   RoxscanCard,
   GenericCard,
@@ -292,7 +307,6 @@ const COMPONENT_MAP: Record<string, React.ComponentType<any>> = {
   PhaseAnalysisList: GenericList,  // 添加缺失的组件
   
   // 表格组件
-  LossTable,
   SplitBreakdownTable: GenericCard,
   
   // 图表组件

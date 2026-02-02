@@ -398,14 +398,6 @@ class ReportGenerator:
             config_loader.load_all()
             logger.info("[ReportGenerator V3] 配置加载完成")
             
-            # #region agent log
-            import json as _dbg_json
-            _dbg_log_path = r"e:\HyroxAgent 4 1\HyroxAgent\.cursor\debug.log"
-            _dbg_section_ids = config_loader.get_dynamic_section_ids()
-            with open(_dbg_log_path, "a", encoding="utf-8") as _dbg_f:
-                _dbg_f.write(_dbg_json.dumps({"location":"report_generator.py:after_config_load","message":"ConfigLoader loaded section IDs","data":{"section_ids":_dbg_section_ids,"count":len(_dbg_section_ids)},"timestamp":__import__("time").time()*1000,"sessionId":"debug-session","hypothesisId":"A"}) + "\n")
-            # #endregion
-            
             yield {"event": "progress", "data": {"progress": 8, "step": "加载配置完成..."}}
             
             # 2. 心率数据处理（如果有图片）
@@ -541,12 +533,6 @@ class ReportGenerator:
                     title=report_title,
                     section_outputs=section_outputs,
                 )
-                
-                # #region agent log
-                _dbg_assembled_sections = [s.section_id for s in assembled_report.sections]
-                with open(_dbg_log_path, "a", encoding="utf-8") as _dbg_f:
-                    _dbg_f.write(_dbg_json.dumps({"location":"report_generator.py:after_assemble","message":"Report assembled","data":{"assembled_section_ids":_dbg_assembled_sections,"assembled_count":len(_dbg_assembled_sections),"section_outputs_keys":list(section_outputs.keys())},"timestamp":__import__("time").time()*1000,"sessionId":"debug-session","hypothesisId":"B"}) + "\n")
-                # #endregion
                 
                 yield {"event": "progress", "data": {"progress": 90, "step": "保存报告..."}}
                 

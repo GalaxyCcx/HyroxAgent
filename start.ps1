@@ -1,4 +1,4 @@
-# HyroxAgent 前后端启动脚本 (PowerShell)
+﻿# HyroxAgent 前后端启动脚本 (PowerShell)
 # 支持在 PowerShell / Cursor / VS Code 终端中直接运行
 # 用法: .\start.ps1  或  pwsh -File start.ps1
 
@@ -15,10 +15,10 @@ function Stop-ProcessOnPort {
         $lines = netstat -ano 2>$null | Select-String ":$Port\s" | Select-String "LISTENING"
         foreach ($line in $lines) {
             $parts = $line -split '\s+'
-            $pid = $parts[-1]
-            if ($pid -match '^\d+$') {
-                Write-Host "       终止进程 PID: $pid"
-                try { Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue } catch {}
+            $procId = $parts[-1]
+            if ($procId -match '^\d+$') {
+                Write-Host "       终止进程 PID: $procId"
+                try { Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue } catch {}
                 $found = $true
             }
         }

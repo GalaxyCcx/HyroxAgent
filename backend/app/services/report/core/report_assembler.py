@@ -32,15 +32,22 @@ class AssembledSection:
     order: int
     type: str
     blocks: List[Dict[str, Any]] = field(default_factory=list)
+    section_tag: Optional[str] = None  # V4: 如 "第1章"
+    subtitle: Optional[str] = None     # V4: 如 "The Lost 5 Minutes"
     
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             "section_id": self.section_id,
             "title": self.title,
             "order": self.order,
             "type": self.type,
             "blocks": self.blocks,
         }
+        if self.section_tag is not None:
+            d["section_tag"] = self.section_tag
+        if self.subtitle is not None:
+            d["subtitle"] = self.subtitle
+        return d
 
 
 @dataclass
@@ -102,16 +109,6 @@ class ReportAssembler:
         # 获取章节定义
         section_definitions = self.config_loader.get_section_definitions()
         
-        # #region agent log
-        import json as _dbg_json
-        import time as _dbg_time
-        _dbg_log_path = r"e:\HyroxAgent 4 1\HyroxAgent\.cursor\debug.log"
-        _dbg_all_defs = [(d.section_id, d.enabled, d.type) for d in section_definitions]
-        _dbg_enabled_defs = [(d.section_id, d.type) for d in section_definitions if d.enabled]
-        with open(_dbg_log_path, "a", encoding="utf-8") as _dbg_f:
-            _dbg_f.write(_dbg_json.dumps({"location":"report_assembler.py:assemble_report","message":"Section definitions from ConfigLoader","data":{"all_definitions":_dbg_all_defs,"enabled_definitions":_dbg_enabled_defs,"section_outputs_keys":list(section_outputs.keys())},"timestamp":_dbg_time.time()*1000,"sessionId":"debug-session","hypothesisId":"B"}) + "\n")
-        # #endregion
-        
         for section_def in section_definitions:
             if not section_def.enabled:
                 continue
@@ -128,11 +125,15 @@ class ReportAssembler:
                     assembled = self._assemble_dynamic_section(section_output, section_def)
                 else:
                     # 章节输出不存在，创建空章节
+                    section_tag = getattr(section_def, "section_tag", None)
+                    subtitle = getattr(section_def, "subtitle", None)
                     assembled = AssembledSection(
                         section_id=section_id,
                         title=section_def.title,
                         order=section_def.order,
                         type=section_def.type,
+                        section_tag=section_tag,
+                        subtitle=subtitle,
                     )
             
             report.sections.append(assembled)
@@ -150,13 +151,16 @@ class ReportAssembler:
     ) -> AssembledSection:
         """组装动态章节"""
         blocks = section_output.arguments.get("_blocks", [])
-        
+        section_tag = getattr(section_def, "section_tag", None)
+        subtitle = getattr(section_def, "subtitle", None)
         return AssembledSection(
             section_id=section_output.section_id,
             title=section_output.title,
             order=section_def.order,
             type="dynamic",
             blocks=blocks,
+            section_tag=section_tag,
+            subtitle=subtitle,
         )
     
     def _assemble_static_section(

@@ -156,16 +156,6 @@ async def get_report_detail(report_id: str):
         if not report:
             raise HTTPException(status_code=404, detail="报告不存在")
         
-        # #region agent log
-        import json as _dbg_json
-        import time as _dbg_time
-        _dbg_log_path = r"e:\HyroxAgent 4 1\HyroxAgent\.cursor\debug.log"
-        _dbg_sections = report.get("sections", []) if isinstance(report, dict) else []
-        _dbg_section_ids = [s.get("section_id") for s in _dbg_sections] if _dbg_sections else []
-        with open(_dbg_log_path, "a", encoding="utf-8") as _dbg_f:
-            _dbg_f.write(_dbg_json.dumps({"location":"report.py:get_report_detail","message":"Returning report to frontend","data":{"report_id":report_id,"sections_count":len(_dbg_sections),"section_ids":_dbg_section_ids,"status":report.get("status") if isinstance(report, dict) else None},"timestamp":_dbg_time.time()*1000,"sessionId":"debug-session","hypothesisId":"D"}) + "\n")
-        # #endregion
-        
         return report
 
 

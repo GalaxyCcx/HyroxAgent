@@ -29,6 +29,8 @@ class SectionDefinition:
     config_path: Optional[str] = None
     description: str = ""
     conditional: Optional[Dict[str, Any]] = None
+    section_tag: Optional[str] = None  # V4: 如 "核心摘要", "第1章"
+    subtitle: Optional[str] = None     # V4: 如 "The Lost 5 Minutes"
 
 
 @dataclass
@@ -204,6 +206,8 @@ class ConfigLoader:
                 config_path=section.get("config_path"),
                 description=section.get("description", ""),
                 conditional=section.get("conditional"),
+                section_tag=section.get("section_tag"),
+                subtitle=section.get("subtitle"),
             ))
         
         # 按 order 排序

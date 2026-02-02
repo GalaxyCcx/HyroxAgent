@@ -2,6 +2,7 @@
 ChartDataBuilder - 图表配置预构建模块
 根据 DataProvider 提供的 ReportData 预构建所有图表的 ECharts 配置
 """
+import re
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional
 
@@ -612,10 +613,17 @@ class ChartDataBuilder:
             })
             easy_total += loss_sec
         
-        # 添加配速崩盘损耗
+        # 添加配速崩盘损耗（来源由数据计算得出，不写死 Run 8）
         if time_loss.pacing_loss and time_loss.pacing_loss.loss_seconds > 0:
+            # 从 description 提取简短标签，如 "配速崩盘损耗（Run7 vs 前4段平均）" -> "Run7 配速崩盘"，若无则用 "配速崩盘"
+            desc = (time_loss.pacing_loss.description or "").strip()
+            if "Run" in desc and "vs" in desc:
+                m = re.search(r"(Run\s*\d+)\s*[^）]*", desc)
+                source = f"{m.group(1)} 配速崩盘" if m else "配速崩盘"
+            else:
+                source = "配速崩盘"
             data.append({
-                "source": "Run 8配速崩盘",
+                "source": source,
                 "lossSeconds": round(time_loss.pacing_loss.loss_seconds, 1),
                 "difficulty": "medium",
                 "suggestion": "加强后段有氧耐力，避免提前掏空"

@@ -1,121 +1,139 @@
 {
   "section_id": "time_loss",
-  "description": "时间损耗章节 - One Call 输出完整内容",
-  
+  "description": "时间损耗章节 - 价值主张、损耗总览、三 Tab 分段对比、深度归因（固定四大方向）",
+
   "tool": {
     "type": "function",
     "function": {
       "name": "generate_time_loss_section",
-      "description": "生成时间损耗分析章节的完整内容，包含价值主张、损耗表格和瀑布图数据",
+      "description": "生成时间损耗分析章节：价值主张、导言、损耗总览表（含难度星级）、Running/Workout/Roxzone 分段对比、深度归因（固定转换区/跑步/功能站/节奏四大方向，每方向好坏+明细）",
       "parameters": {
         "type": "object",
         "properties": {
-          
           "value_proposition": {
             "type": "string",
-            "description": "价值主张，格式如「同樣的體能付出，通過戰術執行修正，你本場比賽的理論上限是 1:21:06」"
+            "description": "价值主张，一句理论最佳成绩，如「同样的体能付出，通过战术执行修正，你本场比赛的理论上限是 1:21:06」"
           },
-          
           "intro_text": {
             "type": "string",
             "description": "导言段落，解释这些时间损耗的性质（不需要提升体能，只需改变策略）"
           },
-          
-          "loss_table": {
+          "loss_overview": {
             "type": "object",
-            "description": "损耗分析表格",
+            "description": "损耗总览，仅包含本场实际存在的显著损耗，不凑条数",
             "properties": {
-              "data_id": {
-                "type": "string",
-                "description": "引用的时间损耗数据ID（由系统填充）"
-              },
-              "total_loss_seconds": {
-                "type": "number",
-                "description": "总损耗秒数"
-              },
-              "theoretical_best": {
-                "type": "string",
-                "description": "理论最佳成绩，格式如 '1:21:06'"
-              },
+              "total_loss_seconds": { "type": "number", "description": "总损耗秒数" },
+              "total_loss_display": { "type": "string", "description": "总损耗展示，如 \"-5:00\"" },
               "items": {
                 "type": "array",
-                "description": "损耗明细列表，按损耗大小排序",
-                "minItems": 2,
-                "maxItems": 5,
+                "description": "损耗明细，按损耗大小排序；0～8 条，根据数据有多少写多少",
+                "minItems": 0,
+                "maxItems": 8,
                 "items": {
                   "type": "object",
                   "properties": {
-                    "source": {
-                      "type": "string",
-                      "description": "损耗来源，如 'ROXZONE (轉換區)', 'Run 8 (配速崩盤)', 'SkiErg (滑雪機)'"
-                    },
-                    "loss_seconds": {
-                      "type": "number",
-                      "description": "损耗秒数"
-                    },
-                    "root_cause_analysis": {
-                      "type": "string",
-                      "maxLength": 200,
-                      "description": "深度归因分析（50-150字），必须包含具体数据"
-                    },
-                    "difficulty": {
-                      "type": "string",
-                      "enum": ["极易", "技术", "节奏", "体能"],
-                      "description": "挽回难度：极易(⭐)/技术(⭐⭐)/节奏(⭐⭐)/体能(⭐⭐⭐)"
-                    }
+                    "source": { "type": "string", "description": "损耗来源，如 ROXZONE (转换区)、Run 8 (配速崩盘)" },
+                    "source_desc": { "type": "string", "description": "简短描述，如 无效补给与步行" },
+                    "loss_seconds": { "type": "number" },
+                    "loss_display": { "type": "string", "description": "如 -2:30" },
+                    "difficulty": { "type": "string", "description": "星级：⭐ / ⭐⭐ / ⭐⭐⭐" },
+                    "difficulty_level": { "type": "number", "description": "1/2/3" }
                   },
-                  "required": ["source", "loss_seconds", "root_cause_analysis", "difficulty"]
+                  "required": ["source", "source_desc", "loss_seconds", "loss_display", "difficulty", "difficulty_level"]
                 }
               }
             },
-            "required": ["total_loss_seconds", "theoretical_best", "items"]
+            "required": ["total_loss_seconds", "total_loss_display", "items"]
           },
-          
-          "waterfall_chart": {
+          "segment_comparison": {
             "type": "object",
-            "description": "时间损耗瀑布图配置",
+            "description": "三 Tab 分段对比：Running / Workout / Roxzone",
             "properties": {
-              "data_id": {
-                "type": "string",
-                "description": "引用的数据ID（由系统填充）"
+              "running": {
+                "type": "object",
+                "properties": {
+                  "chart_data": { "type": "array", "description": "柱状图+折线图数据，如 [{segment, you, top10}] 秒数" },
+                  "table_data": { "type": "array", "description": "表格行：segment, you, top10, diff, highlight" },
+                  "warning": { "type": "object", "properties": { "title": { "type": "string" }, "content": { "type": "string" } } }
+                }
               },
-              "show_categories": {
-                "type": "boolean",
-                "default": true,
-                "description": "是否按类别分组显示"
+              "workout": {
+                "type": "object",
+                "properties": {
+                  "chart_data": { "type": "array" },
+                  "table_data": { "type": "array" },
+                  "highlight": { "type": "object", "properties": { "title": { "type": "string" }, "content": { "type": "string" } } }
+                }
+              },
+              "roxzone": {
+                "type": "object",
+                "properties": {
+                  "comparison": {
+                    "type": "object",
+                    "properties": {
+                      "you": { "type": "object", "properties": { "value": { "type": "string" }, "seconds": { "type": "number" } } },
+                      "top10": { "type": "object", "properties": { "value": { "type": "string" }, "seconds": { "type": "number" } } },
+                      "avg": { "type": "object", "properties": { "value": { "type": "string" }, "seconds": { "type": "number" } } }
+                    }
+                  },
+                  "warning": { "type": "object", "properties": { "title": { "type": "string" }, "content": { "type": "string" } } }
+                }
               }
-            }
+            },
+            "required": ["running", "workout", "roxzone"]
+          },
+          "deep_analysis": {
+            "type": "object",
+            "description": "深度归因：固定四个大方向（转换区、跑步、功能站、节奏），每方向 status 好/坏，坏则 details 列明细",
+            "properties": {
+              "categories": {
+                "type": "array",
+                "description": "固定 4 项，顺序：转换区、跑步、功能站、节奏",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": { "type": "string", "description": "转换区 | 跑步 | 功能站 | 节奏" },
+                    "label": { "type": "string", "description": "展示名称，如 转换区 (ROXZONE)" },
+                    "status": { "type": "string", "enum": ["good", "bad"], "description": "该方向整体表现" },
+                    "summary": { "type": "string", "description": "一句话概括" },
+                    "details": {
+                      "type": "array",
+                      "description": "仅 status=bad 时非空；每条类似 demo 明细",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "source": { "type": "string" },
+                          "loss_display": { "type": "string" },
+                          "difficulty": { "type": "string" },
+                          "analysis_title": { "type": "string" },
+                          "analysis_content": { "type": "string" }
+                        },
+                        "required": ["source", "loss_display", "difficulty", "analysis_title", "analysis_content"]
+                      }
+                    }
+                  },
+                  "required": ["key", "label", "status", "summary", "details"]
+                }
+              }
+            },
+            "required": ["categories"]
           }
-          
         },
-        "required": ["value_proposition", "loss_table"]
+        "required": ["value_proposition", "loss_overview", "deep_analysis"]
       }
     }
   },
-  
   "tool_choice": {
     "type": "function",
-    "function": {
-      "name": "generate_time_loss_section"
-    }
+    "function": { "name": "generate_time_loss_section" }
   },
-  
   "blocks_mapping": {
-    "value_proposition": {
-      "type": "text",
-      "component": "ValueProposition"
-    },
-    "intro_text": {
-      "type": "text",
-      "component": "Paragraph"
-    },
-    "loss_table": {
-      "type": "table",
-      "component": "LossTable"
-    },
-    "waterfall_chart": {
-      "type": "chart",
-      "component": "HorizontalBar"
-    }
+    "value_proposition": { "type": "text", "component": "QuoteBox" },
+    "intro_text": { "type": "text", "component": "Paragraph" },
+    "loss_overview": { "type": "table", "component": "LossOverviewTable" },
+    "segment_comparison": { "type": "chart", "component": "SegmentTabs" },
+    "deep_analysis": { "type": "list", "component": "DeepAnalysisList" }
   }
 }

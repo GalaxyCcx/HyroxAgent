@@ -109,6 +109,10 @@ export type { RadarDataPoint, DualRadarProps } from './DualRadar';
 export { default as HorizontalBar } from './HorizontalBar';
 export type { HorizontalBarItem } from './HorizontalBar';
 
+// 分段对比柱状图+折线图 (第1章 你 vs Top10%)
+export { default as ComparisonChart } from './ComparisonChart';
+export type { ComparisonChartPoint } from './ComparisonChart';
+
 // 同水平对比卡片 (第5章对标分析)
 export { default as CohortComparison } from './CohortComparison';
 

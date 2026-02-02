@@ -22,7 +22,7 @@
       "subtitle": "The Lost 5 Minutes",
       "type": "dynamic",
       "order": 2,
-      "enabled": false,
+      "enabled": true,
       "config_path": "sections/time_loss",
       "description": "找出成绩中隐藏的时间损耗，量化改进空间"
     },

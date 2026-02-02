@@ -381,53 +381,69 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, index, chart
         {/* V3 模式：使用 BlockRenderer 渲染 blocks；核心摘要中的 ScoreRing 改为 demo 风格无圆环卡片 */}
         {hasBlocks && !(isSummary && section.structured_output) && (
           <div className="space-y-4">
-            {blocks.map((block, blockIndex) => {
-              if (!block) return null;
-              const blockComponent = (block as { component?: string }).component;
-              if (isSummary && blockComponent === 'ScoreRing') {
-                const props = block.props as { score?: number; level?: string; level_name?: string; level_description?: string };
-                const score = props?.score ?? 0;
-                const level = props?.level ?? 'D';
-                const levelName = props?.level_name ?? '';
-                const levelDescriptions: Record<string, string> = {
-                  'S': '你的综合实力位于全球前 5% 的选手行列',
-                  'A': '你的综合实力位于全球前 15% 的选手行列',
-                  'B': '你的综合实力位于全球前 30% 的选手行列',
-                  'C': '你的综合实力位于全球前 50% 的选手行列',
-                  'D': '你的综合实力有较大提升空间',
-                };
+            {(() => {
+              const isTimeLoss = (section.section_id ?? '') === 'time_loss';
+              const subSectionTitles: Record<string, string> = {
+                LossOverviewTable: '📋 1.1 时间损耗总览',
+                SegmentTabs: '🏃 1.2 数据证明：跑步分段',
+                DeepAnalysisList: '🔍 1.3 深度归因分析',
+              };
+              return blocks.map((block, blockIndex) => {
+                if (!block) return null;
+                const blockComponent = (block as { component?: string }).component;
+                const subTitle = isTimeLoss && blockComponent ? subSectionTitles[blockComponent] : null;
                 return (
-                  <div key={`block-${blockIndex}`} className="bg-[#1A1A1A] rounded-xl mb-0 overflow-hidden">
-                    <div className="px-6 pt-5 pb-2 text-white">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🎯</span>
-                        <span className="text-base font-semibold">ROXSCAN</span>
-                        <span className="text-sm text-white/90">综合评分</span>
-                      </div>
-                    </div>
-                    <div className="px-6 pt-4 pb-6 flex items-start gap-8">
-                      <div className="flex flex-col items-start shrink-0">
-                        <span className="text-[40px] font-bold text-[#00FF88] leading-none tracking-tight">{score}</span>
-                        <span className="text-sm text-[#888888] mt-1 ml-0.5">/100</span>
-                      </div>
-                      <div className="flex-1 min-w-0 pt-0.5">
-                        <div className="text-lg font-semibold text-[#00FF88] mb-2 leading-tight">{levelName || `${level}级`}</div>
-                        <div className="text-[13px] text-[#888888] leading-relaxed">
-                          {props?.level_description ?? levelDescriptions[level] ?? ''}
+                  <React.Fragment key={`block-${blockIndex}`}>
+                    {subTitle && (
+                      <h3 className="text-base font-semibold text-white mb-4 pb-2 border-b border-[#333333] flex items-center gap-2">
+                        {subTitle}
+                      </h3>
+                    )}
+                    {isSummary && blockComponent === 'ScoreRing' ? (() => {
+                      const props = block.props as { score?: number; level?: string; level_name?: string; level_description?: string };
+                      const score = props?.score ?? 0;
+                      const level = props?.level ?? 'D';
+                      const levelName = props?.level_name ?? '';
+                      const levelDescriptions: Record<string, string> = {
+                        'S': '你的综合实力位于全球前 5% 的选手行列',
+                        'A': '你的综合实力位于全球前 15% 的选手行列',
+                        'B': '你的综合实力位于全球前 30% 的选手行列',
+                        'C': '你的综合实力位于全球前 50% 的选手行列',
+                        'D': '你的综合实力有较大提升空间',
+                      };
+                      return (
+                        <div className="bg-[#1A1A1A] rounded-xl mb-0 overflow-hidden">
+                          <div className="px-6 pt-5 pb-2 text-white">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🎯</span>
+                              <span className="text-base font-semibold">ROXSCAN</span>
+                              <span className="text-sm text-white/90">综合评分</span>
+                            </div>
+                          </div>
+                          <div className="px-6 pt-4 pb-6 flex items-start gap-8">
+                            <div className="flex flex-col items-start shrink-0">
+                              <span className="text-[40px] font-bold text-[#00FF88] leading-none tracking-tight">{score}</span>
+                              <span className="text-sm text-[#888888] mt-1 ml-0.5">/100</span>
+                            </div>
+                            <div className="flex-1 min-w-0 pt-0.5">
+                              <div className="text-lg font-semibold text-[#00FF88] mb-2 leading-tight">{levelName || `${level}级`}</div>
+                              <div className="text-[13px] text-[#888888] leading-relaxed">
+                                {props?.level_description ?? levelDescriptions[level] ?? ''}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
+                      );
+                    })() : (
+                      <BlockRenderer
+                        block={block}
+                        dataSnapshots={dataSnapshots}
+                      />
+                    )}
+                  </React.Fragment>
                 );
-              }
-              return (
-                <BlockRenderer 
-                  key={`block-${blockIndex}`}
-                  block={block}
-                  dataSnapshots={dataSnapshots}
-                />
-              );
-            })}
+              });
+            })()}
           </div>
         )}
 
