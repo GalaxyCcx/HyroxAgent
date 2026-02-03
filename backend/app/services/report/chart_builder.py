@@ -613,18 +613,19 @@ class ChartDataBuilder:
             })
             easy_total += loss_sec
         
-        # 添加配速崩盘损耗（来源由数据计算得出，不写死 Run 8）
-        if time_loss.pacing_loss and time_loss.pacing_loss.loss_seconds > 0:
-            # 从 description 提取简短标签，如 "配速崩盘损耗（Run7 vs 前4段平均）" -> "Run7 配速崩盘"，若无则用 "配速崩盘"
-            desc = (time_loss.pacing_loss.description or "").strip()
-            if "Run" in desc and "vs" in desc:
-                m = re.search(r"(Run\s*\d+)\s*[^）]*", desc)
+        # 配速损耗（多段，0～N）
+        for pl in (time_loss.pacing_losses or []):
+            if pl.loss_seconds <= 0:
+                continue
+            desc = (pl.description or "").strip()
+            if "Run" in desc:
+                m = re.search(r"(Run\s*\d+)", desc)
                 source = f"{m.group(1)} 配速崩盘" if m else "配速崩盘"
             else:
                 source = "配速崩盘"
             data.append({
                 "source": source,
-                "lossSeconds": round(time_loss.pacing_loss.loss_seconds, 1),
+                "lossSeconds": round(pl.loss_seconds, 1),
                 "difficulty": "medium",
                 "suggestion": "加强后段有氧耐力，避免提前掏空"
             })
@@ -1681,14 +1682,17 @@ class ChartDataBuilder:
                 "actual": round(time_loss_analysis.transition_loss.athlete_value * 60, 1) if time_loss_analysis.transition_loss.athlete_value else 0,
             })
         
-        # 添加配速崩盘损耗
-        if time_loss_analysis.pacing_loss:
+        # 配速损耗（多段）
+        for pl in (time_loss_analysis.pacing_losses or []):
+            if pl.loss_seconds <= 0:
+                continue
+            name = (pl.description or "").replace("配速损耗（", "").replace(" vs 前4段平均）", "").strip() or "配速崩盘"
             items.append({
-                "name": "配速崩盘",
-                "value": round(time_loss_analysis.pacing_loss.loss_seconds, 1),
+                "name": name,
+                "value": round(pl.loss_seconds, 1),
                 "category": "pacing",
-                "reference": round(time_loss_analysis.pacing_loss.reference_value * 60, 1) if time_loss_analysis.pacing_loss.reference_value else 0,
-                "actual": round(time_loss_analysis.pacing_loss.athlete_value * 60, 1) if time_loss_analysis.pacing_loss.athlete_value else 0,
+                "reference": round(pl.reference_value * 60, 1) if pl.reference_value else 0,
+                "actual": round(pl.athlete_value * 60, 1) if pl.athlete_value else 0,
             })
         
         # 按损耗大小排序
@@ -1846,14 +1850,17 @@ class ChartDataBuilder:
                 "quadrant": self._get_quadrant(impact, difficulty),
             })
         
-        # 添加配速/耐力改进项
-        if time_loss_analysis.pacing_loss and time_loss_analysis.pacing_loss.loss_seconds > 30:
-            impact = min(100, (time_loss_analysis.pacing_loss.loss_seconds / 60) * 20)
+        # 配速/耐力改进项（多段合并或取最大）
+        for pl in (time_loss_analysis.pacing_losses or []):
+            if pl.loss_seconds <= 30:
+                continue
+            impact = min(100, (pl.loss_seconds / 60) * 20)
+            name = (pl.description or "").replace("配速损耗（", "").replace(" vs 前4段平均）", "").strip() or "配速管理"
             items.append({
-                "name": "配速管理",
+                "name": name or "配速管理",
                 "impact": round(impact, 1),
-                "difficulty": 60,  # 需要长期训练
-                "lossSeconds": round(time_loss_analysis.pacing_loss.loss_seconds, 1),
+                "difficulty": 60,
+                "lossSeconds": round(pl.loss_seconds, 1),
                 "quadrant": self._get_quadrant(impact, 60),
             })
         

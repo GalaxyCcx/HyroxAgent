@@ -28,6 +28,11 @@
       "model": "qwen-max-latest",
       "temperature": 0.5,
       "max_tokens": 8192
+    },
+    "improvement_agent": {
+      "model": "qwen3-coder-plus",
+      "temperature": 0.3,
+      "max_tokens": 1024
     }
   }
 }

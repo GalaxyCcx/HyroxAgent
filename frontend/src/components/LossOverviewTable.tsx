@@ -12,6 +12,8 @@ export interface LossOverviewItem {
   source_desc: string;
   loss_seconds: number;
   loss_display: string;
+  /** 区域可提升展示（来自 Agent，如「约 25 秒」） */
+  improvement_display?: string;
   difficulty: string;
   difficulty_level?: number;
 }
@@ -52,11 +54,15 @@ const LossOverviewTable: React.FC<LossOverviewTableProps> = ({
                 {item.source_desc}
               </div>
             </div>
-            <div
-              className="text-base font-semibold mx-4 shrink-0"
-              style={{ color: REPORT_THEME.warning }}
-            >
-              {item.loss_display}
+            <div className="mx-4 shrink-0 flex flex-col items-end gap-0.5">
+              <span className="text-base font-semibold" style={{ color: REPORT_THEME.warning }}>
+                {item.loss_display}
+              </span>
+              {item.improvement_display && (
+                <span className="text-xs" style={{ color: REPORT_THEME.accent }}>
+                  可提升：{item.improvement_display}
+                </span>
+              )}
             </div>
             <div className="text-sm shrink-0" style={{ color: REPORT_THEME.gold }}>
               {item.difficulty}

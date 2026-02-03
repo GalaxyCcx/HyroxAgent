@@ -8,12 +8,19 @@ import { REPORT_THEME } from '../styles/report-theme';
 import { formatTime } from './charts/ChartRenderer';
 import ComparisonChart from './charts/ComparisonChart';
 import ComparisonTable from './ComparisonTable';
-import WarningBox from './WarningBox';
-import QuoteBox from './QuoteBox';
+
+export interface RunningConclusionBlock {
+  segment: string;
+  gap_vs_top10: string;
+  pacing_issue: string;
+  improvement_display: string;
+  improvement_logic: string;
+}
 
 interface TabData {
   chart_data?: Array<{ segment: string; you: number; top10: number }>;
   table_data?: Array<{ segment: string; you: string; top10: string; diff: string; highlight?: boolean }>;
+  conclusion_blocks?: RunningConclusionBlock[];
   warning?: { title?: string; content?: string };
   highlight?: { title?: string; content?: string };
 }
@@ -51,21 +58,21 @@ const SegmentTabs: React.FC<SegmentTabsProps> = ({ running, workout, roxzone }) 
   const renderRunning = () => {
     if (!running) return null;
     const chartData = running.chart_data ?? [];
-    const highlightIdx = running.table_data?.findIndex((r) => r.highlight) ?? -1;
+    const highlightIndices = (running.table_data ?? [])
+      .map((r, i) => (r.highlight ? i : -1))
+      .filter((i) => i >= 0);
     return (
       <div className="space-y-4">
         {chartData.length > 0 && (
           <ComparisonChart
             chart_data={chartData}
-            highlightIndex={highlightIdx >= 0 ? highlightIdx : undefined}
+            highlightIndices={highlightIndices.length > 0 ? highlightIndices : undefined}
           />
         )}
         {running.table_data && running.table_data.length > 0 && (
           <ComparisonTable table_data={running.table_data} />
         )}
-        {running.warning && (
-          <WarningBox title={running.warning.title} content={running.warning.content} />
-        )}
+        {/* 1.2 分析模块暂隐藏，仅展示数据图表 */}
       </div>
     );
   };
@@ -73,25 +80,22 @@ const SegmentTabs: React.FC<SegmentTabsProps> = ({ running, workout, roxzone }) 
   const renderWorkout = () => {
     if (!workout) return null;
     const chartData = workout.chart_data ?? [];
-    const highlightIdx = workout.table_data?.findIndex((r) => r.highlight) ?? -1;
+    const highlightIndices = (workout.table_data ?? [])
+      .map((r, i) => (r.highlight ? i : -1))
+      .filter((i) => i >= 0);
     return (
       <div className="space-y-4">
         {chartData.length > 0 && (
           <ComparisonChart
             chart_data={chartData}
             title="功能站分段对比 (vs Top 10%)"
-            highlightIndex={highlightIdx >= 0 ? highlightIdx : undefined}
+            highlightIndices={highlightIndices.length > 0 ? highlightIndices : undefined}
           />
         )}
         {workout.table_data && workout.table_data.length > 0 && (
           <ComparisonTable table_data={workout.table_data} />
         )}
-        {workout.highlight && (
-          <QuoteBox content={`💡 ${workout.highlight.title || ''} ${workout.highlight.content || ''}`} />
-        )}
-        {workout.warning && (
-          <WarningBox title={workout.warning.title} content={workout.warning.content} />
-        )}
+        {/* 1.2 分析模块暂隐藏，仅展示数据图表 */}
       </div>
     );
   };
@@ -133,9 +137,7 @@ const SegmentTabs: React.FC<SegmentTabsProps> = ({ running, workout, roxzone }) 
             ))}
           </div>
         </div>
-        {roxzone.warning && (
-          <WarningBox title={roxzone.warning.title} content={roxzone.warning.content} />
-        )}
+        {/* 1.2 分析模块暂隐藏，仅展示数据图表 */}
       </div>
     );
   };

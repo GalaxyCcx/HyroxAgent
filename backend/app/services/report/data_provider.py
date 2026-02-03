@@ -197,8 +197,10 @@ class TimeLossAnalysisData:
     """时间损耗分析数据"""
     total_loss_seconds: float = 0.0
     transition_loss: Optional[TimeLossItem] = None  # 转换区损耗
-    pacing_loss: Optional[TimeLossItem] = None  # 配速崩盘损耗
+    pacing_losses: List[TimeLossItem] = field(default_factory=list)  # 配速损耗，0～N 段（灵活：多段都很差或没有差都兼容）
     station_losses: List[TimeLossItem] = field(default_factory=list)  # 功能站技术损耗
+    # 提升潜力：同组别性别中总成绩比我差但在某区域做得比我好的人数/比例（由数据可分析得出）
+    segment_improvement_potential: List[Dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass 
@@ -454,6 +456,13 @@ class DataProvider:
                 report_data.division_stats,
                 report_data.segment_comparison,
             )
+            # 提升潜力：同组别性别中总成绩比我差但在某区域做得比我好的人数/比例
+            try:
+                time_loss.segment_improvement_potential = await self._fetch_segment_improvement_potential(
+                    season, location, athlete_result, gender, division
+                )
+            except Exception as ep:
+                logger.warning(f"获取分段提升潜力失败: {ep}")
             report_data.time_loss_analysis = time_loss
         except Exception as e:
             logger.warning(f"计算时间损耗分析失败: {e}")
@@ -631,6 +640,56 @@ class DataProvider:
                     segments.append(item)
             
             return SegmentComparisonData(segments=segments)
+    
+    async def _fetch_segment_improvement_potential(
+        self,
+        season: int,
+        location: str,
+        athlete_result: AthleteResultData,
+        gender: str,
+        division: str,
+    ) -> List[Dict[str, Any]]:
+        """
+        同组别性别中，总成绩比我差但在某区域做得比我好的人数/比例。
+        若某区域大量「总成绩比我差」的人做得比我好，说明该区域有提升空间。
+        """
+        my_total = athlete_result.total_time
+        if my_total is None:
+            return []
+        async with async_session_maker() as session:
+            stmt = select(Result).where(
+                Result.season == season,
+                Result.location == location,
+                Result.gender == gender,
+                Result.division == division,
+                Result.total_time.isnot(None),
+                Result.total_time > my_total,
+            )
+            result = await session.execute(stmt)
+            peers_slower_total = result.scalars().all()
+        peer_slower_total_count = len(peers_slower_total)
+        if peer_slower_total_count == 0:
+            return []
+        out = []
+        all_segments = list(self.RUNNING_SEGMENTS) + list(self.STATION_SEGMENTS)
+        for seg_name, seg_field in all_segments:
+            my_val = getattr(athlete_result, seg_field, None)
+            if my_val is None:
+                continue
+            better_count = sum(
+                1 for p in peers_slower_total
+                if getattr(p, seg_field) is not None and getattr(p, seg_field) < my_val
+            )
+            if better_count > 0:
+                ratio = round(100.0 * better_count / peer_slower_total_count, 1)
+                out.append({
+                    "segment_name": seg_name,
+                    "segment_field": seg_field,
+                    "peer_slower_total_count": peer_slower_total_count,
+                    "peer_better_in_segment_count": better_count,
+                    "ratio_percent": ratio,
+                })
+        return out
     
     def _calculate_segment_comparison(
         self,
@@ -1022,22 +1081,26 @@ class DataProvider:
         total_loss = 0.0
         
         
-        # 1. 转换区损耗
+        # 1. 转换区损耗：与组别平均或 Top 10% 的较大正差距（保证 1.1/1.3 有 ROXZONE 项）
         if athlete_result.roxzone_time and division_stats and division_stats.roxzone_time:
-            avg_roxzone = division_stats.roxzone_time.avg
-            if avg_roxzone:
-                loss_seconds = (athlete_result.roxzone_time - avg_roxzone) * 60
-                if loss_seconds > 0:  # 只计算正损耗
-                    analysis.transition_loss = TimeLossItem(
-                        category="transition",
-                        description="转换区/Roxzone 损耗",
-                        loss_seconds=round(loss_seconds, 1),
-                        reference_value=round(avg_roxzone, 2),
-                        athlete_value=round(athlete_result.roxzone_time, 2),
-                    )
-                    total_loss += loss_seconds
+            rox_fs = division_stats.roxzone_time
+            avg_roxzone = rox_fs.avg
+            p10_roxzone = getattr(rox_fs, "p10", None)
+            loss_vs_avg = (athlete_result.roxzone_time - avg_roxzone) * 60 if avg_roxzone and athlete_result.roxzone_time > avg_roxzone else 0.0
+            loss_vs_p10 = (athlete_result.roxzone_time - p10_roxzone) * 60 if p10_roxzone and athlete_result.roxzone_time > p10_roxzone else 0.0
+            loss_seconds = max(loss_vs_avg, loss_vs_p10)
+            if loss_seconds > 0:
+                reference = round(avg_roxzone, 2) if loss_vs_avg >= loss_vs_p10 and avg_roxzone else round(p10_roxzone, 2)
+                analysis.transition_loss = TimeLossItem(
+                    category="transition",
+                    description="转换区/Roxzone 损耗",
+                    loss_seconds=round(loss_seconds, 1),
+                    reference_value=reference,
+                    athlete_value=round(athlete_result.roxzone_time, 2),
+                )
+                total_loss += loss_seconds
         
-        # 2. 配速崩盘损耗（计算Run5-Run8相对于前4段平均的差距）
+        # 2. 配速损耗（灵活：Run5～Run8 相对前4段平均，可 0 段或多段）
         run_times = [
             athlete_result.run1_time,
             athlete_result.run2_time,
@@ -1050,43 +1113,22 @@ class DataProvider:
             (7, athlete_result.run7_time),
             (8, athlete_result.run8_time),
         ]
-        
         valid_run_times = [t for t in run_times if t is not None]
         if valid_run_times:
             avg_first_4 = sum(valid_run_times) / len(valid_run_times)
-            pacing_losses = []
-            
             for run_num, run_time in later_runs:
                 if run_time:
                     pacing_loss_seconds = (run_time - avg_first_4) * 60
-                    if pacing_loss_seconds > 20:  # 降低阈值到20秒，捕捉更多损耗
-                        pacing_losses.append({
-                            'run_num': run_num,
-                            'loss_seconds': pacing_loss_seconds,
-                            'run_time': run_time,
-                        })
-            
-            # 如果有多段配速问题，选择最严重的一段作为主要损耗
-            if pacing_losses:
-                # 按损耗大小排序
-                pacing_losses.sort(key=lambda x: x['loss_seconds'], reverse=True)
-                main_loss = pacing_losses[0]
-                
-                # 如果有多个损耗段，在描述中说明
-                if len(pacing_losses) > 1:
-                    other_runs = [f"Run{p['run_num']}" for p in pacing_losses[1:]]
-                    description = f"配速崩盘损耗（Run{main_loss['run_num']} vs 前4段平均，{', '.join(other_runs)}也有损耗）"
-                else:
-                    description = f"配速崩盘损耗（Run{main_loss['run_num']} vs 前4段平均）"
-                
-                analysis.pacing_loss = TimeLossItem(
-                    category="pacing",
-                    description=description,
-                    loss_seconds=round(main_loss['loss_seconds'], 1),
-                    reference_value=round(avg_first_4, 2),
-                    athlete_value=round(main_loss['run_time'], 2),
-                )
-                total_loss += main_loss['loss_seconds']
+                    if pacing_loss_seconds > 20:  # 超过阈值才计入
+                        analysis.pacing_losses.append(TimeLossItem(
+                            category="pacing",
+                            description=f"配速损耗（Run{run_num} vs 前4段平均）",
+                            loss_seconds=round(pacing_loss_seconds, 1),
+                            reference_value=round(avg_first_4, 2),
+                            athlete_value=round(run_time, 2),
+                        ))
+                        total_loss += pacing_loss_seconds
+            analysis.pacing_losses.sort(key=lambda x: x.loss_seconds, reverse=True)
         
         # 3. 功能站技术损耗（与平均值和TOP25%比较，取较大的正差距）
         if segment_comparison and division_stats:

@@ -16,18 +16,20 @@ export interface ComparisonChartPoint {
 interface ComparisonChartProps {
   chart_data?: ComparisonChartPoint[];
   title?: string;
-  highlightIndex?: number; // 高亮柱子的索引（由数据确定的最差段）
+  /** 需要标红的问题段索引（与表格 highlight 一致，可多段） */
+  highlightIndices?: number[];
 }
 
 const ComparisonChart: React.FC<ComparisonChartProps> = ({
   chart_data = [],
   title = '分段对比 (vs Top 10%)',
-  highlightIndex,
+  highlightIndices,
 }) => {
   const option = useMemo<EChartsOption>(() => {
     const categories = chart_data.map((d) => d.segment);
     const youData = chart_data.map((d) => d.you);
     const top10Data = chart_data.map((d) => d.top10);
+    const isHighlight = (i: number) => highlightIndices != null && highlightIndices.includes(i);
 
     return {
       grid: {
@@ -62,7 +64,7 @@ const ComparisonChart: React.FC<ComparisonChartProps> = ({
           data: youData.map((v, i) => ({
             value: v,
             itemStyle: {
-              color: i === highlightIndex ? CHART_COLORS.danger : '#00FF88',
+              color: isHighlight(i) ? CHART_COLORS.danger : '#00FF88',
             },
           })),
           barWidth: '36%',
@@ -94,7 +96,7 @@ const ComparisonChart: React.FC<ComparisonChartProps> = ({
         },
       },
     };
-  }, [chart_data, highlightIndex]);
+  }, [chart_data, highlightIndices]);
 
   if (!chart_data.length) return null;
 

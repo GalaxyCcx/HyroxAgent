@@ -17,12 +17,12 @@
     {
       "data_type": "time_loss_analysis",
       "name": "時間損耗分析",
-      "describe": "各類時間損耗的計算結果，包含 ROXZONE 損耗、配速損耗、功能站損耗",
+      "describe": "各類時間損耗的計算結果，包含 ROXZONE 損耗、配速損耗、功能站損耗。其中 canonical_loss_items 為本場所有需在 1.1 列出的損耗項（與 1.3 深度歸因一致），1.1 須逐條列出、不得漏項。",
       "summary_template": "總損耗 {total_loss_seconds} 秒，理論最佳 {theoretical_best}",
       "fields": {
         "key_params": [],
-        "summary": ["total_loss_seconds", "theoretical_best"],
-        "details": ["roxzone_loss", "pacing_loss", "station_losses", "vs_top25_gaps"]
+        "summary": ["total_loss_seconds", "theoretical_best", "total_loss_display"],
+        "details": ["transition_loss", "pacing_losses", "station_losses", "canonical_loss_items", "segment_improvement_potential"]
       }
     },
     {
@@ -50,12 +50,12 @@
     {
       "data_type": "segment_comparison",
       "name": "分段對比",
-      "describe": "各分段與 TOP25% 的對比數據",
+      "describe": "各分段與 TOP25% 的對比數據；running_vs_top10_table / workout_vs_top10_table / roxzone_comparison 為後端預計算表格，1.2 三 Tab 必須照抄",
       "summary_template": "",
       "fields": {
         "key_params": [],
         "summary": [],
-        "details": ["segments", "vs_top25"]
+        "details": ["segments", "vs_top25", "running_vs_top10_table", "workout_vs_top10_table", "roxzone_comparison"]
       }
     }
   ],

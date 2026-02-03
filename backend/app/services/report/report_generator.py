@@ -36,6 +36,194 @@ from .data import (
 logger = logging.getLogger(__name__)
 
 
+def _parse_diff_to_seconds(diff_str: str) -> Optional[int]:
+    """把表格「差距」字符串（如 -1:10、-0:21）解析为秒数（非负）。"""
+    if not diff_str:
+        return None
+    s = (diff_str or "").strip().lstrip("-+")
+    if not s or s == "0" or s == "0:00":
+        return 0
+    parts = s.split(":")
+    if len(parts) == 2:
+        try:
+            m, s = int(parts[0]), int(parts[1])
+            return m * 60 + s
+        except ValueError:
+            return None
+    return None
+
+
+def _patch_time_loss_agent_result(
+    section_output: Any,
+    improvement_agent_result: Optional[Dict[str, Any]] = None,
+    running_vs_top10_table: Optional[List[Dict[str, Any]]] = None,
+    workout_vs_top10_table: Optional[List[Dict[str, Any]]] = None,
+    roxzone_comparison: Optional[Dict[str, Any]] = None,
+    canonical_loss_items: Optional[List[Dict[str, Any]]] = None,
+) -> None:
+    """
+    1) 用后端预计算表覆盖 1.2 三 Tab 的表格/对比，保证 you/top10/diff 等全部来自取数与后端计算；
+    2) 若有 improvement_agent_result，再覆盖 1.1/1.2 的 improvement_display；
+    3) 若 canonical 中有 ROXZONE 且 Agent 有 roxzone 但 1.1 items 漏列，则补一条（兜底保证 1.1 与 1.3 一致）。
+    """
+    import re
+    from .improvement_agent import format_improvement_display
+
+    args = getattr(section_output, "arguments", None)
+    if not args:
+        return
+
+    seg_comp = args.get("segment_comparison") or {}
+    running = seg_comp.get("running") or {}
+    table_data = running.get("table_data") or []
+
+    # 1) Running：后端表覆盖 table_data
+    if running_vs_top10_table:
+        llm_highlights = { (r.get("segment") or "").strip(): r.get("highlight", False) for r in table_data }
+        running["table_data"] = [
+            { "segment": row["segment"], "you": row["you"], "top10": row["top10"], "diff": row["diff"], "highlight": llm_highlights.get((row.get("segment") or "").strip(), False) }
+            for row in running_vs_top10_table
+        ]
+        table_data = running["table_data"]
+
+    # 2) Workout：后端表覆盖 table_data（保留 LLM 的 highlight）；缺 conclusion_blocks 时按 highlight 行合成卡片
+    workout = seg_comp.get("workout") or {}
+    workout_map_early = {
+        (w.get("segment") or "").strip(): w
+        for w in (improvement_agent_result or {}).get("workout") or []
+    }
+    if workout_vs_top10_table:
+        wt_data = workout.get("table_data") or []
+        llm_highlights_w = { (r.get("segment") or "").strip(): r.get("highlight", False) for r in wt_data }
+        workout["table_data"] = [
+            { "segment": row["segment"], "you": row["you"], "top10": row["top10"], "diff": row["diff"], "highlight": llm_highlights_w.get((row.get("segment") or "").strip(), False) }
+            for row in workout_vs_top10_table
+        ]
+        # 有 highlight 行但缺/少 conclusion_blocks 时，按 Running 格式合成多张卡片（每站一张）
+        wt_table = workout.get("table_data") or []
+        highlight_rows = [r for r in wt_table if r.get("highlight")]
+        existing_blocks = workout.get("conclusion_blocks") or []
+        if highlight_rows and len(existing_blocks) != len(highlight_rows):
+            blocks = []
+            for r in highlight_rows:
+                seg = (r.get("segment") or "").strip()
+                you = r.get("you") or ""
+                top10 = r.get("top10") or ""
+                diff = r.get("diff") or ""
+                gap_text = f"你 {you}，Top 10% {top10}，差距 {diff}"
+                w_agent = workout_map_early.get(seg)
+                rec_sec = int(w_agent.get("recommended_improvement_seconds", 0)) if w_agent else 0
+                improvement_display = format_improvement_display(rec_sec)
+                blocks.append({
+                    "segment": seg,
+                    "gap_vs_top10": gap_text,
+                    "pacing_issue": "相对同组 Top 10% 用时偏长，存在技术或节奏空间。",
+                    "improvement_display": improvement_display,
+                    "improvement_logic": f"本站与 Top 10% 的差距为 {diff}；可提升上限取该差距与 1.1 该站损耗的较小值。推荐可争取 {improvement_display}，理由：与组别参考一致。",
+                })
+            workout["conclusion_blocks"] = blocks
+
+    # 3) Roxzone：后端 comparison 覆盖
+    roxzone = seg_comp.get("roxzone") or {}
+    if roxzone_comparison and isinstance(roxzone_comparison, dict):
+        roxzone["comparison"] = dict(roxzone_comparison)
+
+    if not improvement_agent_result:
+        logger.info("[ReportGenerator] time_loss 已用后端表覆盖 running/workout/roxzone 数据")
+        return
+
+    running_map = {
+        (r.get("segment") or "").strip(): r
+        for r in (improvement_agent_result.get("running") or [])
+    }
+    workout_map = {
+        (w.get("segment") or "").strip(): w
+        for w in (improvement_agent_result.get("workout") or [])
+    }
+    roxzone_agent = improvement_agent_result.get("roxzone")
+
+    # 从表格取「差距」作为跑步段可提升上限
+    table_diff_seconds: Dict[str, int] = {}
+    for row in table_data:
+        seg = (row.get("segment") or "").strip()
+        diff_str = row.get("diff") or ""
+        sec = _parse_diff_to_seconds(diff_str)
+        if seg and sec is not None:
+            table_diff_seconds[seg] = sec
+
+    def _cap_run_improvement(segment: str, agent_seconds: int) -> int:
+        cap = table_diff_seconds.get(segment)
+        if cap is not None and agent_seconds > cap:
+            return cap
+        return agent_seconds
+
+    # 1. 覆盖 loss_overview.items 的 improvement_display（跑步段用表格差距做上限）；漏列 ROXZONE 时兜底补一条
+    loss_overview = args.get("loss_overview") or {}
+    items = loss_overview.get("items") or []
+    has_roxzone_item = any(
+        ("ROXZONE" in ((i.get("source") or "").strip()) or "转换区" in ((i.get("source") or "").strip()))
+        for i in items
+    )
+    if roxzone_agent and (canonical_loss_items or []) and not has_roxzone_item:
+        roxzone_canonical = next(
+            (c for c in canonical_loss_items if ("ROXZONE" in (c.get("source") or "") or "转换区" in (c.get("source") or ""))),
+            None,
+        )
+        if roxzone_canonical:
+            sec = roxzone_agent.get("recommended_improvement_seconds") or 0
+            items.append({
+                "source": roxzone_canonical.get("source") or "ROXZONE (转换区)",
+                "source_desc": "转换区相对组别平均的损耗",
+                "loss_seconds": roxzone_canonical.get("loss_seconds"),
+                "loss_display": roxzone_canonical.get("loss_display") or "",
+                "difficulty": "容易",
+                "difficulty_level": "easy",
+                "improvement_display": format_improvement_display(int(sec)),
+            })
+            logger.info("[ReportGenerator] time_loss 1.1 已兜底补入 ROXZONE (转换区) 项")
+    for item in items:
+        source = (item.get("source") or "").strip()
+        run_m = re.search(r"Run\s*(\d+)", source)
+        if run_m:
+            seg = f"Run {run_m.group(1)}"
+            r = running_map.get(seg)
+            if r:
+                sec = r.get("recommended_improvement_seconds") or 0
+                sec = _cap_run_improvement(seg, int(sec))
+                item["improvement_display"] = format_improvement_display(sec)
+                continue
+        if source in workout_map:
+            w = workout_map[source]
+            sec = w.get("recommended_improvement_seconds") or 0
+            item["improvement_display"] = format_improvement_display(sec)
+            continue
+        if "ROXZONE" in source or "转换区" in source:
+            if roxzone_agent:
+                sec = roxzone_agent.get("recommended_improvement_seconds") or 0
+                item["improvement_display"] = format_improvement_display(sec)
+
+    # 2. 覆盖 segment_comparison.running.conclusion_blocks 的 improvement_display（计算逻辑由 LLM 写详细版，不覆盖）
+    blocks = running.get("conclusion_blocks") or []
+    for block in blocks:
+        seg = (block.get("segment") or "").strip()
+        r = running_map.get(seg)
+        if r:
+            sec = r.get("recommended_improvement_seconds") or 0
+            sec = _cap_run_improvement(seg, int(sec))
+            block["improvement_display"] = format_improvement_display(sec)
+
+    # 4) Workout conclusion_blocks：用 Agent 结果覆盖 improvement_display（计算逻辑由 LLM 写详细版）
+    workout_blocks = workout.get("conclusion_blocks") or []
+    for wblock in workout_blocks:
+        seg = (wblock.get("segment") or "").strip()
+        w = workout_map.get(seg)
+        if w:
+            sec = w.get("recommended_improvement_seconds") or 0
+            wblock["improvement_display"] = format_improvement_display(sec)
+
+    logger.info("[ReportGenerator] time_loss 已用 Agent 结果覆盖 improvement_display（running/workout）；running 计算逻辑由 LLM 写详细版；running/workout/roxzone 表已用后端数据覆盖")
+
+
 class ReportGenerator:
     """报告生成器"""
     
@@ -477,11 +665,26 @@ class ReportGenerator:
                     yield {"event": "progress", "data": {"progress": current_progress, "step": step_msg}}
                     
                     try:
+                        # time_loss 章节前先调用提升空间 Agent，结果注入 context
+                        section_context = dict(context)
+                        if section_id == "time_loss":
+                            improvement_result = None
+                            try:
+                                from .improvement_agent import call_improvement_agent
+                                improvement_result = await call_improvement_agent(report_data)
+                                section_context["improvement_agent_result"] = improvement_result
+                                n_run = len(improvement_result.get("running") or [])
+                                n_work = len(improvement_result.get("workout") or [])
+                                has_rox = improvement_result.get("roxzone") is not None
+                                logger.info(f"[ReportGenerator] 提升空间 Agent 已调用: running={n_run}, workout={n_work}, roxzone={has_rox}")
+                            except Exception as agent_err:
+                                logger.warning(f"[ReportGenerator] 提升空间 Agent 调用失败: {agent_err}", exc_info=True)
+                                section_context["improvement_agent_result"] = None
                         # 构建章节输入
                         section_input = input_builder.build_section_input(
                             section_id=section_id,
                             report_id=report_id,
-                            context=context,
+                            context=section_context,
                         )
                         
                         # 生成章节
@@ -489,6 +692,23 @@ class ReportGenerator:
                             section_id=section_id,
                             section_input=section_input,
                         )
+                        
+                        # time_loss：用后端预计算表覆盖 1.2 三 Tab；覆盖 improvement_display；漏列 ROXZONE 时兜底补入 1.1
+                        if section_id == "time_loss" and section_output.success:
+                            seg_data = data_registry.get_data("segment_comparison")
+                            running_table = seg_data.get("running_vs_top10_table") if seg_data and isinstance(seg_data.get("running_vs_top10_table"), list) else None
+                            workout_table = seg_data.get("workout_vs_top10_table") if seg_data and isinstance(seg_data.get("workout_vs_top10_table"), list) else None
+                            roxzone_comp = seg_data.get("roxzone_comparison") if seg_data and isinstance(seg_data.get("roxzone_comparison"), dict) else None
+                            tla_data = data_registry.get_data("time_loss_analysis")
+                            canonical_items = (tla_data.get("canonical_loss_items") or []) if tla_data and isinstance(tla_data.get("canonical_loss_items"), list) else None
+                            _patch_time_loss_agent_result(
+                                section_output,
+                                improvement_agent_result=section_context.get("improvement_agent_result"),
+                                running_vs_top10_table=running_table,
+                                workout_vs_top10_table=workout_table,
+                                roxzone_comparison=roxzone_comp,
+                                canonical_loss_items=canonical_items,
+                            )
                         
                         # 解析 Function Call 结果
                         if section_output.success:

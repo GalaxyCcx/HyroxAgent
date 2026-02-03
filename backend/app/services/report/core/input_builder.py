@@ -121,6 +121,23 @@ class InputBuilder:
         
         section_input = SectionInput(section_id=section_id)
         
+        # time_loss 章节：优先注入提升空间 Agent 结果（放在首位，确保 LLM 使用）
+        if section_id == "time_loss" and context:
+            improvement_result = context.get("improvement_agent_result")
+            if improvement_result is not None:
+                n_r = len(improvement_result.get("running") or [])
+                n_w = len(improvement_result.get("workout") or [])
+                logger.info(f"[InputBuilder] time_loss 注入提升空间Agent结果: running={n_r}, workout={n_w}")
+                section_input.inputs.insert(0, InputDataItem(
+                    data_id="improvement_agent_result",
+                    data_type="improvement_agent_result",
+                    name="提升空间Agent结果（必用）",
+                    describe="由 Agent 根据 1.1 损耗与 Top 10% 对比计算出的各区域可提升时间及理由。1.1 的 improvement_display 与 1.2 conclusion_blocks 的 improvement_display、improvement_logic 必须据此填写，不得使用其他口径。",
+                    summary="",
+                    key_params={},
+                    data_details=improvement_result,
+                ))
+        
         # 处理必需输入
         for input_def in required_inputs:
             data_item = self._build_input_item(input_def, report_id, context)

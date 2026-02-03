@@ -14,17 +14,23 @@
 
 这是整个章节的核心卖点，要让运动员意识到：不需要更努力训练，只需要更聪明地比赛。
 
-## 时间损耗：按数据识别，不预设类型
+## 1.1 损耗总览：与 canonical_loss_items 逐条对应，与 1.3 一致
 
-**重要**：损耗项完全由本场数据决定，不要预设「一定有配速崩盘」或「只有某一段掉速」。
+**预计节省时间只出现一个数字**：报告中「可提升 / 预计节省」**仅**使用 **improvement_agent_result**（提升空间 Agent）给出的时间，不得再用「时间损耗」或「与 Top 10% 差距」当作预计节省展示。
 
-- **可能有的损耗类型**：转换区（ROXZONE）、若干段跑步掉速、若干功能站技术/时间差、节奏控制等。
-- **转换区**：若本场 Roxzone 相对同水平选手明显偏长，则列出一条或多条归因（如无效补给与步行、进/出站慢等）；若无明显问题可不列或标为「表现正常」。
-- **跑步**：根据 8 段跑步的配速/时间数据判断——可能**没有**明显掉速段，也可能有**一段或多段**掉速（Run 5/6/7/8 等）。有则按实际段数写，每段一条；无则不写。
-- **功能站**：对比同水平选手，哪些站点明显偏慢就列哪些（如 SkiErg、Burpee 等），可能 0 条也可能多条。
-- **节奏**：若存在动作间重置时间过长、节奏不稳等，则列；否则不列。
+- **loss_overview.total_loss_seconds**：必须等于输入中的 `total_loss_seconds`。
+- **loss_overview.total_loss_display**：必须等于输入中的 `total_loss_display`（如 "-2:26"）。
+- **loss_overview.items**：**必须与输入中的 canonical_loss_items 一一对应**——canonical_loss_items 中有几条、哪些 source，1.1 就列几条、对应哪些 source，**不得漏项也不得捏造**；顺序可自定。**特别地，若 canonical_loss_items 中存在 source 为「ROXZONE (转换区)」的条目，则 1.1 必须有一条与之对应，不得遗漏。**每条需包含：
+  - **source**：与 canonical 中该条 source 一致（如「ROXZONE (转换区)」「Run 8 (配速)」「Sled Push」）。
+  - **loss_seconds / loss_display**：从 canonical 或 time_loss_analysis 中该条照抄，勿捏造。
+  - **source_desc**、**difficulty**、**difficulty_level**：由你补充。
+  - **improvement_display**：**必须**从 **improvement_agent_result** 取。source 含 "Run X" 或 "Run X (配速)" → agent.running 中 segment 为 "Run X" 的项；功能站名 → agent.workout 同名；ROXZONE/转换区 → agent.roxzone。格式化为「约 X 秒」或「约 X 分 X 秒」。这是该条**唯一的预计节省时间**，不得用 loss_seconds 或表格差距代替。
 
-**loss_overview.items**：按上述逻辑列出**所有本场实际存在的显著损耗**，2～6 条均可；每条含 source、source_desc、loss_seconds、loss_display、difficulty、difficulty_level。不要凑条数，没有的不要写。
+**1.1 与 1.3 一致**：1.1 的 items 与 1.3 深度归因中「需要优化的项」应对应：1.3 中 status=bad 的方向下 details 里出现的 source 都应在 1.1 的 items 中；1.1 的每一条也应对应 1.3 中某一方向的 detail（转换区→转换区，配速→跑步，功能站→功能站）。只要 1.1 按 canonical_loss_items 逐条输出，即满足与 1.3 一致。
+
+**提升潜力数据**：若输入中有 **segment_improvement_potential**，表示「同组别性别中总成绩比你差、但在某区域做得比你好」的人数/比例。可在深度分析（1.3）或价值主张中引用，例如：「同组别有 N 人总成绩比你慢，但其中 M 人在 [某区域] 做得比你好（占 XX%），说明该区域有明确提升空间。」
+
+**表述约束**：功能站损耗的描述应基于**数据可分析出的内容**（如与同组别平均值/TOP25% 的差距、与同组中总成绩更差但在该区域做得更好的人数比例）。不要写无法从数据得出的「动作不标准」「技术动作」「动作质量」等推测。
 
 ## 深度归因：固定四个大方向，每方向有好有坏
 
@@ -40,6 +46,7 @@
 - **status**：`good` 或 `bad`（根据本场数据判断该方向整体表现好坏）。
 - **summary**：一句话概括；若 status 为 good，可写亮点（如「转换区效率高，进站出站流畅」）；若为 bad，可写问题概览。
 - **details**：仅当 status 为 **bad** 时必填，且按类似 demo 的明细列出——每条包含：source（具体来源，如「ROXZONE (转换区)」「Run 8 (配速崩盘)」）、loss_display、difficulty（星级）、analysis_title、analysis_content（50～150 字，含具体数据）。若该方向下有多处问题（如多段跑步掉速、多个功能站偏慢），则 details 为多条；若 status 为 good，details 可为空数组。
+- **禁止重复**：每个具体来源（source）**只应出现在一个大方向的 details 中一次**。不得将同一项目（如 Burpee Broad Jump）同时在「功能站」技术损耗与「节奏控制」中列出且 loss_display/时间损耗重复。若某站既存在技术偏差又存在节奏问题，只归入一个方向（如仅「功能站」或仅「节奏控制」），或在一处合并叙述，不要两处重复列出相同 source 与相同时间。
 
 示例含义（勿照抄内容）：
 
@@ -52,9 +59,24 @@
 
 你需要产出 **segment_comparison**，包含三块：
 
-- **running**：跑步分段对比。chart_data / table_data 的 segment 与顺序须与本场数据一致（Run 1～Run 8）。table_data 每项含 segment、you、top10、diff、**highlight**：由你根据数据将「相对 Top10% 或相对前几段掉速最大的那一行」设为 true（可能没有，也可能多行视需求而定），其余 false。warning 的 title/content 根据你判定的最大损耗来源来写。
-- **workout**：功能站分段对比。结构同 running；可用 highlight 表示亮点（如 Sled Pull 表现卓越）。
-- **roxzone**：转换区对比。comparison 为 { you, top10, avg } 各 { value, seconds }；warning 为 { title, content }。
+### running（跑步分段）
+
+- **table_data（必须照抄后端）**：输入中的 **running_vs_top10_table** 为后端根据 athlete_result 与 division_stats(p10) 预计算的「与 Top 10% 的差距」表格。你必须**照抄**该表作为 segment_comparison.running.table_data：每条 segment、you、top10、diff 与 running_vs_top10_table 完全一致，**不得改写或捏造**。同一份数据每次报告的 you/top10/diff 由此固定。
+- **highlight**：你在照抄 table_data 后，仅可补充 **highlight** 字段：将「相对 Top 10% 差距明显」的段落设为 true，可多行；前端柱状图会标红 highlight=true 的段。
+- **chart_data**：可与 table_data 一致（you、top10 用秒数等），用于柱状图。
+- **conclusion_blocks（结论块，必填）**：每个 **highlight=true** 的段落对应**一块**独立结论；**有多少个 highlight 段就多少块**（由数据决定，不固定 Run 5/Run 8）。每块包含：
+  1. **segment**：段落名（与 table_data 中该行 segment 一致）。
+  2. **gap_vs_top10**：与 Top 10% 的差距，**照抄 table_data 中该段的 you、top10、diff**。
+  3. **pacing_issue**：该段配速问题简述。
+  4. **improvement_display**：**必须**使用 **improvement_agent_result** 中该 segment 的 recommended_improvement_seconds 格式化为「约 X 秒」或「约 X 分 X 秒」，不得用 table 的 diff 或 1.1 的 loss_seconds。
+  5. **improvement_logic**：**必须写清具体计算逻辑**，不能只写一句话。应包含：① 本段与 Top 10% 的差距为多少秒（来自 table_data 该段 diff）；② 1.1 中该段配速损耗为多少秒（来自 canonical_loss_items / pacing_losses）；③ 可提升上限取「与 Top 10% 差距」与「配速损耗」的较小值，因不可能一步超过同组 Top 10% 水平；④ 本段推荐可争取 X 秒，理由简述（可引用 Agent 该段的 reason）。以上四点用 1～2 句话连贯写出即可。
+- 若无任何 highlight 段，conclusion_blocks 可为空数组；若有，则**每段一块**，顺序与 table_data 中 highlight 段一致。
+- **warning**：可选，用于简短总括；若有 conclusion_blocks 则前端优先展示 conclusion_blocks。
+- **workout（必须照抄后端 + 结论块同 Running）**：输入中的 **workout_vs_top10_table** 为后端预计算的功能站「与 Top 10% 的差距」表格。你必须**照抄**该表作为 segment_comparison.workout.table_data：每条 segment、you、top10、diff 与 workout_vs_top10_table 完全一致，**不得改写或捏造**。**highlight**：将「相对 Top 10% 差距明显」的功能站设为 true，**可多行**；若你在结论中会提到具体站名（如 Burpee Broad Jump、Sandbag Lunges），则**必须**为这些站在 table_data 中设 highlight=true，并输出等量的 conclusion_blocks（每站一块），不得只写一段 highlight 文案而少填 conclusion_blocks。
+  - **conclusion_blocks（必填）**：与 Running **格式与逻辑完全一致**——**每个 highlight=true 的功能站对应一块**独立结论卡片，有多少 highlight 站就多少块。每块包含：**segment**（站名，与 table_data 一致）、**gap_vs_top10**（照抄该行 you、top10、diff）、**pacing_issue**（该站问题简述）、**improvement_display**（来自 improvement_agent_result.workout 该站）、**improvement_logic**（写清计算逻辑）。若无 highlight 则 conclusion_blocks 为空数组；**有 highlight 则必须填满等量的 conclusion_blocks**，前端会按卡片展示，不会用绿色单块。
+  - 可补充 chart_data、warning；若有 conclusion_blocks 则前端优先展示结论块。
+- **roxzone（必须照抄后端 + 优化空间写详细专业）**：输入中的 **roxzone_comparison** 为后端预计算的转换区对比：{ you, top10, avg } 各 { value (M:SS), seconds }。你必须**照抄**该对象作为 segment_comparison.roxzone.comparison，**不得改写或捏造**。
+  - **warning（优化空间结论）**：title 为简短结论（如「转换区有优化空间」）；**content 必须写得详细、专业**，包含：① 你的转换区总用时（来自 comparison.you）；② 与 Top 10% 的差距（秒数或 M:SS）；③ 与组别平均的对比（可选）；④ 主要流失环节分析（如无效停留、步行、补给节奏、动线）；⑤ 可争取提升时间（来自 improvement_agent_result.roxzone 的 recommended_improvement_seconds，格式化为「约 X 秒」）；⑥ 具体建议（如减少无效停留与步行、预设动线、分站补水等）。语气专业、数据准确、建议可执行。
 
 若某块暂无详细数据，可填合理占位，保证前端能渲染。
 
@@ -64,14 +86,14 @@
 
 1. **value_proposition**（必填）：一句话价值主张，包含理论上限时间。
 2. **intro_text**（可选）：导言段落，解释这些损耗的性质。
-3. **loss_overview**（必填）：total_loss_seconds、total_loss_display（如 "-5:00"）；**items** 为本场实际存在的显著损耗列表，2～6 条，每条 source、source_desc、loss_seconds、loss_display、difficulty、difficulty_level。
+3. **loss_overview**（必填）：**total_loss_seconds**、**total_loss_display** 与输入一致；**items** 必须与输入中的 **canonical_loss_items** 逐条对应（几条就几条、source 一致），不漏不造，顺序可自定；每条 source、loss_seconds、loss_display 从 canonical/time_loss_analysis 取，补充 source_desc、difficulty、difficulty_level，**improvement_display** 仅用 improvement_agent_result（预计节省只此一个）。
 4. **segment_comparison**（必填）：running、workout、roxzone 三块，每块含 chart_data、table_data、warning 或 highlight；roxzone 含 comparison + warning。
 5. **deep_analysis**（必填）：**categories** 数组，固定 4 项，每项对应一大方向：
    - **key**：`"转换区"` | `"跑步"` | `"功能站"` | `"节奏"`
    - **label**：展示用名称（如「转换区 (ROXZONE)」「跑步」「功能站」「节奏控制」）
    - **status**：`"good"` | `"bad"`
    - **summary**：一句话概括（必填）
-   - **details**：仅当 status 为 bad 时非空；数组，每项 { source, loss_display, difficulty, analysis_title, analysis_content }
+   - **details**：仅当 status 为 bad 时非空；数组，每项 { source, loss_display, difficulty, analysis_title, analysis_content }。**每个 source 只在一个大方向的 details 中出现一次**，禁止同一项目（如 Burpee Broad Jump）在「功能站」与「节奏控制」等处重复列出。
 
 ## 输出示例（节选，仅作格式参考）
 
@@ -107,12 +129,38 @@
     "running": {
       "chart_data": [{"segment": "Run 1", "you": 295, "top10": 290}, {"segment": "Run 8", "you": 367, "top10": 297}],
       "table_data": [{"segment": "Run 1", "you": "4:55", "top10": "4:50", "diff": "-0:05", "highlight": false}, {"segment": "Run 8", "you": "6:07", "top10": "4:57", "diff": "-1:10", "highlight": true}],
-      "warning": {"title": "Run 8 是最大单一时间损耗来源", "content": "前7段均速维持在 5:00/km 左右，第8段骤降至 6:07/km。"}
+      "conclusion_blocks": [
+        {
+          "segment": "Run 8",
+          "gap_vs_top10": "你的用时 6:07，Top 10% 为 4:57，差距 -1:10。",
+          "pacing_issue": "相对前4段明显掉速，属节奏控制失误。",
+          "improvement_display": "约 1 分 10 秒",
+          "improvement_logic": "本段与 Top 10% 的差距为 70 秒（table_data 该段 diff），1.1 配速损耗为 80 秒；可提升上限取较小值 70 秒，因不可能一步超过同组 Top 10% 水平。本段推荐可争取约 70 秒，理由：以同组 Top 10% 该段平均为参照，该差值为可争取空间。"
+        }
+      ],
+      "warning": {"title": "Run 8 相对 Top 10% 差距最大", "content": "见上方分块结论。"}
     },
-    "workout": { "chart_data": [], "table_data": [], "highlight": {"title": "Sled Pull 表现卓越", "content": "证明你的绝对力量储备充足。"} },
+    "workout": {
+      "chart_data": [],
+      "table_data": [],
+      "conclusion_blocks": [
+        {
+          "segment": "Burpee Broad Jump",
+          "gap_vs_top10": "你的用时 1:25，Top 10% 为 1:12，差距 -0:13。",
+          "pacing_issue": "相对同组 Top 10% 用时偏长，存在节奏与动作衔接空间。",
+          "improvement_display": "约 13 秒",
+          "improvement_logic": "本站与 Top 10% 的差距为 13 秒，1.1 该站损耗为 15 秒；可提升上限取较小值 13 秒。推荐可争取约 13 秒，理由：与组别参考的损耗一致，可作为可争取空间。"
+        }
+      ],
+      "highlight": null,
+      "warning": null
+    },
     "roxzone": {
       "comparison": {"you": {"value": "8:15", "seconds": 495}, "top10": {"value": "5:47", "seconds": 347}, "avg": {"value": "7:16", "seconds": 436}},
-      "warning": {"title": "转换区是最容易挽回的时间损耗", "content": "这 2 分 30 秒，你没有在做任何高强度运动，仅仅是因为喝水、擦汗、看手表和慢走而流失。"}
+      "warning": {
+        "title": "转换区有优化空间",
+        "content": "你的转换区总用时 8:15，比同组 Top 10% 慢 1 分 28 秒（88 秒），较组别平均也多出约 1 分钟。主要流失在：进站出站动线不清晰、补水与擦汗停留偏长、站间步行未压缩。可争取提升约 1 分 28 秒（来自 Agent 推荐）。建议：预设每站动线、分站补水减少单次停留、出站即慢跑衔接下一段，减少无效停留与步行。"
+      }
     }
   },
   "deep_analysis": {
