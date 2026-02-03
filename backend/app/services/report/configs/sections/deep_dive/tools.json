@@ -22,6 +22,93 @@
             "description": "分析类型：full=完整心率分析，degraded=降级配速分析"
           },
           
+          "intro_quote": {
+            "type": "string",
+            "description": "2.1 引言一句，绿色引用框，如：我们要看的不是心率多高，而是心率和配速什么时候「分手」"
+          },
+          
+          "decoupling_chart": {
+            "type": "object",
+            "description": "解耦图数据：双轴配速(s/km)与心率(bpm)，脱钩区域 Run6–Run8",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "segment": { "type": "string" },
+                    "pace_seconds": { "type": "number", "description": "配速秒数/km" },
+                    "hr": { "type": "number", "description": "心率 bpm" }
+                  }
+                }
+              },
+              "decoupling_zone": {
+                "type": "object",
+                "properties": {
+                  "start": { "type": "string", "description": "如 Run6" },
+                  "end": { "type": "string", "description": "如 Run8" }
+                }
+              }
+            }
+          },
+          
+          "phase_analysis": {
+            "type": "array",
+            "description": "阶段分析（LLM 输出），每阶段：标题、数据行、结论（success/warning）",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": { "type": "string" },
+                "icon": { "type": "string", "description": "如 📍" },
+                "metrics": { "type": "string", "description": "数据行" },
+                "detail": { "type": "string" },
+                "status": { "type": "string", "enum": ["success", "warning"] },
+                "conclusion": { "type": "string", "description": "结论句" }
+              }
+            }
+          },
+          
+          "zonex_conclusion": {
+            "type": "object",
+            "description": "ZONEØ 结论（LLM 输出），红色警告框",
+            "properties": {
+              "title": { "type": "string", "description": "如 ZONEØ 结论" },
+              "content": { "type": "string" }
+            }
+          },
+          
+          "roxzone_intro_quote": {
+            "type": "string",
+            "description": "2.2 转换区引言一句"
+          },
+          
+          "roxzone_comparison_chart": {
+            "type": "object",
+            "description": "Roxzone 总耗时对比：你 / Top10% / 平均",
+            "properties": {
+              "you": { "type": "object", "properties": { "label": { "type": "string" }, "value": { "type": "string" }, "seconds": { "type": "number" } } },
+              "top10": { "type": "object", "properties": { "label": { "type": "string" }, "value": { "type": "string" }, "seconds": { "type": "number" } } },
+              "avg": { "type": "object", "properties": { "label": { "type": "string" }, "value": { "type": "string" }, "seconds": { "type": "number" } } }
+            }
+          },
+          
+          "roxzone_behavior_analysis": {
+            "type": "array",
+            "description": "行为分析（LLM 输出），每项 title + content",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": { "type": "string" },
+                "content": { "type": "string" }
+              }
+            }
+          },
+          
+          "roxzone_suggestion": {
+            "type": "string",
+            "description": "可执行建议（LLM 输出），绿色框 + 💡"
+          },
+          
           "hr_pace_chart": {
             "type": "object",
             "description": "心率配速双轴图（仅完整分析模式）",
@@ -137,7 +224,7 @@
           }
           
         },
-        "required": ["has_heart_rate_data", "analysis_type", "phases", "analysis_text"]
+        "required": ["has_heart_rate_data", "analysis_type", "intro_quote", "phase_analysis", "zonex_conclusion", "roxzone_intro_quote", "roxzone_comparison_chart", "roxzone_behavior_analysis", "roxzone_suggestion", "analysis_text"]
       }
     }
   },
@@ -150,6 +237,38 @@
   },
   
   "blocks_mapping": {
+    "intro_quote": {
+      "type": "text",
+      "component": "QuoteBox"
+    },
+    "decoupling_chart": {
+      "type": "chart",
+      "component": "DecouplingChart"
+    },
+    "phase_analysis": {
+      "type": "list",
+      "component": "PhaseAnalysisCard"
+    },
+    "zonex_conclusion": {
+      "type": "card",
+      "component": "WarningBox"
+    },
+    "roxzone_intro_quote": {
+      "type": "text",
+      "component": "QuoteBox"
+    },
+    "roxzone_comparison_chart": {
+      "type": "chart",
+      "component": "RoxzoneCompareChart"
+    },
+    "roxzone_behavior_analysis": {
+      "type": "list",
+      "component": "BehaviorAnalysisCard"
+    },
+    "roxzone_suggestion": {
+      "type": "text",
+      "component": "SuggestionBox"
+    },
     "hr_pace_chart": {
       "type": "chart",
       "component": "HRPaceDualAxis",

@@ -97,8 +97,8 @@ class HeartRateExtractor:
     使用 VL 模型从心率监测截图中提取时序数据
     """
     
-    # 提取间隔（秒）
-    EXTRACTION_INTERVAL = 30
+    # 提取间隔（秒），10 秒一个点以获更精细曲线
+    EXTRACTION_INTERVAL = 10
     
     # VL 提示词模板
     EXTRACTION_PROMPT_TEMPLATE = """你是专业的心率图表数据提取器。你的任务是从图片中**精确读取**心率曲线数据。
@@ -157,8 +157,9 @@ class HeartRateExtractor:
   ],
   "data_points": [
     {{"time": "00:00", "hr": 心率值}},
-    {{"time": "00:30", "hr": 心率值}},
-    ... 每{interval}秒一个点，直到结束
+    {{"time": "00:10", "hr": 心率值}},
+    {{"time": "00:20", "hr": 心率值}},
+    ... 严格每 {interval} 秒一个点（如 10 秒间隔则为 00:00, 00:10, 00:20, ...），直到结束
   ],
   "statistics": {{
     "min_hr": 最低心率,
@@ -428,7 +429,7 @@ class HeartRateExtractor:
         image_url: Optional[str] = None,
         image_base64: Optional[str] = None,
         total_time_minutes: float = 75.0,
-        extraction_interval: int = 30,
+        extraction_interval: int = 10,
     ) -> HeartRateExtractionResult:
         """
         从心率图片中提取数据
@@ -438,7 +439,7 @@ class HeartRateExtractor:
             image_url: 图片 URL
             image_base64: base64 编码的图片
             total_time_minutes: 预期比赛总时长（分钟）
-            extraction_interval: 提取间隔（秒）
+            extraction_interval: 提取间隔（秒），默认 10 秒一个点
             
         Returns:
             HeartRateExtractionResult 对象
@@ -465,7 +466,7 @@ class HeartRateExtractor:
                 image_path=image_path,
                 image_url=image_url,
                 image_base64=image_base64,
-                max_tokens=8192,
+                max_tokens=16384,  # 10s 间隔数据点更多，需更大输出空间
                 temperature=0.2,  # 低温度以获得更准确的数据
             )
             
@@ -504,7 +505,7 @@ class HeartRateExtractor:
         self,
         images: List[Dict[str, Any]],
         total_time_minutes: float = 75.0,
-        extraction_interval: int = 30,
+        extraction_interval: int = 10,
     ) -> HeartRateExtractionResult:
         """
         从多张心率图片中提取并合并数据
@@ -514,7 +515,7 @@ class HeartRateExtractor:
         Args:
             images: 图片列表，每个元素包含 path/url/base64
             total_time_minutes: 预期比赛总时长（分钟）
-            extraction_interval: 提取间隔（秒）
+            extraction_interval: 提取间隔（秒），默认 10 秒一个点
             
         Returns:
             合并后的 HeartRateExtractionResult 对象

@@ -44,6 +44,14 @@ DEFAULT_BLOCK_ORDER = {
     "segment_comparison": 4,
     "deep_analysis": 5,
     "waterfall_chart": 6,
+    "intro_quote": 1,
+    "decoupling_chart": 2,
+    "phase_analysis": 3,
+    "zonex_conclusion": 4,
+    "roxzone_intro_quote": 5,
+    "roxzone_comparison_chart": 6,
+    "roxzone_behavior_analysis": 7,
+    "roxzone_suggestion": 8,
     "hr_pace_chart": 1,
     "phases": 2,
     "decoupling_metrics": 3,
@@ -116,7 +124,7 @@ class FunctionExecutor:
         for arg_name, arg_value in arguments.items():
             if arg_name.startswith("_"):
                 continue  # 跳过内部字段
-            
+
             mapping = blocks_mapping.get(arg_name)
             if not mapping:
                 # 没有映射，创建默认的文本块

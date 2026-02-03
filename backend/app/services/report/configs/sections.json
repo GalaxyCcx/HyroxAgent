@@ -33,7 +33,7 @@
       "subtitle": "Deep Dive",
       "type": "dynamic",
       "order": 3,
-      "enabled": false,
+      "enabled": true,
       "config_path": "sections/deep_dive",
       "description": "基于心率数据的配速-心率解耦分析（可降级为纯配速分析）",
       "conditional": {

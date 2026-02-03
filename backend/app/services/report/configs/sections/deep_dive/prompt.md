@@ -4,7 +4,18 @@
 
 ## 你的任务
 
-分析运动员的心率数据与配速的关系，找出体能崩溃点。你需要输出详细的**自然语言描述**，而不是简单的数据罗列。
+分析运动员的心率数据与配速的关系，找出体能崩溃点。你需要输出**结构化字段**与**自然语言结论**（阶段分析、ZONEØ 结论、行为分析均由你根据数据生成），禁止仅罗列数据。
+
+## 必须输出的字段（与 Demo 对应）
+
+1. **intro_quote**：2.1 引言一句，绿色引用框。例如：「我们要看的不是心率多高，而是心率和配速什么时候「分手」。」
+2. **decoupling_chart**：解耦图数据。双轴为配速(s/km)与心率(bpm)，脱钩区域通常为 Run6–Run8。含 `data`（每段 segment、pace_seconds、hr）与 `decoupling_zone`（start/end 如 Run6、Run8）。
+3. **phase_analysis**：阶段分析（**LLM 输出**）。每阶段一条：标题（如「阶段一：稳态期 (Run 1 - Run 5）」）、icon（如 📍）、metrics（数据行）、detail（简短描述）、status（success 或 warning）、conclusion（结论句，带 ✅ 或 ⚠️ 语义）。禁止只列数据，必须写出可读结论。
+4. **zonex_conclusion**：**LLM 输出**。红色警告框，title 如「ZONEØ 结论」，content 为一段归纳（如乳酸堆积、有氧底座不足等）。
+5. **roxzone_intro_quote**：2.2 转换区引言一句。例如：「这是一个被严重忽视的第九个功能站」。
+6. **roxzone_comparison_chart**：你 / Top10% / 平均 的 Roxzone 总耗时，每项含 label、value（如 "8:15"）、seconds。
+7. **roxzone_behavior_analysis**：**LLM 输出**。行为分析数组，每项 title（如「进站减速」）+ content（自然段）。
+8. **roxzone_suggestion**：**LLM 输出**。一句可执行建议，绿色框 + 💡。例如：「将 Roxzone 视为比赛的一部分。出站后立即慢跑 (Jog)，禁止步行。」
 
 ## 心率配速解耦概念
 
@@ -133,13 +144,19 @@
 
 1. `has_heart_rate_data`: 布尔值
 2. `analysis_type`: "full" 或 "degraded"
-3. `phases`: 三阶段分析数组
-4. `analysis_text`: 分析总结
+3. `intro_quote`: 2.1 引言一句（绿色引用框）
+4. `phase_analysis`: 阶段分析数组（**LLM 输出**，每项含 title、icon、metrics、detail、status、conclusion）
+5. `zonex_conclusion`: **LLM 输出**，对象 { title, content }，红色警告框
+6. `roxzone_intro_quote`: 2.2 转换区引言一句
+7. `roxzone_comparison_chart`: 你/Top10%/平均 的 Roxzone 总耗时（you、top10、avg 各含 label、value、seconds）
+8. `roxzone_behavior_analysis`: **LLM 输出**，数组，每项 { title, content }
+9. `roxzone_suggestion`: **LLM 输出**，一句可执行建议
+10. `analysis_text`: 分析总结（100–200 字）
 
 ### 条件字段
 
-- 完整分析模式：`hr_pace_chart`, `decoupling_metrics`
-- 降级分析模式：`pace_trend_chart`, `degraded_analysis`
+- 完整分析模式：`decoupling_chart`（含 data、decoupling_zone）、`phases`（可与 phase_analysis 一致或合并）、`decoupling_metrics`
+- 降级分析模式：`pace_trend_chart`、`degraded_analysis`；无心率时可不填 decoupling_chart 的 hr，仅配速；转换区显微镜（roxzone_*）仍须输出
 
 ## 语气风格
 

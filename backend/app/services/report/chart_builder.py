@@ -671,6 +671,53 @@ class ChartDataBuilder:
         )
     
     # ==================== 6. HR-Pace Dual Axis ====================
+
+    @staticmethod
+    def build_decoupling_data(
+        hr_data: MappedHeartRateData,
+        pacing_data: PacingAnalysisData,
+    ) -> List[Dict[str, Any]]:
+        """
+        从源数据构建解耦图数据（与 _build_hr_pace_chart 同源），供第2章 DecouplingChart 使用。
+        返回 [{"segment": "Run1", "pace_seconds": 295, "hr": 160}, ...]，保证与源数据一致。
+        """
+        if not pacing_data or not pacing_data.lap_times:
+            return []
+        segments = [f"Run{lap.lap}" for lap in pacing_data.lap_times]
+        pace_data = [round((lap.run_time or 0) * 60, 1) for lap in pacing_data.lap_times]
+        hr_data_list = []
+        if hr_data and hr_data.data_points and len(hr_data.data_points) > 0:
+            cumulative_time = 0
+            lap_boundaries = []
+            for lap in pacing_data.lap_times:
+                lap_start = cumulative_time
+                cumulative_time += (lap.lap_time or 0) * 60
+                lap_boundaries.append({"start": lap_start, "end": cumulative_time})
+            sorted_points = sorted(hr_data.data_points, key=lambda x: x.timestamp_seconds)
+            for boundary in lap_boundaries:
+                lap_hr_values = [
+                    dp.heart_rate for dp in sorted_points
+                    if boundary["start"] <= dp.timestamp_seconds <= boundary["end"]
+                ]
+                if lap_hr_values:
+                    hr_data_list.append(round(sum(lap_hr_values) / len(lap_hr_values), 0))
+                else:
+                    lap_mid = (boundary["start"] + boundary["end"]) / 2
+                    closest = min(
+                        sorted_points,
+                        key=lambda x: abs(x.timestamp_seconds - lap_mid),
+                        default=None,
+                    )
+                    hr_data_list.append(closest.heart_rate if closest else (hr_data.avg_heart_rate or 0))
+        elif hr_data and hr_data.avg_heart_rate:
+            avg_hr = hr_data.avg_heart_rate
+            hr_data_list = [round(avg_hr * (0.85 + 0.02 * i), 0) for i in range(len(segments))]
+        else:
+            hr_data_list = [0] * len(segments)
+        return [
+            {"segment": seg, "pace_seconds": int(pace_data[i]), "hr": int(hr_data_list[i])}
+            for i, seg in enumerate(segments)
+        ]
     
     def _build_hr_pace_chart(
         self,

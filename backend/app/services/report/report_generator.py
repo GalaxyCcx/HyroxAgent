@@ -15,11 +15,11 @@ from typing import Dict, Any, Callable, Optional, List, AsyncGenerator
 
 from sqlalchemy.orm import Session
 
-from ...db.models import ProReport, Result
+from ...db.models import ProReport, Result, ReportDataSnapshot
 from ...db.database import get_sync_db
 
 from .data_provider import get_data_provider, MappedHeartRateData
-from .heart_rate_extractor import heart_rate_extractor
+from .heart_rate_extractor import heart_rate_extractor, HeartRateExtractor
 from .heart_rate_mapper import heart_rate_mapper
 from .core import (
     ConfigLoader, get_config_loader, reset_config_loader,
@@ -32,6 +32,7 @@ from .data import (
     SnapshotManager, get_snapshot_manager,
     DataRegistry, get_data_registry,
 )
+from .chart_builder import ChartDataBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -269,6 +270,11 @@ class ReportGenerator:
         if not report:
             return False
         
+        # 删除该报告的所有数据快照，避免重新生成时与旧快照混合（如心率 30s vs 10s）
+        deleted = db.query(ReportDataSnapshot).filter(ReportDataSnapshot.report_id == report_id).delete()
+        if deleted:
+            logger.info(f"[ReportGenerator] 已删除 {deleted} 条旧数据快照: {report_id}")
+        
         # 重置状态和内容
         report.status = "pending"
         report.progress = 0
@@ -461,8 +467,54 @@ class ReportGenerator:
                     ]
         except Exception as e:
             logger.warning(f"[ReportGenerator] 按配置过滤 sections 失败: {e}")
+
+        # 从 data_snapshots（charts）提取解耦图源数据，供前端/调试查看
+        report_data["source_data"] = self._extract_source_data_from_snapshots(
+            report_data.get("charts") or {}
+        )
         
         return report_data
+
+    def _extract_source_data_from_snapshots(self, charts: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        从报告快照中提取解耦图使用的源数据，便于核对 Run1-8 配速与图片识别心率。
+        每种类型只取第一份快照，避免多章节/多输入复用同一数据时重复追加。
+        返回: { run1_8_pace: [...], heart_rate_from_image: [...] }
+        """
+        run1_8_pace = []
+        heart_rate_from_image = []
+        got_pacing = False
+        got_heart_rate = False
+        if not charts or not isinstance(charts, dict):
+            return {"run1_8_pace": run1_8_pace, "heart_rate_from_image": heart_rate_from_image}
+        for _sid, snap in charts.items():
+            if not isinstance(snap, dict):
+                continue
+            dt = snap.get("data_type")
+            content = snap.get("content") or {}
+            if dt == "pacing_analysis" and not got_pacing:
+                got_pacing = True
+                lap_times = content.get("lap_times") or []
+                for lap in lap_times:
+                    run_time = lap.get("run_time")
+                    lap_num = lap.get("lap")
+                    if lap_num is not None:
+                        pace_seconds = round((run_time or 0) * 60)
+                        run1_8_pace.append({
+                            "segment": f"Run{lap_num}",
+                            "pace_min_per_km": run_time,
+                            "pace_seconds": pace_seconds,
+                            "unit_note": "run_time 为分钟/公里（来自成绩表），pace_seconds = run_time * 60",
+                        })
+            if dt == "heart_rate_data" and not got_heart_rate:
+                got_heart_rate = True
+                data_points = content.get("data_points") or []
+                for p in data_points:
+                    heart_rate_from_image.append({
+                        "timestamp_seconds": p.get("timestamp_seconds"),
+                        "heart_rate": p.get("heart_rate"),
+                    })
+        return {"run1_8_pace": run1_8_pace, "heart_rate_from_image": heart_rate_from_image}
     
     def list_user_reports(
         self, db: Session, user_id: Optional[int] = None, athlete_name: Optional[str] = None
@@ -500,17 +552,21 @@ class ReportGenerator:
         
         try:
             
-            # 提取心率数据
+            # 提取心率数据（显式 10 秒间隔，与 HeartRateExtractor.EXTRACTION_INTERVAL 一致）
+            extraction_interval = HeartRateExtractor.EXTRACTION_INTERVAL  # 10
+            logger.info(f"[ReportGenerator] 心率提取间隔: {extraction_interval} 秒/点")
             if len(heart_rate_images) == 1:
                 extraction_result = await heart_rate_extractor.extract_from_image(
                     image_path=heart_rate_images[0],
                     total_time_minutes=total_time_minutes,
+                    extraction_interval=extraction_interval,
                 )
             else:
                 images = [{"path": img} for img in heart_rate_images]
                 extraction_result = await heart_rate_extractor.extract_from_multiple_images(
                     images=images,
                     total_time_minutes=total_time_minutes,
+                    extraction_interval=extraction_interval,
                 )
             
             if not extraction_result.success:
@@ -717,6 +773,18 @@ class ReportGenerator:
                                 section_output,
                                 data_id_map=data_id_map,
                             )
+                            # deep_dive：用源数据覆盖解耦图，保证心率和配速与源数据一致（H1 修复）
+                            if section_id == "deep_dive" and report_data.heart_rate_data and report_data.pacing_analysis:
+                                decoupling_data = ChartDataBuilder.build_decoupling_data(
+                                    report_data.heart_rate_data,
+                                    report_data.pacing_analysis,
+                                )
+                                if decoupling_data:
+                                    blocks = section_output.arguments.get("_blocks") or []
+                                    for blk in blocks:
+                                        if (blk or {}).get("component") == "DecouplingChart" and isinstance(blk.get("props"), dict):
+                                            blk["props"]["data"] = decoupling_data
+                                            break
                         
                         section_outputs[section_id] = section_output
                         
@@ -762,7 +830,7 @@ class ReportGenerator:
                 
                 # 将 data_snapshots 存储到 charts 字段（复用现有字段）
                 report.charts = json.dumps(assembled_report.data_snapshots, ensure_ascii=False)
-                
+
                 # 提取 introduction 和 conclusion
                 introduction_text = ""
                 conclusion_text = ""

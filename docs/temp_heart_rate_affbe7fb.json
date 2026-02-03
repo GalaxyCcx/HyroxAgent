@@ -1,0 +1,1810 @@
+[
+  {
+    "timestamp_seconds": 0,
+    "heart_rate": 134
+  },
+  {
+    "timestamp_seconds": 10,
+    "heart_rate": 138
+  },
+  {
+    "timestamp_seconds": 20,
+    "heart_rate": 151
+  },
+  {
+    "timestamp_seconds": 30,
+    "heart_rate": 161
+  },
+  {
+    "timestamp_seconds": 40,
+    "heart_rate": 160
+  },
+  {
+    "timestamp_seconds": 50,
+    "heart_rate": 167
+  },
+  {
+    "timestamp_seconds": 60,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 70,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 80,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 90,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 100,
+    "heart_rate": 164
+  },
+  {
+    "timestamp_seconds": 110,
+    "heart_rate": 161
+  },
+  {
+    "timestamp_seconds": 120,
+    "heart_rate": 166
+  },
+  {
+    "timestamp_seconds": 130,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 140,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 150,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 160,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 170,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 180,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 190,
+    "heart_rate": 169
+  },
+  {
+    "timestamp_seconds": 200,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 210,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 220,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 230,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 240,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 250,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 260,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 270,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 280,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 290,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 300,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 310,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 320,
+    "heart_rate": 169
+  },
+  {
+    "timestamp_seconds": 330,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 340,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 350,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 360,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 370,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 380,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 390,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 400,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 410,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 420,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 430,
+    "heart_rate": 157
+  },
+  {
+    "timestamp_seconds": 440,
+    "heart_rate": 166
+  },
+  {
+    "timestamp_seconds": 450,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 460,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 470,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 480,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 490,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 500,
+    "heart_rate": 190
+  },
+  {
+    "timestamp_seconds": 510,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 520,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 530,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 540,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 550,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 560,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 570,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 580,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 590,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 600,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 610,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 620,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 630,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 640,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 650,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 660,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 670,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 680,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 690,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 700,
+    "heart_rate": 167
+  },
+  {
+    "timestamp_seconds": 710,
+    "heart_rate": 163
+  },
+  {
+    "timestamp_seconds": 720,
+    "heart_rate": 166
+  },
+  {
+    "timestamp_seconds": 730,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 740,
+    "heart_rate": 166
+  },
+  {
+    "timestamp_seconds": 750,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 760,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 770,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 780,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 790,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 800,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 810,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 820,
+    "heart_rate": 185
+  },
+  {
+    "timestamp_seconds": 830,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 840,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 850,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 860,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 870,
+    "heart_rate": 169
+  },
+  {
+    "timestamp_seconds": 880,
+    "heart_rate": 167
+  },
+  {
+    "timestamp_seconds": 890,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 900,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 910,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 920,
+    "heart_rate": 176
+  },
+  {
+    "timestamp_seconds": 930,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 940,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 950,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 960,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 970,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 980,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 990,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 1000,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 1010,
+    "heart_rate": 184
+  },
+  {
+    "timestamp_seconds": 1020,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 1029,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 1039,
+    "heart_rate": 163
+  },
+  {
+    "timestamp_seconds": 1049,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 1059,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 1069,
+    "heart_rate": 162
+  },
+  {
+    "timestamp_seconds": 1079,
+    "heart_rate": 159
+  },
+  {
+    "timestamp_seconds": 1089,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 1099,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 1109,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 1119,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 1129,
+    "heart_rate": 166
+  },
+  {
+    "timestamp_seconds": 1139,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 1149,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 1159,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 1169,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 1179,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 1189,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 1199,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 1209,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 1219,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 1229,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 1239,
+    "heart_rate": 176
+  },
+  {
+    "timestamp_seconds": 1249,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 1259,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 1269,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 1279,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 1289,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 1299,
+    "heart_rate": 176
+  },
+  {
+    "timestamp_seconds": 1309,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 1319,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 1329,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 1339,
+    "heart_rate": 166
+  },
+  {
+    "timestamp_seconds": 1349,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 1359,
+    "heart_rate": 161
+  },
+  {
+    "timestamp_seconds": 1369,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 1379,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 1389,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 1399,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 1409,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 1419,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 1429,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 1439,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 1449,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 1459,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 1469,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 1479,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 1489,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 1499,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 1509,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 1519,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 1529,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 1539,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 1549,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 1559,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 1569,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 1579,
+    "heart_rate": 167
+  },
+  {
+    "timestamp_seconds": 1589,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 1599,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 1609,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 1619,
+    "heart_rate": 169
+  },
+  {
+    "timestamp_seconds": 1629,
+    "heart_rate": 164
+  },
+  {
+    "timestamp_seconds": 1639,
+    "heart_rate": 169
+  },
+  {
+    "timestamp_seconds": 1649,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 1659,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 1669,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 1679,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 1689,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 1699,
+    "heart_rate": 188
+  },
+  {
+    "timestamp_seconds": 1709,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 1719,
+    "heart_rate": 188
+  },
+  {
+    "timestamp_seconds": 1729,
+    "heart_rate": 190
+  },
+  {
+    "timestamp_seconds": 1739,
+    "heart_rate": 190
+  },
+  {
+    "timestamp_seconds": 1749,
+    "heart_rate": 199
+  },
+  {
+    "timestamp_seconds": 1759,
+    "heart_rate": 192
+  },
+  {
+    "timestamp_seconds": 1769,
+    "heart_rate": 189
+  },
+  {
+    "timestamp_seconds": 1779,
+    "heart_rate": 199
+  },
+  {
+    "timestamp_seconds": 1789,
+    "heart_rate": 201
+  },
+  {
+    "timestamp_seconds": 1799,
+    "heart_rate": 193
+  },
+  {
+    "timestamp_seconds": 1809,
+    "heart_rate": 193
+  },
+  {
+    "timestamp_seconds": 1819,
+    "heart_rate": 188
+  },
+  {
+    "timestamp_seconds": 1829,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 1839,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 1849,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 1859,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 1869,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 1879,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 1889,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 1899,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 1909,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 1919,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 1929,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 1939,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 1949,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 1959,
+    "heart_rate": 167
+  },
+  {
+    "timestamp_seconds": 1969,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 1979,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 1989,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 1999,
+    "heart_rate": 176
+  },
+  {
+    "timestamp_seconds": 2009,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 2019,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 2029,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 2039,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 2049,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 2058,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 2068,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 2078,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 2088,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 2098,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 2108,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 2118,
+    "heart_rate": 161
+  },
+  {
+    "timestamp_seconds": 2128,
+    "heart_rate": 164
+  },
+  {
+    "timestamp_seconds": 2138,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 2148,
+    "heart_rate": 176
+  },
+  {
+    "timestamp_seconds": 2158,
+    "heart_rate": 176
+  },
+  {
+    "timestamp_seconds": 2168,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 2178,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 2188,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 2198,
+    "heart_rate": 176
+  },
+  {
+    "timestamp_seconds": 2208,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 2218,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 2228,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 2238,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 2248,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 2258,
+    "heart_rate": 189
+  },
+  {
+    "timestamp_seconds": 2268,
+    "heart_rate": 190
+  },
+  {
+    "timestamp_seconds": 2278,
+    "heart_rate": 188
+  },
+  {
+    "timestamp_seconds": 2288,
+    "heart_rate": 194
+  },
+  {
+    "timestamp_seconds": 2298,
+    "heart_rate": 193
+  },
+  {
+    "timestamp_seconds": 2308,
+    "heart_rate": 195
+  },
+  {
+    "timestamp_seconds": 2318,
+    "heart_rate": 194
+  },
+  {
+    "timestamp_seconds": 2328,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 2338,
+    "heart_rate": 202
+  },
+  {
+    "timestamp_seconds": 2348,
+    "heart_rate": 198
+  },
+  {
+    "timestamp_seconds": 2358,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 2368,
+    "heart_rate": 195
+  },
+  {
+    "timestamp_seconds": 2378,
+    "heart_rate": 198
+  },
+  {
+    "timestamp_seconds": 2388,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 2398,
+    "heart_rate": 191
+  },
+  {
+    "timestamp_seconds": 2408,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 2418,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 2428,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 2438,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 2448,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 2458,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 2468,
+    "heart_rate": 167
+  },
+  {
+    "timestamp_seconds": 2478,
+    "heart_rate": 162
+  },
+  {
+    "timestamp_seconds": 2488,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 2498,
+    "heart_rate": 160
+  },
+  {
+    "timestamp_seconds": 2508,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 2518,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 2528,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 2538,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 2548,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 2558,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 2568,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 2578,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 2588,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 2598,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 2608,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 2618,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 2628,
+    "heart_rate": 185
+  },
+  {
+    "timestamp_seconds": 2638,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 2648,
+    "heart_rate": 189
+  },
+  {
+    "timestamp_seconds": 2658,
+    "heart_rate": 189
+  },
+  {
+    "timestamp_seconds": 2668,
+    "heart_rate": 188
+  },
+  {
+    "timestamp_seconds": 2678,
+    "heart_rate": 192
+  },
+  {
+    "timestamp_seconds": 2688,
+    "heart_rate": 191
+  },
+  {
+    "timestamp_seconds": 2698,
+    "heart_rate": 192
+  },
+  {
+    "timestamp_seconds": 2708,
+    "heart_rate": 194
+  },
+  {
+    "timestamp_seconds": 2718,
+    "heart_rate": 195
+  },
+  {
+    "timestamp_seconds": 2728,
+    "heart_rate": 192
+  },
+  {
+    "timestamp_seconds": 2738,
+    "heart_rate": 194
+  },
+  {
+    "timestamp_seconds": 2748,
+    "heart_rate": 190
+  },
+  {
+    "timestamp_seconds": 2758,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 2768,
+    "heart_rate": 195
+  },
+  {
+    "timestamp_seconds": 2778,
+    "heart_rate": 203
+  },
+  {
+    "timestamp_seconds": 2788,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 2798,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 2808,
+    "heart_rate": 195
+  },
+  {
+    "timestamp_seconds": 2818,
+    "heart_rate": 196
+  },
+  {
+    "timestamp_seconds": 2828,
+    "heart_rate": 188
+  },
+  {
+    "timestamp_seconds": 2838,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 2848,
+    "heart_rate": 188
+  },
+  {
+    "timestamp_seconds": 2858,
+    "heart_rate": 193
+  },
+  {
+    "timestamp_seconds": 2868,
+    "heart_rate": 196
+  },
+  {
+    "timestamp_seconds": 2878,
+    "heart_rate": 194
+  },
+  {
+    "timestamp_seconds": 2888,
+    "heart_rate": 184
+  },
+  {
+    "timestamp_seconds": 2898,
+    "heart_rate": 186
+  },
+  {
+    "timestamp_seconds": 2908,
+    "heart_rate": 186
+  },
+  {
+    "timestamp_seconds": 2918,
+    "heart_rate": 184
+  },
+  {
+    "timestamp_seconds": 2928,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 2938,
+    "heart_rate": 176
+  },
+  {
+    "timestamp_seconds": 2948,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 2958,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 2968,
+    "heart_rate": 169
+  },
+  {
+    "timestamp_seconds": 2978,
+    "heart_rate": 163
+  },
+  {
+    "timestamp_seconds": 2988,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 2998,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 3008,
+    "heart_rate": 167
+  },
+  {
+    "timestamp_seconds": 3018,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 3028,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 3038,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 3048,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 3058,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 3068,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 3078,
+    "heart_rate": 184
+  },
+  {
+    "timestamp_seconds": 3086,
+    "heart_rate": 154
+  },
+  {
+    "timestamp_seconds": 3096,
+    "heart_rate": 149
+  },
+  {
+    "timestamp_seconds": 3106,
+    "heart_rate": 146
+  },
+  {
+    "timestamp_seconds": 3116,
+    "heart_rate": 141
+  },
+  {
+    "timestamp_seconds": 3126,
+    "heart_rate": 146
+  },
+  {
+    "timestamp_seconds": 3136,
+    "heart_rate": 153
+  },
+  {
+    "timestamp_seconds": 3146,
+    "heart_rate": 157
+  },
+  {
+    "timestamp_seconds": 3156,
+    "heart_rate": 158
+  },
+  {
+    "timestamp_seconds": 3166,
+    "heart_rate": 156
+  },
+  {
+    "timestamp_seconds": 3176,
+    "heart_rate": 158
+  },
+  {
+    "timestamp_seconds": 3186,
+    "heart_rate": 161
+  },
+  {
+    "timestamp_seconds": 3196,
+    "heart_rate": 160
+  },
+  {
+    "timestamp_seconds": 3206,
+    "heart_rate": 161
+  },
+  {
+    "timestamp_seconds": 3216,
+    "heart_rate": 167
+  },
+  {
+    "timestamp_seconds": 3226,
+    "heart_rate": 164
+  },
+  {
+    "timestamp_seconds": 3236,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 3246,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 3256,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 3266,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 3276,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 3286,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 3296,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 3306,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 3316,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 3326,
+    "heart_rate": 184
+  },
+  {
+    "timestamp_seconds": 3336,
+    "heart_rate": 186
+  },
+  {
+    "timestamp_seconds": 3346,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 3356,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 3366,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 3376,
+    "heart_rate": 188
+  },
+  {
+    "timestamp_seconds": 3386,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 3396,
+    "heart_rate": 193
+  },
+  {
+    "timestamp_seconds": 3406,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 3416,
+    "heart_rate": 195
+  },
+  {
+    "timestamp_seconds": 3426,
+    "heart_rate": 184
+  },
+  {
+    "timestamp_seconds": 3436,
+    "heart_rate": 186
+  },
+  {
+    "timestamp_seconds": 3446,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 3456,
+    "heart_rate": 205
+  },
+  {
+    "timestamp_seconds": 3466,
+    "heart_rate": 201
+  },
+  {
+    "timestamp_seconds": 3476,
+    "heart_rate": 198
+  },
+  {
+    "timestamp_seconds": 3486,
+    "heart_rate": 203
+  },
+  {
+    "timestamp_seconds": 3496,
+    "heart_rate": 210
+  },
+  {
+    "timestamp_seconds": 3506,
+    "heart_rate": 205
+  },
+  {
+    "timestamp_seconds": 3516,
+    "heart_rate": 210
+  },
+  {
+    "timestamp_seconds": 3526,
+    "heart_rate": 209
+  },
+  {
+    "timestamp_seconds": 3536,
+    "heart_rate": 207
+  },
+  {
+    "timestamp_seconds": 3546,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 3556,
+    "heart_rate": 203
+  },
+  {
+    "timestamp_seconds": 3566,
+    "heart_rate": 195
+  },
+  {
+    "timestamp_seconds": 3576,
+    "heart_rate": 196
+  },
+  {
+    "timestamp_seconds": 3586,
+    "heart_rate": 191
+  },
+  {
+    "timestamp_seconds": 3596,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 3606,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 3616,
+    "heart_rate": 173
+  },
+  {
+    "timestamp_seconds": 3626,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 3636,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 3646,
+    "heart_rate": 169
+  },
+  {
+    "timestamp_seconds": 3656,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 3666,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 3676,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 3686,
+    "heart_rate": 166
+  },
+  {
+    "timestamp_seconds": 3696,
+    "heart_rate": 161
+  },
+  {
+    "timestamp_seconds": 3706,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 3716,
+    "heart_rate": 168
+  },
+  {
+    "timestamp_seconds": 3726,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 3736,
+    "heart_rate": 170
+  },
+  {
+    "timestamp_seconds": 3746,
+    "heart_rate": 169
+  },
+  {
+    "timestamp_seconds": 3756,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 3766,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 3776,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 3786,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 3796,
+    "heart_rate": 178
+  },
+  {
+    "timestamp_seconds": 3806,
+    "heart_rate": 185
+  },
+  {
+    "timestamp_seconds": 3816,
+    "heart_rate": 186
+  },
+  {
+    "timestamp_seconds": 3826,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 3836,
+    "heart_rate": 184
+  },
+  {
+    "timestamp_seconds": 3846,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 3856,
+    "heart_rate": 188
+  },
+  {
+    "timestamp_seconds": 3866,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 3876,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 3886,
+    "heart_rate": 191
+  },
+  {
+    "timestamp_seconds": 3896,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 3906,
+    "heart_rate": 188
+  },
+  {
+    "timestamp_seconds": 3916,
+    "heart_rate": 195
+  },
+  {
+    "timestamp_seconds": 3926,
+    "heart_rate": 192
+  },
+  {
+    "timestamp_seconds": 3936,
+    "heart_rate": 197
+  },
+  {
+    "timestamp_seconds": 3946,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 3956,
+    "heart_rate": 199
+  },
+  {
+    "timestamp_seconds": 3966,
+    "heart_rate": 197
+  },
+  {
+    "timestamp_seconds": 3976,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 3986,
+    "heart_rate": 193
+  },
+  {
+    "timestamp_seconds": 3996,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 4006,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 4016,
+    "heart_rate": 194
+  },
+  {
+    "timestamp_seconds": 4026,
+    "heart_rate": 188
+  },
+  {
+    "timestamp_seconds": 4036,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 4046,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 4056,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 4066,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 4076,
+    "heart_rate": 190
+  },
+  {
+    "timestamp_seconds": 4086,
+    "heart_rate": 191
+  },
+  {
+    "timestamp_seconds": 4096,
+    "heart_rate": 186
+  },
+  {
+    "timestamp_seconds": 4106,
+    "heart_rate": 185
+  },
+  {
+    "timestamp_seconds": 4116,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 4126,
+    "heart_rate": 180
+  },
+  {
+    "timestamp_seconds": 4136,
+    "heart_rate": 179
+  },
+  {
+    "timestamp_seconds": 4146,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 4156,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 4166,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 4176,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 4186,
+    "heart_rate": 175
+  },
+  {
+    "timestamp_seconds": 4196,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 4206,
+    "heart_rate": 165
+  },
+  {
+    "timestamp_seconds": 4216,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 4226,
+    "heart_rate": 174
+  },
+  {
+    "timestamp_seconds": 4236,
+    "heart_rate": 172
+  },
+  {
+    "timestamp_seconds": 4246,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 4256,
+    "heart_rate": 171
+  },
+  {
+    "timestamp_seconds": 4266,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 4276,
+    "heart_rate": 182
+  },
+  {
+    "timestamp_seconds": 4286,
+    "heart_rate": 177
+  },
+  {
+    "timestamp_seconds": 4296,
+    "heart_rate": 185
+  },
+  {
+    "timestamp_seconds": 4306,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 4316,
+    "heart_rate": 189
+  },
+  {
+    "timestamp_seconds": 4326,
+    "heart_rate": 185
+  },
+  {
+    "timestamp_seconds": 4336,
+    "heart_rate": 181
+  },
+  {
+    "timestamp_seconds": 4346,
+    "heart_rate": 183
+  },
+  {
+    "timestamp_seconds": 4356,
+    "heart_rate": 187
+  },
+  {
+    "timestamp_seconds": 4366,
+    "heart_rate": 189
+  },
+  {
+    "timestamp_seconds": 4376,
+    "heart_rate": 185
+  },
+  {
+    "timestamp_seconds": 4386,
+    "heart_rate": 186
+  },
+  {
+    "timestamp_seconds": 4396,
+    "heart_rate": 195
+  },
+  {
+    "timestamp_seconds": 4406,
+    "heart_rate": 196
+  },
+  {
+    "timestamp_seconds": 4416,
+    "heart_rate": 199
+  },
+  {
+    "timestamp_seconds": 4426,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 4436,
+    "heart_rate": 195
+  },
+  {
+    "timestamp_seconds": 4446,
+    "heart_rate": 198
+  },
+  {
+    "timestamp_seconds": 4456,
+    "heart_rate": 198
+  },
+  {
+    "timestamp_seconds": 4466,
+    "heart_rate": 201
+  },
+  {
+    "timestamp_seconds": 4476,
+    "heart_rate": 195
+  },
+  {
+    "timestamp_seconds": 4486,
+    "heart_rate": 200
+  },
+  {
+    "timestamp_seconds": 4496,
+    "heart_rate": 198
+  },
+  {
+    "timestamp_seconds": 4504,
+    "heart_rate": 156
+  }
+]

@@ -122,3 +122,12 @@ export { default as PriorityMatrix } from './PriorityMatrix';
 // 同水平选手群体分布 (第4章预测分析)
 export { default as CohortDistribution } from './CohortDistribution';
 export { generateMockCohortDistribution } from './CohortDistribution';
+
+// ==================== 第2章 深度复盘 ====================
+
+// 心率-配速解耦图（双 Y 轴 + 脱钩区高亮）
+export { default as DecouplingChart } from './DecouplingChart';
+export type { DecouplingDataPoint } from './DecouplingChart';
+
+// 转换区总耗时对比（横向条形图）
+export { default as RoxzoneCompareChart } from './RoxzoneCompareChart';

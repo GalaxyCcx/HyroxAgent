@@ -383,15 +383,22 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, index, chart
           <div className="space-y-4">
             {(() => {
               const isTimeLoss = (section.section_id ?? '') === 'time_loss';
+              const isDeepDive = (section.section_id ?? '') === 'deep_dive';
               const subSectionTitles: Record<string, string> = {
                 LossOverviewTable: '📋 1.1 时间损耗总览',
                 SegmentTabs: '🏃 1.2 数据证明：跑步分段',
                 DeepAnalysisList: '🔍 1.3 深度归因分析',
               };
+              const deepDiveSubTitles: Record<string, string> = {
+                RoxzoneCompareChart: '⚡ 2.2 转换区显微镜',
+              };
               return blocks.map((block, blockIndex) => {
                 if (!block) return null;
                 const blockComponent = (block as { component?: string }).component;
-                const subTitle = isTimeLoss && blockComponent ? subSectionTitles[blockComponent] : null;
+                let subTitle: string | null = null;
+                if (isTimeLoss && blockComponent) subTitle = subSectionTitles[blockComponent] ?? null;
+                else if (isDeepDive && blockIndex === 0) subTitle = '💓 2.1 心率与配速解耦分析';
+                else if (isDeepDive && blockComponent) subTitle = deepDiveSubTitles[blockComponent] ?? null;
                 return (
                   <React.Fragment key={`block-${blockIndex}`}>
                     {subTitle && (

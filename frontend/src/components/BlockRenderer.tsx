@@ -21,6 +21,8 @@ import {
   RadarChart5D,
   ScoreRing,
   DEFAULT_ZONEX_DIMENSIONS,
+  DecouplingChart,
+  RoxzoneCompareChart,
 } from './charts';
 import SummaryText from './SummaryText';
 import DimensionList from './DimensionList';
@@ -30,6 +32,9 @@ import SegmentTabs from './SegmentTabs';
 import ComparisonTable from './ComparisonTable';
 import WarningBox from './WarningBox';
 import DeepAnalysisList from './DeepAnalysisList';
+import PhaseAnalysisCard from './PhaseAnalysisCard';
+import BehaviorAnalysisCard from './BehaviorAnalysisCard';
+import SuggestionBox from './SuggestionBox';
 import type {
   ContentBlock,
   DataSnapshot,
@@ -284,6 +289,13 @@ const COMPONENT_MAP: Record<string, React.ComponentType<any>> = {
   ComparisonTable,              // 分段对比表
   WarningBox,                   // 红色警告框
   DeepAnalysisList,             // 深度归因列表
+  
+  // 第2章 深度复盘
+  DecouplingChart,              // 心率-配速解耦图
+  PhaseAnalysisCard,            // 阶段分析卡片（stage-box）
+  RoxzoneCompareChart,          // 转换区总耗时对比
+  BehaviorAnalysisCard,         // 行为分析卡片
+  SuggestionBox,                // 建议框（绿色 + 💡）
   
   // 卡片组件
   RoxscanCard,
