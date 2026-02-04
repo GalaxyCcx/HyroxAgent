@@ -11,7 +11,7 @@
 
 import React, { useState, Component, ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
-import { AppTab } from './types';
+import { AppTab, type PendingSplitIntent } from './types';
 import PlanTab from './screens/PlanTab';
 import DataTab from './screens/DataTab';
 import LiveTab from './screens/LiveTab';
@@ -78,17 +78,28 @@ const ReportPage: React.FC = () => {
 // 主页面组件（带底部导航）
 const MainPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>(AppTab.HOME);
+  const [pendingSplitIntent, setPendingSplitIntent] = useState<PendingSplitIntent | null>(null);
 
   const renderContent = () => {
     switch (activeTab) {
       case AppTab.HOME:
-        return <LiveTab />;
+        return (
+          <LiveTab
+            setActiveTab={setActiveTab}
+            setPendingSplitIntent={setPendingSplitIntent}
+          />
+        );
       case AppTab.RACE:
         return <PlanTab />;
       case AppTab.ME:
-        return <DataTab />;
+        return (
+          <DataTab
+            pendingSplitIntent={pendingSplitIntent}
+            setPendingSplitIntent={setPendingSplitIntent}
+          />
+        );
       default:
-        return <LiveTab />;
+        return <LiveTab setActiveTab={setActiveTab} setPendingSplitIntent={setPendingSplitIntent} />;
     }
   };
 

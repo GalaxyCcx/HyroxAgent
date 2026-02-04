@@ -25,8 +25,13 @@ import type {
   HeartRateUploadResponse,
 } from '../types';
 
-// API 基础地址，可通过环境变量覆盖
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+// API 基础地址：开发时用相对路径走 Vite 代理，生产或显式配置时用环境变量
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL !== undefined && import.meta.env.VITE_API_BASE_URL !== ''
+    ? import.meta.env.VITE_API_BASE_URL
+    : import.meta.env.DEV
+      ? '/api/v1'
+      : 'http://localhost:8000/api/v1';
 
 /**
  * 通用请求函数
@@ -34,12 +39,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 async function request<T>(url: string): Promise<ApiResponse<T>> {
   try {
     const response = await fetch(url);
-    
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
-    
     return response.json();
   } catch (err) {
     throw err;

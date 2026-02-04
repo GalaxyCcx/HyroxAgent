@@ -209,7 +209,8 @@ class AnalysisCache(Base):
     summary = Column(Text, comment="一句话总结")
     strengths = Column(Text, comment="优势 (JSON 数组)")
     weaknesses = Column(Text, comment="短板 (JSON 数组)")
-    
+    analysis_scope = Column(String(200), nullable=True, comment="分析口径说明")
+
     created_at = Column(DateTime, server_default=func.now(), comment="生成时间")
     
     __table_args__ = (

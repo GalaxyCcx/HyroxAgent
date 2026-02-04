@@ -19,13 +19,19 @@ import type {
   SplitAnalyticsData,
   UserProfile,
   ProReportSummary,
-  ProReportDetail
+  ProReportDetail,
+  PendingSplitIntent
 } from '../types';
 import AthleteSearchView from '../components/AthleteSearchView';
 
 // --- Types ---
 type ViewState = 'PROFILE' | 'SEARCH_ACTIVE' | 'HUB' | 'SUMMARY' | 'SPLIT_CENTER' | 'STATION_DETAIL' | 'POSTER' | 'PRO_REPORT';
 type SplitTab = 'OVERVIEW' | 'RUN' | 'STATION';
+
+export interface DataTabProps {
+  pendingSplitIntent?: PendingSplitIntent | null;
+  setPendingSplitIntent?: (intent: PendingSplitIntent | null) => void;
+}
 
 // --- Mock Data: 用户个人资料 ---
 const MOCK_PROFILE: UserProfile = {
@@ -58,7 +64,7 @@ const getTopPercentBadge = (rank: number, total: number): { text: string; show: 
   return null;
 };
 
-const DataTab: React.FC = () => {
+const DataTab: React.FC<DataTabProps> = ({ pendingSplitIntent = null, setPendingSplitIntent }) => {
   // --- View State ---
   const [currentView, setCurrentView] = useState<ViewState>('PROFILE');
   const [splitTab, setSplitTab] = useState<SplitTab>('OVERVIEW');
@@ -73,6 +79,35 @@ const DataTab: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState<SplitAnalyticsData | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+
+  // --- 处理从首页比赛总结跳转过来的分段中心意图 ---
+  useEffect(() => {
+    if (!pendingSplitIntent || !setPendingSplitIntent) return;
+    const intent = pendingSplitIntent;
+    let cancelled = false;
+    setIsLoadingDetail(true);
+    setDetailError(null);
+    Promise.all([
+      athleteApi.getResult(intent.season, intent.location, intent.athleteName),
+      athleteApi.getAnalytics(intent.season, intent.location, intent.athleteName)
+    ]).then(([resultResponse, analyticsResponse]) => {
+      if (cancelled) return;
+      if (resultResponse.code === 0 && resultResponse.data) setResultData(resultResponse.data);
+      if (analyticsResponse.code === 0 && analyticsResponse.data) setAnalyticsData(analyticsResponse.data);
+      setCurrentView('SPLIT_CENTER');
+      setSplitTab(intent.splitTab);
+      setPendingSplitIntent(null);
+    }).catch((err) => {
+      if (!cancelled) {
+        console.error('Failed to load split center from intent:', err);
+        setDetailError('加载分段数据失败，请重试');
+        setPendingSplitIntent(null);
+      }
+    }).finally(() => {
+      if (!cancelled) setIsLoadingDetail(false);
+    });
+    return () => { cancelled = true; };
+  }, [pendingSplitIntent, setPendingSplitIntent]);
   
   // --- 专业报告状态 ---
   const [proReports, setProReports] = useState<ProReportSummary[]>([]);
@@ -1066,6 +1101,16 @@ const DataTab: React.FC = () => {
       </div>
     );
   };
+
+  // --- 从首页跳转过来时先显示加载 ---
+  if (pendingSplitIntent && isLoadingDetail) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background-dark items-center justify-center gap-4">
+        <div className="size-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-white/70 text-sm">加载分段数据...</p>
+      </div>
+    );
+  }
 
   // --- Main Render Switch ---
   switch (currentView) {

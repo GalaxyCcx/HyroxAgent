@@ -25,8 +25,10 @@ import type {
   RaceEvent,
   RaceLeaderboardData,
   AnalysisLiteData,
-  ProReportSummary
+  ProReportSummary,
+  PendingSplitIntent
 } from '../types';
+import { AppTab } from '../types';
 import { athleteApi, racesApi, reportApi } from '../services/api';
 import ReportChart, { parseChartMarkers } from '../components/ReportChart';
 import ImageUploader from '../components/ImageUploader';
@@ -35,7 +37,7 @@ import BlockRenderer from '../components/BlockRenderer';
 import type { HeartRateImage, ContentBlock, DataSnapshot } from '../types';
 
 // --- 视图状态类型 ---
-type LiveView = 'HOME' | 'SEARCH' | 'RESULTS' | 'SUMMARY' | 'ANALYSIS_LITE' | 'PRO_REPORT';
+type LiveView = 'HOME' | 'SEARCH' | 'RESULTS' | 'SUMMARY' | 'ROXZONE_DETAIL' | 'ANALYSIS_LITE' | 'PRO_REPORT';
 
 // --- 筛选类型 ---
 type RaceTypeFilter = 'single' | 'doubles';  // 一级标签：单人赛/双人赛
@@ -52,7 +54,12 @@ const AGE_GROUPS_DOUBLES = [
   '16-29', '30-39', '40-49', '50-59', '60-70+'
 ];
 
-const LiveTab: React.FC = () => {
+export interface LiveTabProps {
+  setActiveTab?: (tab: AppTab) => void;
+  setPendingSplitIntent?: (intent: PendingSplitIntent | null) => void;
+}
+
+const LiveTab: React.FC<LiveTabProps> = ({ setActiveTab, setPendingSplitIntent }) => {
   const navigate = useNavigate();
   
   // --- 视图状态 ---
@@ -265,7 +272,16 @@ const LiveTab: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to load analysis:', err);
-      setAnalysisError('网络错误，请检查连接后重试');
+      const msg = err instanceof Error ? err.message : String(err);
+      const isNetworkFailure = err instanceof TypeError && (msg === 'Failed to fetch' || msg.includes('fetch'));
+      const isServerError = msg.startsWith('HTTP 5') || msg.startsWith('HTTP 500');
+      setAnalysisError(
+        isNetworkFailure
+          ? '无法连接分析服务，请确认后端已启动（默认 http://localhost:8000）'
+          : isServerError
+            ? '分析服务暂时出错，请稍后重试'
+            : msg.startsWith('HTTP ') ? msg : '网络错误，请检查连接后重试'
+      );
     } finally {
       setIsLoadingAnalysis(false);
     }
@@ -425,6 +441,9 @@ const LiveTab: React.FC = () => {
         setCurrentView('ANALYSIS_LITE');
         break;
       case 'ANALYSIS_LITE':
+        setCurrentView('SUMMARY');
+        break;
+      case 'ROXZONE_DETAIL':
         setCurrentView('SUMMARY');
         break;
       case 'SUMMARY':
@@ -1195,15 +1214,15 @@ const LiveTab: React.FC = () => {
               </div>
             </div>
 
-            {/* Breakdown Cards */}
+            {/* Breakdown Cards：跑步/站点跳转「我的」分段中心，转换区留在本页明细 */}
             <div className="bg-[#15171A] border border-white/10 rounded-3xl p-4 mb-6 grid grid-cols-3 gap-0 relative overflow-hidden">
               <div className="absolute inset-y-4 left-1/3 w-px bg-white/5"></div>
               <div className="absolute inset-y-4 right-1/3 w-px bg-white/5"></div>
               
               {[
-                { icon: 'directions_run', label: '跑步 (8圈)', sub: '8圈总用时', val: displayData.runTime, color: 'text-pink-500', bg: 'bg-pink-500/20' },
-                { icon: 'fitness_center', label: '站点 (8个)', sub: '8项功能站总用时', val: displayData.workTime, color: 'text-primary', bg: 'bg-primary/20' },
-                { icon: 'bolt', label: '转换区 (8段)', sub: '8次转换区总用时', val: displayData.roxzoneTime, color: 'text-blue-400', bg: 'bg-blue-400/20' }
+                { icon: 'directions_run', label: '跑步 (8圈)', sub: '8圈总用时', val: displayData.runTime, color: 'text-pink-500', bg: 'bg-pink-500/20', openSplitTab: 'RUN' as const },
+                { icon: 'fitness_center', label: '站点 (8个)', sub: '8项功能站总用时', val: displayData.workTime, color: 'text-primary', bg: 'bg-primary/20', openSplitTab: 'STATION' as const },
+                { icon: 'bolt', label: '转换区 (8段)', sub: '8次转换区总用时', val: displayData.roxzoneTime, color: 'text-blue-400', bg: 'bg-blue-400/20', openSplitTab: null }
               ].map((item, i) => (
                 <div key={i} className="flex flex-col items-center text-center p-2 relative">
                   <div className={`size-8 rounded-full ${item.bg} flex items-center justify-center mb-3`}>
@@ -1212,7 +1231,23 @@ const LiveTab: React.FC = () => {
                   <div className="text-xs font-bold text-white mb-1">{item.label}</div>
                   <div className="text-[8px] text-white/30 mb-2 scale-90">{item.sub}</div>
                   <div className="text-lg font-bold text-white font-display mb-3">{item.val}</div>
-                  <button className="text-[10px] text-primary flex items-center gap-0.5 opacity-80 hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (item.openSplitTab && setPendingSplitIntent && setActiveTab && selectedAthlete) {
+                        setPendingSplitIntent({
+                          season: selectedAthlete.race.season,
+                          location: selectedAthlete.race.location,
+                          athleteName: selectedAthlete.athlete.name,
+                          splitTab: item.openSplitTab
+                        });
+                        setActiveTab(AppTab.ME);
+                      } else if (!item.openSplitTab) {
+                        setCurrentView('ROXZONE_DETAIL');
+                      }
+                    }}
+                    className="text-[10px] text-primary flex items-center gap-0.5 opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
+                  >
                     点击查看 <span className="material-symbols-outlined text-[10px]">chevron_right</span>
                   </button>
                 </div>
@@ -1272,6 +1307,39 @@ const LiveTab: React.FC = () => {
     );
   };
 
+  // --- VIEW: 转换区明细（跑步/站点使用 DataTab 现成分段中心） ---
+  const renderRoxzoneDetail = () => {
+    const roxzoneTime = selectedAthlete?.results?.roxzone_time ?? '--:--';
+    const eventName = selectedAthlete?.race?.event_name ?? '';
+
+    return (
+      <div className="flex flex-col min-h-screen bg-background-dark animate-in slide-in-from-right-8 duration-300">
+        <header className="px-4 py-4 flex items-center justify-between sticky top-0 bg-background-dark/95 backdrop-blur-md z-30 border-b border-white/5">
+          <button onClick={goBack} className="text-white">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <span className="text-white font-bold">转换区明细</span>
+          <span className="w-10" />
+        </header>
+        <main className="flex-1 p-5 pb-32 overflow-y-auto no-scrollbar">
+          <div className="text-[10px] text-white/40 mb-4">{eventName}</div>
+          <div className="bg-[#15171A] border border-white/10 rounded-2xl p-6 mb-4">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="size-12 rounded-full bg-blue-400/20 flex items-center justify-center">
+                <span className="material-symbols-outlined text-blue-400">bolt</span>
+              </div>
+              <div>
+                <div className="text-[10px] text-white/40 uppercase tracking-wider">8次转换区总用时</div>
+                <div className="text-3xl font-bold text-white font-display text-blue-400">{roxzoneTime}</div>
+              </div>
+            </div>
+            <p className="text-[10px] text-white/30 text-center">跑步与功能站之间的 8 段转换区合计用时</p>
+          </div>
+        </main>
+      </div>
+    );
+  };
+
   // --- VIEW: ANALYSIS LITE (赛后快速分析) ---
   const renderAnalysisLite = () => {
     const displayData = selectedAthlete ? {
@@ -1283,6 +1351,8 @@ const LiveTab: React.FC = () => {
       divisionTotal: selectedAthlete.rankings.division_total,
       overallRank: selectedAthlete.rankings.overall_rank,
       overallTotal: selectedAthlete.rankings.overall_total,
+      ageGroupRank: selectedAthlete.rankings.age_group_rank ?? null,
+      ageGroupTotal: selectedAthlete.rankings.age_group_total ?? null,
     } : {
       eventName: 'HYROX 北京站 2026',
       name: '陈悦',
@@ -1292,6 +1362,8 @@ const LiveTab: React.FC = () => {
       divisionTotal: 200,
       overallRank: 1,
       overallTotal: 500,
+      ageGroupRank: null as number | null,
+      ageGroupTotal: null as number | null,
     };
 
     // 从 event_name 提取地点
@@ -1319,34 +1391,8 @@ const LiveTab: React.FC = () => {
         </div>
 
         <main className="flex-1 px-4 py-5 space-y-5 pb-32 overflow-y-auto no-scrollbar">
-          {/* Loading State */}
-          {isLoadingAnalysis && (
-            <div className="flex flex-col items-center justify-center pt-20">
-              <div className="size-12 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-white font-bold mb-2">AI 分析生成中...</p>
-              <p className="text-[10px] text-white/40">首次分析需要约 10 秒</p>
-            </div>
-          )}
-
-          {/* Error State */}
-          {!isLoadingAnalysis && analysisError && (
-            <div className="flex flex-col items-center justify-center pt-20">
-              <span className="material-symbols-outlined text-4xl text-white/40 mb-4">error</span>
-              <p className="text-white/60 mb-4">{analysisError}</p>
-              <button 
-                onClick={loadAnalysis}
-                className="px-6 py-2 bg-primary text-black font-bold rounded-lg"
-              >
-                重试
-              </button>
-            </div>
-          )}
-
-          {/* Content - show when not loading and no error */}
-          {!isLoadingAnalysis && !analysisError && (
-            <>
-              {/* Hero Card with Image */}
-              <div className="relative rounded-2xl overflow-hidden h-48 border border-white/10 group">
+          {/* Hero Card - 始终展示，避免请求失败时整页只有报错 */}
+          <div className="relative rounded-2xl overflow-hidden h-48 border border-white/10 group">
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10"></div>
                 <img src="https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=800&auto=format&fit=crop" className="w-full h-full object-cover grayscale opacity-60 group-hover:scale-105 transition-transform duration-700" />
                 
@@ -1357,9 +1403,9 @@ const LiveTab: React.FC = () => {
                   <h2 className="text-xl font-bold text-white mt-2">HYROX {displayData.division}</h2>
                 </div>
 
-                <div className="absolute bottom-4 left-4 right-4 z-20 flex justify-between items-end">
+                <div className="absolute bottom-4 left-4 right-4 z-20 grid grid-cols-2 gap-2">
                   <div className="text-center bg-black/40 backdrop-blur-md rounded-lg p-2 border border-white/10">
-                    <div className="text-2xl font-bold text-white font-display">{displayData.totalTime}</div>
+                    <div className="text-xl font-bold text-white font-display">{displayData.totalTime}</div>
                     <div className="text-[9px] text-white/40">完赛时间</div>
                   </div>
                   <div className="text-center bg-black/40 backdrop-blur-md rounded-lg p-2 border border-white/10">
@@ -1367,57 +1413,136 @@ const LiveTab: React.FC = () => {
                     <div className="text-[9px] text-white/40">总排名</div>
                   </div>
                   <div className="text-center bg-black/40 backdrop-blur-md rounded-lg p-2 border border-white/10">
-                    <div className="text-xl font-bold text-primary font-display">{displayData.division.includes('pro') ? 'PRO' : 'OPEN'}</div>
+                    <div className="text-lg font-bold text-primary font-display">{displayData.division.includes('pro') ? 'PRO' : 'OPEN'}</div>
                     <div className="text-[9px] text-white/40">组别</div>
+                  </div>
+                  <div className="text-center bg-black/40 backdrop-blur-md rounded-lg p-2 border border-white/10">
+                    <div className="text-lg font-bold text-white font-display">
+                      {displayData.ageGroupRank != null && displayData.ageGroupTotal != null
+                        ? `${displayData.ageGroupRank}/${displayData.ageGroupTotal}`
+                        : '--'}
+                    </div>
+                    <div className="text-[9px] text-white/40">年龄组排名</div>
                   </div>
                 </div>
               </div>
 
-              {/* Conclusion Card */}
+          {/* Loading State - 仅占位，不遮挡 Hero */}
+          {isLoadingAnalysis && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="size-12 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-white font-bold mb-2">AI 分析生成中...</p>
+              <p className="text-[10px] text-white/40">首次分析需要约 10 秒</p>
+            </div>
+          )}
+
+          {/* Error State - 内联在 Hero 下方，保留重试 */}
+          {!isLoadingAnalysis && analysisError && (
+            <div className="bg-[#1E2024] border border-white/10 rounded-2xl p-5 flex flex-col items-center justify-center">
+              <span className="material-symbols-outlined text-3xl text-white/40 mb-3">wifi_off</span>
+              <p className="text-white/70 text-sm mb-1">分析加载失败</p>
+              <p className="text-[10px] text-white/40 mb-4">{analysisError}</p>
+              <button
+                onClick={loadAnalysis}
+                className="px-6 py-2 bg-primary text-black font-bold rounded-lg text-sm"
+              >
+                重试
+              </button>
+            </div>
+          )}
+
+          {/* Content - 有分析数据时展示 */}
+          {!isLoadingAnalysis && !analysisError && (
+            <>
+              {/* Conclusion Card：一句话结论 + 分析口径 + 引导解锁 */}
               <div className="bg-[#1E2024] border border-primary/20 rounded-2xl p-5 relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <span className="material-symbols-outlined text-primary text-lg">psychology</span>
                   <h3 className="text-sm font-bold text-white">一句话结论</h3>
                 </div>
+                {analysisData?.analysis_scope && (
+                  <p className="text-[10px] text-white/40 mb-3">分析口径：{analysisData.analysis_scope}</p>
+                )}
                 <p className="text-sm text-white/80 leading-relaxed relative z-10">
-                  {analysisData?.summary ? highlightKeywords(analysisData.summary) : '暂无分析数据'}
+                  {(() => {
+                    const summary = analysisData?.summary;
+                    const isStr = typeof summary === 'string';
+                    return summary && isStr ? highlightKeywords(summary) : (summary ? String(summary) : '暂无分析数据');
+                  })()}
+                </p>
+                <p className="text-xs text-white/50 mt-3 leading-relaxed relative z-10">
+                  想了解逐段与顶尖水平的对比、省时拆解与训练建议？解锁详细报告获取完整分析。
                 </p>
                 <div className="absolute top-0 right-0 size-24 bg-primary/5 rounded-full blur-2xl -mt-8 -mr-8"></div>
               </div>
 
-              {/* Strength/Weakness Grid */}
+              {/* Strength/Weakness Grid + 分析口径 */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-[#1E2024] border border-white/5 rounded-2xl p-4">
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-2">
                     <span className="material-symbols-outlined text-primary text-sm filled">check_circle</span>
                     <h3 className="text-xs font-bold text-white">优势</h3>
                   </div>
-                  <ul className="space-y-2">
+                  {analysisData?.analysis_scope && (
+                    <p className="text-[9px] text-white/40 mb-2">分析口径：{analysisData.analysis_scope}</p>
+                  )}
+                  <ul className="space-y-3">
                     {analysisData?.strengths && analysisData.strengths.length > 0 ? (
-                      analysisData.strengths.map((item, i) => (
-                        <li key={i} className="flex items-center gap-2 text-xs text-white/60">
-                          <span className="size-1 bg-primary rounded-full flex-shrink-0"></span>
-                          {item}
-                        </li>
-                      ))
+                      analysisData.strengths.map((item, i) => {
+                        const text = typeof item === 'string' ? item : item.text;
+                        const percentile = typeof item === 'string' ? null : (item.percentile ?? null);
+                        const tagClass = percentile != null && !Number.isNaN(percentile)
+                          ? (percentile <= 25 ? 'bg-emerald-500/25 text-emerald-400 border border-emerald-500/40' : 'bg-amber-500/25 text-amber-400 border border-amber-500/40')
+                          : '';
+                        return (
+                          <li key={i} className="flex gap-2 text-xs text-white/60">
+                            <span className="size-1.5 bg-primary rounded-full flex-shrink-0 mt-1.5" aria-hidden />
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <p className="leading-snug">{text}</p>
+                              {percentile != null && !Number.isNaN(percentile) && (
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium w-fit ${tagClass}`}>
+                                  top {percentile}%
+                                </span>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })
                     ) : (
                       <li className="text-xs text-white/30">暂无数据</li>
                     )}
                   </ul>
                 </div>
                 <div className="bg-[#1E2024] border border-white/5 rounded-2xl p-4">
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-2">
                     <span className="material-symbols-outlined text-yellow-500 text-sm filled">warning</span>
                     <h3 className="text-xs font-bold text-white">短板</h3>
                   </div>
-                  <ul className="space-y-2">
+                  {analysisData?.analysis_scope && (
+                    <p className="text-[9px] text-white/40 mb-2">分析口径：{analysisData.analysis_scope}</p>
+                  )}
+                  <ul className="space-y-3">
                     {analysisData?.weaknesses && analysisData.weaknesses.length > 0 ? (
-                      analysisData.weaknesses.map((item, i) => (
-                        <li key={i} className="flex items-center gap-2 text-xs text-white/60">
-                          <span className="size-1 bg-yellow-500 rounded-full flex-shrink-0"></span>
-                          {item}
-                        </li>
-                      ))
+                      analysisData.weaknesses.map((item, i) => {
+                        const text = typeof item === 'string' ? item : item.text;
+                        const percentile = typeof item === 'string' ? null : (item.percentile ?? null);
+                        const tagClass = percentile != null && !Number.isNaN(percentile)
+                          ? (percentile <= 25 ? 'bg-emerald-500/25 text-emerald-400 border border-emerald-500/40' : 'bg-amber-500/25 text-amber-400 border border-amber-500/40')
+                          : '';
+                        return (
+                          <li key={i} className="flex gap-2 text-xs text-white/60">
+                            <span className="size-1.5 bg-yellow-500 rounded-full flex-shrink-0 mt-1.5" aria-hidden />
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <p className="leading-snug">{text}</p>
+                              {percentile != null && !Number.isNaN(percentile) && (
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium w-fit ${tagClass}`}>
+                                  top {percentile}%
+                                </span>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })
                     ) : (
                       <li className="text-xs text-white/30">暂无数据</li>
                     )}
@@ -1844,6 +1969,8 @@ const LiveTab: React.FC = () => {
         return renderResults();
       case 'SUMMARY':
         return renderSummary();
+      case 'ROXZONE_DETAIL':
+        return renderRoxzoneDetail();
       case 'ANALYSIS_LITE':
         return renderAnalysisLite();
       case 'PRO_REPORT':

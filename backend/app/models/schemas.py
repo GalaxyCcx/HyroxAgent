@@ -152,12 +152,19 @@ class SplitAnalyticsResponse(ResponseBase[SplitAnalyticsData]):
 
 # ==================== LLM 分析模型 ====================
 
+class AnalysisItem(BaseModel):
+    """优势/短板单项，可带对应口径下的百分位"""
+    text: str = Field(..., description="描述文案")
+    percentile: Optional[float] = Field(None, description="处于对应口径的前 x% 水平（0-100，越小越好）")
+
+
 class AnalysisData(BaseModel):
     """LLM 分析结果数据"""
     summary: str = Field(..., description="一句话总结")
-    strengths: list[str] = Field(default_factory=list, description="优势列表")
-    weaknesses: list[str] = Field(default_factory=list, description="短板列表")
+    strengths: list[AnalysisItem] = Field(default_factory=list, description="优势列表（含百分位）")
+    weaknesses: list[AnalysisItem] = Field(default_factory=list, description="短板列表（含百分位）")
     cached: bool = Field(default=False, description="是否为缓存数据")
+    analysis_scope: Optional[str] = Field(None, description="分析口径说明，如：本场组别内排名对比 / 全球同组别同性别前10%成绩对比")
 
 
 class AnalysisResponse(ResponseBase[AnalysisData]):

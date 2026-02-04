@@ -116,7 +116,17 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         # 创建所有表
         await conn.run_sync(Base.metadata.create_all)
-        
+        # 为旧库补充 analysis_cache.analysis_scope 列（若不存在）
+        try:
+            await conn.execute(text(
+                "ALTER TABLE analysis_cache ADD COLUMN analysis_scope VARCHAR(200)"
+            ))
+            logger.info("Added analysis_scope column to analysis_cache")
+        except Exception as e:
+            if "duplicate column" in str(e).lower():
+                pass
+            else:
+                raise
         # 启用 WAL 模式提升性能
         await conn.execute(text("PRAGMA journal_mode=WAL"))
         await conn.execute(text("PRAGMA synchronous=NORMAL"))

@@ -13,6 +13,14 @@ export enum AppTab {
   ME = 'me'        // 我的 - DataTab (个人数据/历史记录)
 }
 
+/** 从首页比赛总结跳转到「我的」分段中心时携带的意图 */
+export interface PendingSplitIntent {
+  season: number;
+  location: string;
+  athleteName: string;
+  splitTab: 'RUN' | 'STATION';
+}
+
 // ========== 用户个人资料 ==========
 export interface ProfileStats {
   completed: number;      // 已完成比赛数
@@ -238,11 +246,20 @@ export interface AthleteResult {
 }
 
 // ========== LLM 分析数据 ==========
+/** 优势/短板单项，可带对应口径下的百分位 */
+export interface AnalysisLiteItem {
+  text: string;
+  /** 处于对应口径的前 x% 水平（0-100，越小越好），无则仅展示 text */
+  percentile?: number | null;
+}
+
 export interface AnalysisLiteData {
   summary: string;
-  strengths: string[];
-  weaknesses: string[];
+  strengths: AnalysisLiteItem[];
+  weaknesses: AnalysisLiteItem[];
   cached: boolean;
+  /** 分析口径说明，如：本场组别内排名对比 / 全球同组别同性别前10%成绩对比 */
+  analysis_scope?: string;
 }
 
 // ========== 专业分析报告 ==========
