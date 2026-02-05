@@ -1,5 +1,6 @@
 {
-  "api_key": "sk-5b02cdae243544b19250dca63bde621f",
+  "_comment": "复制此文件为 llm_config.json 并填入你的 API Key",
+  "api_key": "sk-your-api-key-here",
   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
   "default": {
     "model": "qwen-max-latest",
