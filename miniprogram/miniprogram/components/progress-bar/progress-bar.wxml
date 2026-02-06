@@ -1,0 +1,24 @@
+<!--
+  progress-bar 组件
+  报告生成进度条
+-->
+<view class="progress-container">
+  <!-- 进度标题 -->
+  <view wx:if="{{title}}" class="progress-header">
+    <text class="progress-title">{{title}}</text>
+    <text class="progress-percent">{{percent}}%</text>
+  </view>
+  
+  <!-- 进度条 -->
+  <view class="progress-track">
+    <view 
+      class="progress-fill {{animated ? 'animated' : ''}}" 
+      style="width: {{percent}}%;"
+    ></view>
+  </view>
+  
+  <!-- 当前步骤说明 -->
+  <view wx:if="{{stepText}}" class="progress-step">
+    <text class="step-text">{{stepText}}</text>
+  </view>
+</view>

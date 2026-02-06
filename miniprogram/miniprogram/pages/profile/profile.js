@@ -1,8 +1,12 @@
 /**
  * 个人资料页
+ * 
+ * 新增功能：
+ * - 专业报告列表展示
  */
 const auth = require('../../services/auth');
 const claimService = require('../../services/claim');
+const api = require('../../services/api');
 
 Page({
   data: {
@@ -17,16 +21,21 @@ Page({
     claimedRaces: [],
     claimedLoading: false,
     
+    // 专业报告列表
+    reports: [],
+    reportsLoading: false,
+    
     // 用户统计
     stats: {
       completed: 0,
       pb: '--:--:--',
       ageGroup: '--',
       rank: '--',
+      reportsCount: 0,
     },
     
     // Tab
-    activeTab: 'races', // races / training
+    activeTab: 'races', // races / reports / training
     
     // 卡片菜单
     activeMenuIndex: -1,
@@ -58,11 +67,12 @@ Page({
       user,
     });
     
-    // 如果已登录，加载认领列表
+    // 如果已登录，加载认领列表和报告列表
     if (isLoggedIn) {
       this.loadClaimedRaces();
+      this.loadReports();
     } else {
-      this.setData({ claimedRaces: [] });
+      this.setData({ claimedRaces: [], reports: [] });
     }
   },
 
@@ -108,6 +118,79 @@ Page({
         claimedLoading: false,
       });
     }
+  },
+
+  /**
+   * 加载专业报告列表
+   */
+  async loadReports() {
+    const user = auth.getUser();
+    if (!user) return;
+    
+    this.setData({ reportsLoading: true });
+    
+    try {
+      const data = await api.listReports({ userId: user.id });
+      const reports = (data.reports || []).map(report => ({
+        ...report,
+        // 格式化时间
+        formatted_time: this.formatReportTime(report.created_at),
+        // 简化状态显示
+        status_text: report.status === 'completed' ? '已完成' : 
+                     report.status === 'generating' ? '生成中' : '待处理',
+        status_class: report.status === 'completed' ? 'success' : 
+                      report.status === 'generating' ? 'pending' : 'default',
+      }));
+      
+      this.setData({
+        reports,
+        reportsLoading: false,
+        stats: {
+          ...this.data.stats,
+          reportsCount: reports.length,
+        },
+      });
+    } catch (err) {
+      console.error('Load reports failed:', err);
+      this.setData({
+        reportsLoading: false,
+      });
+    }
+  },
+
+  /**
+   * 格式化报告时间
+   */
+  formatReportTime(timeStr) {
+    if (!timeStr) return '';
+    const date = new Date(timeStr);
+    const now = new Date();
+    const diff = now - date;
+    
+    // 24小时内显示"x小时前"
+    if (diff < 24 * 60 * 60 * 1000) {
+      const hours = Math.floor(diff / (60 * 60 * 1000));
+      return hours > 0 ? `${hours}小时前` : '刚刚';
+    }
+    
+    // 7天内显示"x天前"
+    if (diff < 7 * 24 * 60 * 60 * 1000) {
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+      return `${days}天前`;
+    }
+    
+    // 其他显示日期
+    return `${date.getMonth() + 1}月${date.getDate()}日`;
+  },
+
+  /**
+   * 点击报告卡片
+   */
+  onTapReport(e) {
+    const { report } = e.currentTarget.dataset;
+    wx.navigateTo({
+      url: `/pages/report/report?id=${report.report_id}`,
+    });
   },
 
   /**

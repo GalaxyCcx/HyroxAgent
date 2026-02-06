@@ -62,9 +62,20 @@ function request(options) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           // 统一响应格式处理
           const data = res.data;
+          
+          // 标准格式: { code: 0, data: { ... } }
           if (data.code === 0) {
             resolve(data.data);
-          } else {
+          } 
+          // 报告 API 直接返回对象格式: { report_id, status, ... }
+          else if (data.report_id !== undefined) {
+            resolve(data);
+          }
+          // 其他直接返回的数据格式（无 code 字段但有有效数据）
+          else if (data.code === undefined && Object.keys(data).length > 0) {
+            resolve(data);
+          }
+          else {
             reject({
               code: data.code,
               message: data.message || '请求失败',

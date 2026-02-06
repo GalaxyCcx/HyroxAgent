@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "专业分析报告",
+  "usingComponents": {
+    "progress-bar": "../../components/progress-bar/progress-bar",
+    "block-renderer": "../../components/block-renderer/block-renderer",
+    "chart-renderer": "../../components/chart-renderer/chart-renderer"
+  }
+}

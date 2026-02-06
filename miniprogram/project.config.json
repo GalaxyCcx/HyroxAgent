@@ -1,5 +1,6 @@
 {
   "description": "HyroxAgent 小程序",
+  "miniprogramRoot": "miniprogram/",
   "packOptions": {
     "ignore": [],
     "include": []
@@ -44,7 +45,7 @@
     "disableSWC": true
   },
   "compileType": "miniprogram",
-  "libVersion": "3.3.4",
+  "libVersion": "3.14.0",
   "appid": "wxcfed9bf3ed5976b7",
   "projectname": "hyrox-agent",
   "condition": {},
@@ -52,6 +53,6 @@
     "tabIndent": "insertSpaces",
     "tabSize": 2
   },
-  "srcMiniprogramRoot": "miniprogram/",
+  "srcMiniprogramRoot": "",
   "simulatorPluginLibVersion": {}
 }

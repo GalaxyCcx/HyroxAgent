@@ -1,0 +1,19 @@
+<!--
+  chart-renderer 组件
+  高级 ECharts 渲染器，用于报告页面图表展示
+-->
+<view class="chart-container" style="height: {{height}}rpx;">
+  <view wx:if="{{loading}}" class="chart-loading">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+  <view wx:elif="{{error}}" class="chart-error">
+    <text class="error-text">{{error}}</text>
+  </view>
+  <ec-canvas 
+    wx:else
+    id="{{chartId}}"
+    canvas-id="{{chartId}}"
+    ec="{{ec}}"
+  ></ec-canvas>
+</view>

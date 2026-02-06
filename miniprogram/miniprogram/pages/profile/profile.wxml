@@ -77,6 +77,11 @@
           bindtap="onTabChange"
         >我的比赛</view>
         <view 
+          class="tab {{activeTab === 'reports' ? 'active' : ''}}"
+          data-tab="reports"
+          bindtap="onTabChange"
+        >专业报告 ({{stats.reportsCount}})</view>
+        <view 
           class="tab {{activeTab === 'training' ? 'active' : ''}}"
           data-tab="training"
           bindtap="onTabChange"
@@ -170,6 +175,55 @@
           <view class="empty-btn" bindtap="onGoSearch">
             <text>去搜索</text>
           </view>
+        </view>
+      </block>
+
+      <!-- 专业报告 Tab 内容 -->
+      <block wx:if="{{activeTab === 'reports'}}">
+        <!-- 加载中 -->
+        <view class="loading-state" wx:if="{{reportsLoading}}">
+          <view class="loading-spinner"></view>
+          <text class="loading-text">加载中...</text>
+        </view>
+
+        <!-- 报告列表 -->
+        <view class="reports-list" wx:if="{{!reportsLoading && reports.length > 0}}">
+          <view 
+            class="report-card"
+            wx:for="{{reports}}"
+            wx:key="report_id"
+            data-report="{{item}}"
+            bindtap="onTapReport"
+          >
+            <view class="report-card-header">
+              <view class="report-badge {{item.status_class}}">
+                <text>{{item.status_text}}</text>
+              </view>
+              <text class="report-time">{{item.formatted_time}}</text>
+            </view>
+            
+            <view class="report-title">{{item.title || 'HYROX 专业分析报告'}}</view>
+            
+            <view class="report-meta">
+              <text class="meta-item">{{item.athlete_name}}</text>
+              <text class="meta-divider">•</text>
+              <text class="meta-item">{{item.location}}</text>
+              <text class="meta-divider">•</text>
+              <text class="meta-item">S{{item.season}}</text>
+            </view>
+            
+            <view class="report-action">
+              <text>查看报告</text>
+              <text class="action-arrow">→</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 空状态 -->
+        <view class="empty-state" wx:if="{{!reportsLoading && reports.length === 0}}">
+          <view class="empty-icon">📄</view>
+          <text class="empty-title">暂无专业报告</text>
+          <text class="empty-desc">在比赛分析页面生成您的第一份专业报告</text>
         </view>
       </block>
 

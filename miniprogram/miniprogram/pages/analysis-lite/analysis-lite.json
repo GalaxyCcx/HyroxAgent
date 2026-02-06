@@ -1,5 +1,9 @@
 {
   "navigationStyle": "custom",
   "navigationBarBackgroundColor": "#101013",
-  "backgroundColor": "#101013"
+  "backgroundColor": "#101013",
+  "usingComponents": {
+    "image-uploader": "../../components/image-uploader/image-uploader",
+    "progress-bar": "../../components/progress-bar/progress-bar"
+  }
 }

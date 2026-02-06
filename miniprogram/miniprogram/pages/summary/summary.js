@@ -184,6 +184,8 @@ Page({
       `totalTime=${results?.total_time || ''}`,
       `overallRank=${rankings?.overall_rank || 0}`,
       `overallTotal=${rankings?.overall_total || 0}`,
+      `ageGroupRank=${rankings?.age_group_rank || 0}`,
+      `ageGroupTotal=${rankings?.age_group_total || 0}`,
     ].join('&');
     
     wx.navigateTo({

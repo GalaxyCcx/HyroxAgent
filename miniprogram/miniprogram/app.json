@@ -9,6 +9,8 @@
     "pages/splits/splits",
     "pages/result/result",
     "pages/analysis-lite/analysis-lite",
+    "pages/report/report",
+    "pages/poster/poster",
     "pages/index/index"
   ],
   "window": {

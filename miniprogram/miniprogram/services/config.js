@@ -3,7 +3,7 @@
  */
 const config = {
   // 临时域名（备案期间使用 cpolar）
-  baseUrl: 'https://765c95c6.r11.vip.cpolar.cn',
+  baseUrl: 'https://www.hyroxagent.cn',
   
   // API 版本前缀
   apiPrefix: '/api/v1',

@@ -1,0 +1,114 @@
+<!--
+  专业分析报告详情页
+  支持5个章节展示：总览、跑步分析、训练站分析、心率分析、建议
+-->
+<view class="report-page">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载报告中...</text>
+  </view>
+
+  <!-- 生成中状态 -->
+  <view wx:elif="{{generating}}" class="generating-container">
+    <view class="generating-card">
+      <view class="generating-icon">
+        <view class="pulse-ring"></view>
+        <text class="icon-text">AI</text>
+      </view>
+      <text class="generating-title">正在生成专业报告</text>
+      <progress-bar
+        percent="{{generateProgress}}"
+        step-text="{{generateStep}}"
+        animated="{{true}}"
+      />
+      <text class="generating-hint">AI 正在分析您的比赛数据，请稍候...</text>
+    </view>
+  </view>
+
+  <!-- 错误状态 -->
+  <view wx:elif="{{error}}" class="error-container">
+    <view class="error-icon">!</view>
+    <text class="error-text">{{error}}</text>
+    <button class="retry-btn" bind:tap="onRetry">重试</button>
+  </view>
+
+  <!-- 报告内容 -->
+  <scroll-view 
+    wx:else 
+    scroll-y 
+    class="report-content"
+    enhanced="{{true}}"
+    show-scrollbar="{{false}}"
+  >
+    <!-- 报告头部 -->
+    <view class="report-header">
+      <view class="header-badge">专业分析</view>
+      <text class="report-title">{{report.title || '比赛分析报告'}}</text>
+      <view class="report-meta">
+        <text class="meta-item">{{report.athlete_name}}</text>
+        <text class="meta-divider">|</text>
+        <text class="meta-item">{{report.race_info}}</text>
+      </view>
+      <view class="report-time">
+        <text>生成时间：{{report.created_at}}</text>
+      </view>
+    </view>
+
+    <!-- 章节导航 -->
+    <scroll-view scroll-x class="section-nav">
+      <view 
+        wx:for="{{sections}}" 
+        wx:key="id"
+        class="nav-item {{activeSection === item.id ? 'active' : ''}}"
+        bind:tap="onSectionTap"
+        data-id="{{item.id}}"
+      >
+        <text class="nav-icon">{{item.icon}}</text>
+        <text class="nav-text">{{item.title}}</text>
+      </view>
+    </scroll-view>
+
+    <!-- 章节内容 -->
+    <view class="sections-container">
+      <view 
+        wx:for="{{report.sections}}" 
+        wx:key="id"
+        id="section-{{item.id}}"
+        class="section"
+      >
+        <!-- 章节标题 -->
+        <view class="section-header">
+          <view class="section-number">{{index + 1}}</view>
+          <text class="section-title">{{item.title}}</text>
+        </view>
+
+        <!-- 章节内容块 -->
+        <view class="section-content">
+          <block-renderer 
+            wx:for="{{item.blocks}}" 
+            wx:key="blockIndex"
+            wx:for-item="block"
+            wx:for-index="blockIndex"
+            block="{{block}}"
+          />
+        </view>
+      </view>
+    </view>
+
+    <!-- 报告底部 -->
+    <view class="report-footer">
+      <text class="footer-text">— 报告结束 —</text>
+      <view class="footer-actions">
+        <button class="action-btn share-btn" open-type="share">
+          <text class="btn-icon">↗</text>
+          <text>分享报告</text>
+        </button>
+        <button class="action-btn poster-btn" bind:tap="onGeneratePoster">
+          <text class="btn-icon">📷</text>
+          <text>生成海报</text>
+        </button>
+      </view>
+    </view>
+  </scroll-view>
+</view>

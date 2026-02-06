@@ -1,7 +1,8 @@
 /**
  * API 接口定义
  */
-const { get } = require('./request');
+const { get, post } = require('./request');
+const config = require('./config');
 
 /**
  * 搜索运动员建议（模糊搜索）
@@ -93,14 +94,105 @@ function getAnalysisLite(season, location, athleteName) {
   return get(`/results/${season}/${location}/${encodedName}/analysis`);
 }
 
+// ==================== 专业报告 API ====================
+
+/**
+ * 创建专业分析报告（V2 新架构）
+ * @param {number} season 赛季
+ * @param {string} location 比赛地点
+ * @param {string} athleteName 运动员姓名
+ * @param {Object} options 可选参数
+ * @param {number} options.userId 用户ID
+ * @param {string[]} options.heartRateImages 心率图片路径列表
+ * @param {boolean} options.forceRegenerate 强制重新生成（默认 true）
+ * @returns {Promise} { report_id, status, message }
+ */
+function createReport(season, location, athleteName, options = {}) {
+  const data = {
+    season,
+    location,
+    athlete_name: athleteName,
+    force_regenerate: options.forceRegenerate !== false, // 默认 true
+  };
+  if (options.userId) data.user_id = options.userId;
+  if (options.heartRateImages) data.heart_rate_images = options.heartRateImages;
+  return post('/reports/v2/create', data);
+}
+
+/**
+ * 触发报告生成（小程序版本）
+ * 使用后台任务端点触发生成，然后通过轮询获取状态
+ * @param {string} reportId 报告ID
+ * @param {string[]} heartRateImages 心率图片路径列表（可选）
+ * @returns {Promise} 触发结果
+ */
+function triggerGenerate(reportId, heartRateImages = []) {
+  // 使用新的后台任务触发端点（POST /v2/trigger/{reportId}）
+  const data = {};
+  if (heartRateImages.length > 0) {
+    data.heart_rate_images = heartRateImages;
+  }
+  return post(`/reports/v2/trigger/${reportId}`, data);
+}
+
+/**
+ * 获取报告生成状态
+ * @param {string} reportId 报告ID
+ * @returns {Promise} { report_id, status, progress, current_step, title }
+ */
+function getReportStatus(reportId) {
+  return get(`/reports/status/${reportId}`);
+}
+
+/**
+ * 获取报告详情
+ * @param {string} reportId 报告ID
+ * @returns {Promise} 完整报告数据（包含所有章节和图表配置）
+ */
+function getReportDetail(reportId) {
+  return get(`/reports/detail/${reportId}`);
+}
+
+/**
+ * 获取报告列表
+ * @param {Object} options 筛选条件
+ * @param {number} options.userId 用户ID
+ * @param {string} options.athleteName 运动员姓名
+ * @returns {Promise} { reports: ProReportSummary[] }
+ */
+function listReports(options = {}) {
+  const params = {};
+  if (options.userId) params.user_id = options.userId;
+  if (options.athleteName) params.athlete_name = options.athleteName;
+  return get('/reports/list', params);
+}
+
+/**
+ * 获取心率图片列表
+ * @param {string} reportId 报告ID
+ * @returns {Promise} { images, total }
+ */
+function getHeartRateImages(reportId) {
+  return get(`/upload/${reportId}/images`);
+}
+
 module.exports = {
+  // 运动员相关
   suggestAthletes,
   searchAthletes,
   getAthleteResult,
   getAnalytics,
+  getAnalysisLite,
+  // 赛事相关
   getRecentRaces,
   getLeaderboard,
-  getAnalysisLite,
+  // 专业报告相关
+  createReport,
+  triggerGenerate,
+  getReportStatus,
+  getReportDetail,
+  listReports,
+  getHeartRateImages,
 };
 
 

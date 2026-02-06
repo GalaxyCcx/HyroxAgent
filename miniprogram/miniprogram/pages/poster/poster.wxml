@@ -1,0 +1,106 @@
+<!--战报海报页-->
+<view class="poster-page">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载报告数据...</text>
+  </view>
+
+  <!-- 错误状态 -->
+  <view wx:elif="{{error}}" class="error-container">
+    <view class="error-icon">!</view>
+    <text class="error-text">{{error}}</text>
+    <button class="retry-btn" bind:tap="loadReport">重试</button>
+  </view>
+
+  <!-- 海报内容 -->
+  <view wx:else class="poster-content">
+    <!-- 海报预览 -->
+    <view class="poster-preview">
+      <view class="poster-card" id="poster-canvas">
+        <!-- 头部装饰 -->
+        <view class="poster-header">
+          <view class="header-gradient"></view>
+          <view class="header-content">
+            <text class="brand-text">HYROX</text>
+            <text class="event-text">{{report.location}} {{report.season}}</text>
+          </view>
+        </view>
+
+        <!-- 主体内容 -->
+        <view class="poster-body">
+          <!-- 运动员信息 -->
+          <view class="athlete-section">
+            <text class="athlete-name">{{report.athlete_name}}</text>
+            <view class="athlete-tags">
+              <text class="tag">{{report.division || 'OPEN'}}</text>
+              <text class="tag">{{report.gender === 'male' ? '男子' : '女子'}}</text>
+            </view>
+          </view>
+
+          <!-- 核心数据 -->
+          <view class="data-section">
+            <view class="data-item main">
+              <text class="data-label">完赛时间</text>
+              <text class="data-value">{{report.total_time || '--:--:--'}}</text>
+            </view>
+            <view class="data-row">
+              <view class="data-item">
+                <text class="data-label">总排名</text>
+                <text class="data-value">#{{report.overall_rank || '-'}}</text>
+              </view>
+              <view class="data-item">
+                <text class="data-label">组别排名</text>
+                <text class="data-value">#{{report.division_rank || '-'}}</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- AI 总结 -->
+          <view class="summary-section" wx:if="{{report.summary}}">
+            <view class="summary-header">
+              <text class="summary-icon">🧠</text>
+              <text class="summary-title">AI 分析</text>
+            </view>
+            <text class="summary-text">{{report.summary}}</text>
+          </view>
+
+          <!-- 亮点标签 -->
+          <view class="highlights-section" wx:if="{{report.strengths && report.strengths.length > 0}}">
+            <view class="highlight-tag" wx:for="{{report.strengths}}" wx:key="index" wx:if="{{index < 3}}">
+              <text class="highlight-icon">✓</text>
+              <text class="highlight-text">{{item}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 底部 -->
+        <view class="poster-footer">
+          <view class="qrcode-placeholder">
+            <text class="qr-text">扫码查看</text>
+            <text class="qr-text">完整报告</text>
+          </view>
+          <view class="footer-info">
+            <text class="footer-brand">HYROX Agent</text>
+            <text class="footer-slogan">你的私人 HYROX 教练</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="action-buttons">
+      <button class="action-btn primary" bind:tap="onSavePoster">
+        <text class="btn-icon">📥</text>
+        <text>保存到相册</text>
+      </button>
+      <button class="action-btn secondary" open-type="share">
+        <text class="btn-icon">↗</text>
+        <text>分享给好友</text>
+      </button>
+    </view>
+
+    <!-- 提示 -->
+    <text class="tip-text">长按海报可保存或分享</text>
+  </view>
+</view>

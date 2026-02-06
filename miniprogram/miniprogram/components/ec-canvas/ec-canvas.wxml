@@ -1,0 +1,23 @@
+<!--
+  ec-canvas 组件模板
+  官方 ECharts 小程序组件
+-->
+<canvas 
+  wx:if="{{isUseNewCanvas}}"
+  type="2d"
+  class="ec-canvas"
+  canvas-id="{{canvasId}}"
+  id="{{canvasId}}"
+  bindtouchstart="touchStart"
+  bindtouchmove="touchMove"
+  bindtouchend="touchEnd"
+></canvas>
+
+<canvas
+  wx:else
+  class="ec-canvas"
+  canvas-id="{{canvasId}}"
+  bindtouchstart="touchStart"
+  bindtouchmove="touchMove"
+  bindtouchend="touchEnd"
+></canvas>

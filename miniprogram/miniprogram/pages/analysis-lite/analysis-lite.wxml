@@ -38,31 +38,39 @@
 
   <!-- 内容区域 -->
   <scroll-view scroll-y class="content" wx:if="{{!loading && !error}}">
-    <!-- Hero 卡片 -->
+    <!-- Hero 卡片 - 2x2 网格布局 -->
     <view class="hero-card">
-      <view class="hero-overlay"></view>
-      <image class="hero-bg" src="https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=800&auto=format&fit=crop" mode="aspectFill"></image>
-      
       <view class="hero-top">
         <view class="hero-badge">
           <text class="badge-icon">📍</text>
-          <text class="badge-text">{{raceName}}</text>
+          <text class="badge-text">{{raceName || location}}</text>
         </view>
-        <text class="hero-title">HYROX {{division}}</text>
       </view>
       
-      <view class="hero-bottom">
-        <view class="hero-stat">
-          <text class="stat-value-lg">{{totalTime}}</text>
-          <text class="stat-label-sm">完赛时间</text>
+      <view class="hero-grid">
+        <!-- 完赛时间 -->
+        <view class="hero-stat-box">
+          <text class="stat-value-xl">{{totalTime}}</text>
+          <text class="stat-label">完赛时间</text>
         </view>
-        <view class="hero-stat">
-          <text class="stat-value-lg">{{overallRank}}<text class="stat-sub">/{{overallTotal}}</text></text>
-          <text class="stat-label-sm">总排名</text>
+        <!-- 总排名 -->
+        <view class="hero-stat-box">
+          <text class="stat-value-xl">{{overallRank}}<text class="stat-sub">/{{overallTotal}}</text></text>
+          <text class="stat-label">总排名</text>
         </view>
-        <view class="hero-stat">
-          <text class="stat-value-lg highlight">{{division}}</text>
-          <text class="stat-label-sm">组别</text>
+        <!-- 组别 -->
+        <view class="hero-stat-box">
+          <text class="stat-value-xl highlight">{{division}}</text>
+          <text class="stat-label">组别</text>
+        </view>
+        <!-- 年龄组排名 -->
+        <view class="hero-stat-box" wx:if="{{ageGroupRank > 0 && ageGroupTotal > 0}}">
+          <text class="stat-value-xl">{{ageGroupRank}}<text class="stat-sub">/{{ageGroupTotal}}</text></text>
+          <text class="stat-label">年龄组排名</text>
+        </view>
+        <view class="hero-stat-box" wx:else>
+          <text class="stat-value-xl">-</text>
+          <text class="stat-label">年龄组排名</text>
         </view>
       </view>
     </view>
@@ -73,7 +81,13 @@
         <text class="card-icon">🧠</text>
         <text class="card-title">一句话结论</text>
       </view>
-      <text class="conclusion-text">{{summary}}</text>
+      <view class="analysis-scope conclusion-scope" wx:if="{{analysisScope}}">
+        <text>分析口径：{{analysisScope}}</text>
+      </view>
+      <rich-text class="conclusion-text" nodes="{{summaryHtml}}"></rich-text>
+      <view class="conclusion-hint">
+        <text>想了解逐段与顶尖水平的对比、省时拆解与训练建议？解锁详细报告获取完整分析。</text>
+      </view>
       <view class="card-glow"></view>
     </view>
 
@@ -85,10 +99,18 @@
           <text class="grid-icon good">✓</text>
           <text class="grid-title">优势</text>
         </view>
+        <view class="analysis-scope" wx:if="{{analysisScope}}">
+          <text>分析口径：{{analysisScope}}</text>
+        </view>
         <view class="grid-list">
           <view class="grid-item" wx:for="{{strengths}}" wx:key="index">
             <text class="item-dot good"></text>
-            <text class="item-text">{{item}}</text>
+            <view class="item-content">
+              <text class="item-text">{{item.text}}</text>
+              <view class="percentile-tag good" wx:if="{{item.percentile != null}}">
+                <text>top {{item.percentile}}%</text>
+              </view>
+            </view>
           </view>
           <view class="grid-item empty" wx:if="{{strengths.length === 0}}">
             <text class="item-text muted">暂无数据</text>
@@ -102,10 +124,18 @@
           <text class="grid-icon warn">⚠</text>
           <text class="grid-title">短板</text>
         </view>
+        <view class="analysis-scope" wx:if="{{analysisScope}}">
+          <text>分析口径：{{analysisScope}}</text>
+        </view>
         <view class="grid-list">
           <view class="grid-item" wx:for="{{weaknesses}}" wx:key="index">
             <text class="item-dot warn"></text>
-            <text class="item-text">{{item}}</text>
+            <view class="item-content">
+              <text class="item-text">{{item.text}}</text>
+              <view class="percentile-tag {{item.percentile <= 25 ? 'good' : 'warn'}}" wx:if="{{item.percentile != null}}">
+                <text>top {{item.percentile}}%</text>
+              </view>
+            </view>
           </view>
           <view class="grid-item empty" wx:if="{{weaknesses.length === 0}}">
             <text class="item-text muted">暂无数据</text>
@@ -151,4 +181,54 @@
       <text class="cache-text">💾 已缓存的分析结果</text>
     </view>
   </scroll-view>
+
+  <!-- 心率图片上传弹窗 -->
+  <view class="modal-overlay" wx:if="{{showUploadModal}}" bind:tap="onCloseModal">
+    <view class="modal-container" catch:tap>
+      <view class="modal-header">
+        <text class="modal-title">上传心率截图</text>
+        <view class="modal-close" bind:tap="onCloseModal">×</view>
+      </view>
+      
+      <view class="modal-body">
+        <view class="modal-hint">
+          <text>上传运动手表的心率截图（可选），AI 将为您生成更精准的心率分析报告</text>
+        </view>
+        
+        <image-uploader
+          title="心率截图"
+          hint="支持 PNG/JPG 格式，最多3张"
+          max-count="{{3}}"
+          images="{{heartRateImages}}"
+          bind:change="onHeartRateImagesChange"
+        />
+      </view>
+      
+      <view class="modal-footer">
+        <view class="modal-btn secondary" bind:tap="onSkipUpload">
+          <text>跳过，直接生成</text>
+        </view>
+        <view class="modal-btn primary" bind:tap="onConfirmUpload">
+          <text>{{heartRateImages.length > 0 ? '开始生成报告' : '跳过并生成'}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 生成进度弹窗 -->
+  <view class="modal-overlay" wx:if="{{showProgressModal}}">
+    <view class="modal-container progress-modal">
+      <view class="progress-icon">
+        <view class="pulse-ring"></view>
+        <text class="icon-text">AI</text>
+      </view>
+      <text class="progress-title">正在生成专业报告</text>
+      <progress-bar
+        percent="{{generateProgress}}"
+        step-text="{{generateStep}}"
+        animated="{{true}}"
+      />
+      <text class="progress-hint">AI 正在分析您的比赛数据，预计需要 30-60 秒...</text>
+    </view>
+  </view>
 </view>

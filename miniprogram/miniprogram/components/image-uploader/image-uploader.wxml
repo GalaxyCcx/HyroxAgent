@@ -1,0 +1,59 @@
+<!--
+  image-uploader 组件
+  心率图片上传器
+-->
+<view class="uploader-container">
+  <!-- 标题区域 -->
+  <view wx:if="{{title}}" class="uploader-header">
+    <text class="uploader-title">{{title}}</text>
+    <text wx:if="{{maxCount > 0}}" class="uploader-count">{{images.length}}/{{maxCount}}</text>
+  </view>
+  
+  <!-- 提示文字 -->
+  <view wx:if="{{hint}}" class="uploader-hint">
+    <text>{{hint}}</text>
+  </view>
+  
+  <!-- 图片网格 -->
+  <view class="image-grid">
+    <!-- 已选图片列表 -->
+    <view 
+      wx:for="{{images}}" 
+      wx:key="index" 
+      class="image-item"
+    >
+      <image 
+        class="image-preview" 
+        src="{{item}}" 
+        mode="aspectFill"
+        bind:tap="onPreviewImage"
+        data-index="{{index}}"
+      />
+      <view 
+        class="image-delete" 
+        bind:tap="onDeleteImage" 
+        data-index="{{index}}"
+      >
+        <text class="delete-icon">×</text>
+      </view>
+    </view>
+    
+    <!-- 添加按钮 -->
+    <view 
+      wx:if="{{images.length < maxCount}}"
+      class="add-button"
+      bind:tap="onChooseImage"
+    >
+      <view class="add-icon">+</view>
+      <text class="add-text">添加图片</text>
+    </view>
+  </view>
+  
+  <!-- 上传进度 -->
+  <view wx:if="{{uploading}}" class="upload-progress">
+    <view class="progress-track">
+      <view class="progress-fill" style="width: {{uploadProgress}}%;"></view>
+    </view>
+    <text class="progress-text">上传中 {{uploadProgress}}%</text>
+  </view>
+</view>

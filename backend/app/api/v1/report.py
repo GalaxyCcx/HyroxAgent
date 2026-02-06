@@ -350,6 +350,67 @@ async def generate_report_stream_v2_post(
     )
 
 
+# ==================== 小程序专用端点（非流式） ====================
+
+class TriggerGenerateResponse(BaseModel):
+    """触发生成响应"""
+    report_id: str
+    status: str
+    message: str
+
+
+async def run_generation_in_background(report_id: str, heart_rate_images: Optional[List[str]] = None):
+    """
+    后台运行报告生成（非流式）
+    
+    用于不支持 SSE 的客户端（如小程序）
+    """
+    db = sync_session_maker()
+    try:
+        # 消费生成器中的所有事件（不流式返回）
+        async for event in report_generator.generate_report_stream_v3(
+            db,
+            report_id,
+            heart_rate_images=heart_rate_images
+        ):
+            # 只记录日志，不返回给客户端
+            event_type = event.get("event", "message")
+            if event_type == "error":
+                print(f"[Background Generation] Error for {report_id}: {event.get('data', {}).get('message')}")
+            elif event_type == "complete":
+                print(f"[Background Generation] Completed for {report_id}")
+            # 给数据库一些处理时间
+            await asyncio.sleep(0.1)
+    except Exception as e:
+        print(f"[Background Generation] Exception for {report_id}: {e}")
+    finally:
+        db.close()
+
+
+@router.post("/v2/trigger/{report_id}", response_model=TriggerGenerateResponse)
+async def trigger_generate_background(
+    report_id: str,
+    background_tasks: BackgroundTasks,
+    heart_rate_images: Optional[List[str]] = Body(None, description="心率图片路径列表"),
+):
+    """
+    触发报告生成（后台任务，非流式）
+    
+    专为不支持 SSE 的客户端设计（如微信小程序）
+    
+    - 立即返回，生成在后台进行
+    - 客户端通过 /status/{report_id} 轮询状态
+    """
+    # 添加后台任务
+    background_tasks.add_task(run_generation_in_background, report_id, heart_rate_images)
+    
+    return TriggerGenerateResponse(
+        report_id=report_id,
+        status="started",
+        message="报告生成已启动，请通过 /status 端点查询进度",
+    )
+
+
 # ==================== V3 配置化架构端点 ====================
 
 class CreateReportRequestV3(BaseModel):
