@@ -391,7 +391,7 @@ async def run_generation_in_background(report_id: str, heart_rate_images: Option
 async def trigger_generate_background(
     report_id: str,
     background_tasks: BackgroundTasks,
-    heart_rate_images: Optional[List[str]] = Body(None, description="心率图片路径列表"),
+    heart_rate_images: Optional[List[str]] = Body(default=None, embed=True, description="心率图片路径列表"),
 ):
     """
     触发报告生成（后台任务，非流式）
