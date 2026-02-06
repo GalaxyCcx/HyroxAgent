@@ -128,11 +128,10 @@ function createReport(season, location, athleteName, options = {}) {
  */
 function triggerGenerate(reportId, heartRateImages = []) {
   // 使用新的后台任务触发端点（POST /v2/trigger/{reportId}）
-  const data = {};
-  if (heartRateImages.length > 0) {
-    data.heart_rate_images = heartRateImages;
-  }
-  return post(`/reports/v2/trigger/${reportId}`, data);
+  // 始终发送完整格式，避免 FastAPI 422 错误
+  return post(`/reports/v2/trigger/${reportId}`, {
+    heart_rate_images: heartRateImages.length > 0 ? heartRateImages : null,
+  });
 }
 
 /**
