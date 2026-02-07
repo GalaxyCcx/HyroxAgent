@@ -12,7 +12,7 @@ const { isLoggedIn, login } = require('../../services/auth');
 
 // 轮询配置
 const POLL_INTERVAL = 2000;
-const MAX_POLL_COUNT = 150;
+const MAX_POLL_COUNT = 300; // 300 × 2s = 10分钟，覆盖多章节 LLM 生成耗时
 
 Page({
   data: {

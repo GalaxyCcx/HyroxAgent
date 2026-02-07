@@ -380,9 +380,19 @@ async def run_generation_in_background(report_id: str, heart_rate_images: Option
             report_id,
             heart_rate_images=heart_rate_images
         ):
-            # 只记录日志，不返回给客户端
             event_type = event.get("event", "message")
-            if event_type == "error":
+            if event_type == "progress":
+                # 实时更新进度到数据库，供前端轮询读取
+                data = event.get("data", {})
+                try:
+                    report = db.query(ProReport).filter(ProReport.report_id == report_id).first()
+                    if report:
+                        report.progress = data.get("progress", 0)
+                        report.current_step = data.get("step", "")
+                        db.commit()
+                except Exception:
+                    pass
+            elif event_type == "error":
                 print(f"[Background Generation] Error for {report_id}: {event.get('data', {}).get('message')}")
             elif event_type == "complete":
                 print(f"[Background Generation] Completed for {report_id}")
