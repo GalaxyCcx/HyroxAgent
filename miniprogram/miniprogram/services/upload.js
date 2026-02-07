@@ -169,7 +169,7 @@ async function uploadHeartRateImages(reportId, filePaths, onProgress) {
   // 收集所有成功上传的图片路径
   const uploadedImages = results
     .filter(r => r.success && r.data)
-    .flatMap(r => r.data.images || [r.data]);
+    .flatMap(r => (r.data.uploaded || []).map(item => item.image_path));
 
   return {
     total: total,

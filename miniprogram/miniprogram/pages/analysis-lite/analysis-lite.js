@@ -379,7 +379,7 @@ Page({
         wx.navigateTo({
           url: `/pages/report/report?id=${reportId}`,
         });
-      } else if (status.status === 'failed') {
+      } else if (status.status === 'failed' || status.status === 'error') {
         // 生成失败
         this.stopPolling();
         this.setData({ showProgressModal: false });

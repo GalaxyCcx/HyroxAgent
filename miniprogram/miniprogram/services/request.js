@@ -82,9 +82,11 @@ function request(options) {
             });
           }
         } else {
+          // 兼容 FastAPI 422 验证错误格式
+          const message = res.data?.message || (Array.isArray(res.data?.detail) ? res.data.detail[0]?.msg : res.data?.detail) || `请求失败: ${res.statusCode}`;
           reject({
             code: res.statusCode,
-            message: res.data?.message || `请求失败: ${res.statusCode}`,
+            message,
           });
         }
       },

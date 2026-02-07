@@ -370,6 +370,8 @@ async def run_generation_in_background(report_id: str, heart_rate_images: Option
     
     用于不支持 SSE 的客户端（如小程序）
     """
+    from ...db.models import ProReport
+
     db = sync_session_maker()
     try:
         # 消费生成器中的所有事件（不流式返回）
@@ -388,6 +390,15 @@ async def run_generation_in_background(report_id: str, heart_rate_images: Option
             await asyncio.sleep(0.1)
     except Exception as e:
         print(f"[Background Generation] Exception for {report_id}: {e}")
+        # 兜底：确保报告状态不会永远卡在 generating
+        try:
+            report = db.query(ProReport).filter(ProReport.report_id == report_id).first()
+            if report and report.status not in ("completed", "error"):
+                report.status = "error"
+                report.error_message = str(e)
+                db.commit()
+        except Exception:
+            pass
     finally:
         db.close()
 

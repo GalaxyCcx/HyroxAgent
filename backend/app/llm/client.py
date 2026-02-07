@@ -5,6 +5,7 @@ LLM 客户端封装
 import json
 import asyncio
 from typing import List, Dict, Any, Optional, AsyncGenerator, Union, Callable, Awaitable
+import httpx
 from openai import AsyncOpenAI, APIError, RateLimitError, APIConnectionError
 from .config import llm_config_manager
 
@@ -46,6 +47,7 @@ class LLMClient:
         self._client = AsyncOpenAI(
             api_key=client_config["api_key"],
             base_url=client_config["base_url"],
+            timeout=httpx.Timeout(timeout=300.0, connect=10.0),
         )
         return self._client
     

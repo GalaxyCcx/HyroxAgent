@@ -172,15 +172,20 @@ class SectionGenerator:
         tool_choice: Optional[Dict[str, Any]],
         model_config: ModelConfig,
     ) -> Dict[str, Any]:
-        """调用 LLM"""
+        """调用 LLM（使用流式收集模式，防止长时间无数据导致连接超时）"""
         logger.info(f"[SectionGenerator] 调用 LLM: model={model_config.model_name}, tools={len(tools)}, tool_choice={tool_choice}")
         
-        # 使用 LLM 客户端
+        # 使用流式收集模式：底层用 stream=True 接收 chunk，但最终返回完整结果
+        # 这样即使响应生成耗时较长，中间也有数据流动，不会因为无数据而断连
+        async def _noop_callback(chunk: str, chunk_type: str):
+            pass
+
         response = await self.llm_client.chat(
             messages=messages,
             tools=tools,
             tool_choice=tool_choice,  # 传递 tool_choice 强制使用指定工具
             agent_name="report_section",
+            chunk_callback=_noop_callback,
         )
         
         return response
