@@ -352,6 +352,11 @@ async def generate_report_stream_v2_post(
 
 # ==================== 小程序专用端点（非流式） ====================
 
+class TriggerGenerateRequest(BaseModel):
+    """触发生成请求"""
+    heart_rate_images: Optional[List[str]] = None
+
+
 class TriggerGenerateResponse(BaseModel):
     """触发生成响应"""
     report_id: str
@@ -391,7 +396,7 @@ async def run_generation_in_background(report_id: str, heart_rate_images: Option
 async def trigger_generate_background(
     report_id: str,
     background_tasks: BackgroundTasks,
-    heart_rate_images: Optional[List[str]] = Body(default=None, embed=True, description="心率图片路径列表"),
+    request: TriggerGenerateRequest = TriggerGenerateRequest(),
 ):
     """
     触发报告生成（后台任务，非流式）
@@ -402,7 +407,7 @@ async def trigger_generate_background(
     - 客户端通过 /status/{report_id} 轮询状态
     """
     # 添加后台任务
-    background_tasks.add_task(run_generation_in_background, report_id, heart_rate_images)
+    background_tasks.add_task(run_generation_in_background, report_id, request.heart_rate_images)
     
     return TriggerGenerateResponse(
         report_id=report_id,
