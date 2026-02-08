@@ -211,26 +211,9 @@ Page({
    * 解锁详细报告 - 显示心率上传弹窗
    */
   async onUnlockPro() {
-    // 检查登录状态
-    if (!isLoggedIn()) {
-      try {
-        wx.showLoading({ title: '登录中...' });
-        await login();
-        wx.hideLoading();
-      } catch (err) {
-        wx.hideLoading();
-        wx.showToast({
-          title: '登录失败，请重试',
-          icon: 'none',
-        });
-        return;
-      }
-    }
-    
-    // 显示心率上传弹窗
-    this.setData({
-      showUploadModal: true,
-      heartRateImages: [],
+    wx.showToast({
+      title: '功能开发中',
+      icon: 'none',
     });
   },
 
